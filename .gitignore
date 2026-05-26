@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+.DS_Store
+*.tmp
+*.log
+# Local working exports — never commit raw OPD / remittance / QBO files
+exports/
+working/
+*.xlsx
+*.xls
+!data/*.xlsx

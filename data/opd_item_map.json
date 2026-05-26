@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "note": "Classifies OPD lines into rebate categories. Two profiles. 'odata' targets the OPD OData ConsultService feed (real source): ScanEligible drives ultrasound eligibility; ServiceName/TrentCode drive the rest. 'generic' is the keyword fallback for arbitrary exports / mock data. code_map is an optional exact-match override table.",
+  "categories": [
+    "ultrasound",
+    "stat",
+    "assistance",
+    "non_ema",
+    "cancellation",
+    "overage",
+    "rads",
+    "other"
+  ],
+  "code_map": {},
+  "odata": {
+    "scan_eligible_means_ultrasound": true,
+    "servicename_rules": [
+      {"contains": "stat", "category": "stat"},
+      {"contains": "non-ema", "category": "non_ema"},
+      {"contains": "non ema", "category": "non_ema"},
+      {"contains": "exam assist", "category": "assistance"},
+      {"contains": "cancel", "category": "cancellation"},
+      {"contains": "overage", "category": "overage"},
+      {"contains": "radiograph", "category": "rads"}
+    ],
+    "trentcode_group_rules": [
+      {"group": "Assist", "category": "assistance"},
+      {"group": "RAD", "category": "rads"},
+      {"group": "ABD", "category": "ultrasound"},
+      {"group": "CARDIAC", "category": "ultrasound"},
+      {"group": "Fast", "category": "ultrasound"},
+      {"group": "FNA", "category": "ultrasound"}
+    ]
+  },
+  "keyword_rules": [
+    {"contains": "stat", "category": "stat"},
+    {"contains": "non-ema", "category": "non_ema"},
+    {"contains": "non ema", "category": "non_ema"},
+    {"contains": "assist", "category": "assistance"},
+    {"contains": "cancel", "category": "cancellation"},
+    {"contains": "overage", "category": "overage"},
+    {"contains": "radiograph", "category": "rads"},
+    {"contains": "x-ray", "category": "rads"},
+    {"contains": "rad", "category": "rads"},
+    {"contains": "ultrasound", "category": "ultrasound"},
+    {"contains": "echo", "category": "ultrasound"},
+    {"contains": "u/s", "category": "ultrasound"},
+    {"contains": "scan", "category": "ultrasound"}
+  ]
+}

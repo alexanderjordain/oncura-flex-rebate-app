@@ -1,0 +1,136 @@
+Customer,Invoice No,Item Code,Description,Amount,Invoice Date
+Mead Veterinary Medical Center,50001,US-STAT,Ultrasound STAT Read,115.8,2026-03-21
+Mead Veterinary Medical Center,50001,US-SCAN,Ultrasound Scan Read,163.88,2026-03-13
+Mead Veterinary Medical Center,50002,RAD-STD,Radiograph Read,38.49,2026-03-28
+Mead Veterinary Medical Center,50002,US-ASST,Ultrasound Assistance Read,31.58,2026-03-05
+Countryside Veterinary Clinic,50003,RAD-STAT,Radiograph STAT Read,92.62,2026-03-22
+Countryside Veterinary Clinic,50003,US-ASST,Ultrasound Assistance Read,24.12,2026-03-19
+Countryside Veterinary Clinic,50004,CANCEL,Cancellation Fee,17.92,2026-03-23
+Countryside Veterinary Clinic,50004,US-STAT,Ultrasound STAT Read,85.15,2026-03-20
+Countryside Veterinary Clinic,50004,RAD-STD,Radiograph Read,72.23,2026-03-18
+Countryside Veterinary Clinic,50005,CANCEL,Cancellation Fee,28.97,2026-03-15
+Countryside Veterinary Clinic,50005,CANCEL,Cancellation Fee,23.99,2026-03-26
+Countryside Veterinary Clinic,50005,US-ASST,Ultrasound Assistance Read,47.96,2026-03-08
+Countryside Veterinary Clinic,50005,US-STAT,Ultrasound STAT Read,85.95,2026-03-17
+Countryside Veterinary Clinic,50005,NONEMA,Non-EMA Charge,36.25,2026-03-24
+NVA - Lake Meridian Animal Hospital,50006,US-STAT,Ultrasound STAT Read,49.45,2026-03-14
+NVA - Lake Meridian Animal Hospital,50006,US-ASST,Ultrasound Assistance Read,50.29,2026-03-05
+NVA - Lake Meridian Animal Hospital,50006,NONEMA,Non-EMA Charge,22.65,2026-03-22
+NVA - Lake Meridian Animal Hospital,50006,US-STAT,Ultrasound STAT Read,101.17,2026-03-19
+NVA - Lake Meridian Animal Hospital,50007,CANCEL,Cancellation Fee,35.86,2026-03-20
+NVA - Lake Meridian Animal Hospital,50007,NONEMA,Non-EMA Charge,27.4,2026-03-15
+NVA - Lake Meridian Animal Hospital,50007,US-STAT,Ultrasound STAT Read,107.2,2026-03-09
+NVA - Lake Meridian Animal Hospital,50007,NONEMA,Non-EMA Charge,30.91,2026-03-03
+Veterinary Medical Center of Folsom,50008,NONEMA,Non-EMA Charge,18.54,2026-03-13
+Veterinary Medical Center of Folsom,50008,CANCEL,Cancellation Fee,15.68,2026-03-15
+Veterinary Medical Center of Folsom,50008,CANCEL,Cancellation Fee,20.04,2026-03-04
+Veterinary Medical Center of Folsom,50008,NONEMA,Non-EMA Charge,11.77,2026-03-25
+Americas Animal Clinic,50009,RAD-STD,Radiograph Read,64.84,2026-03-28
+Americas Animal Clinic,50009,NONEMA,Non-EMA Charge,12.42,2026-03-15
+Americas Animal Clinic,50009,OVERAGE,Overage Charge,132.42,2026-03-05
+Americas Animal Clinic,50010,RAD-STAT,Radiograph STAT Read,105.04,2026-03-12
+Americas Animal Clinic,50010,OVERAGE,Overage Charge,193.66,2026-03-05
+Americas Animal Clinic,50010,US-STAT,Ultrasound STAT Read,54.1,2026-03-08
+Americas Animal Clinic,50010,RAD-STD,Radiograph Read,35.9,2026-03-27
+Americas Animal Clinic,50010,US-ASST,Ultrasound Assistance Read,30.51,2026-03-01
+Aurora Animal Care Community,50011,CANCEL,Cancellation Fee,33.29,2026-03-11
+Aurora Animal Care Community,50011,US-ASST,Ultrasound Assistance Read,47.62,2026-03-17
+Aurora Animal Care Community,50011,US-SCAN,Ultrasound Scan Read,142.2,2026-03-28
+Aurora Animal Care Community,50011,OVERAGE,Overage Charge,109.71,2026-03-13
+Aurora Animal Care Community,50011,US-STAT,Ultrasound STAT Read,78.52,2026-03-13
+Texas Animal Medical Center,50012,US-STAT,Ultrasound STAT Read,118.77,2026-03-15
+Texas Animal Medical Center,50012,US-ASST,Ultrasound Assistance Read,24.4,2026-03-20
+Texas Animal Medical Center,50012,US-SCAN,Ultrasound Scan Read,78.43,2026-03-19
+Canyon Crossroads Animal Hospital,50013,US-STAT,Ultrasound STAT Read,115.92,2026-03-20
+Canyon Crossroads Animal Hospital,50013,US-SCAN,Ultrasound Scan Read,72.66,2026-03-07
+Canyon Crossroads Animal Hospital,50013,OVERAGE,Overage Charge,72.28,2026-03-09
+Canyon Crossroads Animal Hospital,50013,CANCEL,Cancellation Fee,33.07,2026-03-16
+Canyon Crossroads Animal Hospital,50013,US-STAT,Ultrasound STAT Read,49.23,2026-03-16
+Canyon Crossroads Animal Hospital,50013,NONEMA,Non-EMA Charge,24.41,2026-03-10
+Morningside Animal Hospital,50014,US-STAT,Ultrasound STAT Read,99.97,2026-03-24
+Morningside Animal Hospital,50014,RAD-STAT,Radiograph STAT Read,85.68,2026-03-23
+Morningside Animal Hospital,50014,US-ASST,Ultrasound Assistance Read,40.65,2026-03-07
+TVC - Animals Unlimited Veterinary Hospital,50015,US-ASST,Ultrasound Assistance Read,47.6,2026-03-01
+TVC - Animals Unlimited Veterinary Hospital,50015,RAD-STAT,Radiograph STAT Read,128.17,2026-03-28
+TVC - Animals Unlimited Veterinary Hospital,50015,US-STAT,Ultrasound STAT Read,95.7,2026-03-09
+TVC - Animals Unlimited Veterinary Hospital,50015,CANCEL,Cancellation Fee,42.25,2026-03-12
+TVC - Animals Unlimited Veterinary Hospital,50016,CANCEL,Cancellation Fee,34.09,2026-03-20
+TVC - Animals Unlimited Veterinary Hospital,50016,RAD-STD,Radiograph Read,95.46,2026-03-27
+TVC - Animals Unlimited Veterinary Hospital,50016,OVERAGE,Overage Charge,160.98,2026-03-08
+TVC - Animals Unlimited Veterinary Hospital,50017,NONEMA,Non-EMA Charge,20.67,2026-03-01
+TVC - Animals Unlimited Veterinary Hospital,50017,US-SCAN,Ultrasound Scan Read,202.22,2026-03-16
+TVC - Animals Unlimited Veterinary Hospital,50017,RAD-STAT,Radiograph STAT Read,61.46,2026-03-20
+Animal Medical Center of Litchfield,50018,CANCEL,Cancellation Fee,43.65,2026-03-12
+Animal Medical Center of Litchfield,50018,US-STAT,Ultrasound STAT Read,57.64,2026-03-08
+Animal Medical Center of Litchfield,50018,NONEMA,Non-EMA Charge,15.9,2026-03-07
+Animal Medical Center of Litchfield,50018,NONEMA,Non-EMA Charge,28.72,2026-03-20
+Animal Medical Center of Litchfield,50018,US-SCAN,Ultrasound Scan Read,146.31,2026-03-21
+Animal Medical Center of Litchfield,50019,US-STAT,Ultrasound STAT Read,106.77,2026-03-04
+Animal Medical Center of Litchfield,50019,OVERAGE,Overage Charge,167.35,2026-03-25
+Animal Medical Center of Litchfield,50019,RAD-STD,Radiograph Read,70.85,2026-03-06
+Animal Medical Center of Litchfield,50019,OVERAGE,Overage Charge,168.37,2026-03-11
+Stonebrook Family Pet Clinic,50020,NONEMA,Non-EMA Charge,22.04,2026-03-03
+Stonebrook Family Pet Clinic,50020,US-ASST,Ultrasound Assistance Read,26.8,2026-03-05
+Stonebrook Family Pet Clinic,50020,US-SCAN,Ultrasound Scan Read,87.21,2026-03-15
+Stonebrook Family Pet Clinic,50020,US-ASST,Ultrasound Assistance Read,44.46,2026-03-20
+Stonebrook Family Pet Clinic,50020,NONEMA,Non-EMA Charge,29.72,2026-03-12
+Forest Crossing Animal Hospital,50021,US-ASST,Ultrasound Assistance Read,20.86,2026-03-26
+Forest Crossing Animal Hospital,50021,US-STAT,Ultrasound STAT Read,82.13,2026-03-05
+Forest Crossing Animal Hospital,50021,OVERAGE,Overage Charge,197.98,2026-03-07
+Forest Crossing Animal Hospital,50021,RAD-STD,Radiograph Read,37.1,2026-03-07
+Forest Crossing Animal Hospital,50021,RAD-STAT,Radiograph STAT Read,87.6,2026-03-25
+Forest Crossing Animal Hospital,50021,CANCEL,Cancellation Fee,22.78,2026-03-14
+All Creatures Animal Hospital - AL,50022,CANCEL,Cancellation Fee,41.93,2026-03-22
+All Creatures Animal Hospital - AL,50022,OVERAGE,Overage Charge,174.07,2026-03-17
+Beckett & Associates Veterinary Services,50023,US-ASST,Ultrasound Assistance Read,40.94,2026-03-01
+Beckett & Associates Veterinary Services,50023,NONEMA,Non-EMA Charge,33.3,2026-03-20
+Beckett & Associates Veterinary Services,50023,US-SCAN,Ultrasound Scan Read,199.69,2026-03-05
+Beckett & Associates Veterinary Services,50023,US-ASST,Ultrasound Assistance Read,25.66,2026-03-20
+Beckett & Associates Veterinary Services,50023,US-STAT,Ultrasound STAT Read,84.52,2026-03-11
+Beckett & Associates Veterinary Services,50023,NONEMA,Non-EMA Charge,33.53,2026-03-04
+Olive Tree Animal Hospital,50024,RAD-STD,Radiograph Read,49.35,2026-03-02
+Olive Tree Animal Hospital,50024,US-STAT,Ultrasound STAT Read,80.62,2026-03-18
+Olive Tree Animal Hospital,50025,US-STAT,Ultrasound STAT Read,75.46,2026-03-20
+Olive Tree Animal Hospital,50025,RAD-STD,Radiograph Read,86.95,2026-03-15
+Olive Tree Animal Hospital,50026,NONEMA,Non-EMA Charge,25.23,2026-03-08
+Olive Tree Animal Hospital,50026,RAD-STAT,Radiograph STAT Read,123.44,2026-03-07
+Olive Tree Animal Hospital,50026,NONEMA,Non-EMA Charge,14.11,2026-03-04
+Olive Tree Animal Hospital,50026,OVERAGE,Overage Charge,116.32,2026-03-03
+Olive Tree Animal Hospital,50026,RAD-STD,Radiograph Read,67.13,2026-03-07
+Olive Tree Animal Hospital,50026,RAD-STAT,Radiograph STAT Read,111.63,2026-03-25
+Oceanside Animal Hospital,50027,US-ASST,Ultrasound Assistance Read,30.12,2026-03-05
+Oceanside Animal Hospital,50027,NONEMA,Non-EMA Charge,16.59,2026-03-04
+Oceanside Animal Hospital,50027,OVERAGE,Overage Charge,182.74,2026-03-06
+Oceanside Animal Hospital,50027,RAD-STD,Radiograph Read,47.11,2026-03-14
+Atlantic Street Pet Hospital,50028,CANCEL,Cancellation Fee,27.64,2026-03-12
+Atlantic Street Pet Hospital,50028,CANCEL,Cancellation Fee,17.77,2026-03-12
+Atlantic Street Pet Hospital,50028,US-SCAN,Ultrasound Scan Read,120.84,2026-03-15
+Atlantic Street Pet Hospital,50028,NONEMA,Non-EMA Charge,31.09,2026-03-13
+Atlantic Street Pet Hospital,50028,CANCEL,Cancellation Fee,30.52,2026-03-10
+Atlantic Street Pet Hospital,50029,US-STAT,Ultrasound STAT Read,49.03,2026-03-26
+Atlantic Street Pet Hospital,50029,RAD-STD,Radiograph Read,107.88,2026-03-04
+Atlantic Street Pet Hospital,50029,US-STAT,Ultrasound STAT Read,61.25,2026-03-02
+Atlantic Street Pet Hospital,50029,US-ASST,Ultrasound Assistance Read,30.82,2026-03-05
+Atlantic Street Pet Hospital,50029,OVERAGE,Overage Charge,177.44,2026-03-22
+Atlantic Street Pet Hospital,50029,RAD-STAT,Radiograph STAT Read,79.51,2026-03-18
+Atlantic Street Pet Hospital,50030,NONEMA,Non-EMA Charge,31.01,2026-03-03
+Atlantic Street Pet Hospital,50030,RAD-STAT,Radiograph STAT Read,49.89,2026-03-23
+Atlantic Street Pet Hospital,50030,US-ASST,Ultrasound Assistance Read,37.01,2026-03-03
+Atlantic Street Pet Hospital,50030,RAD-STAT,Radiograph STAT Read,124.76,2026-03-21
+Atlantic Street Pet Hospital,50030,US-STAT,Ultrasound STAT Read,104.13,2026-03-03
+Atlantic Street Pet Hospital,50030,RAD-STD,Radiograph Read,40.0,2026-03-28
+Glenville Veterinary Clinic,50031,US-SCAN,Ultrasound Scan Read,121.05,2026-03-18
+Glenville Veterinary Clinic,50031,OVERAGE,Overage Charge,189.0,2026-03-09
+Glenville Veterinary Clinic,50031,US-ASST,Ultrasound Assistance Read,21.73,2026-03-23
+Glenville Veterinary Clinic,50031,RAD-STD,Radiograph Read,105.36,2026-03-06
+Glenville Veterinary Clinic,50031,RAD-STAT,Radiograph STAT Read,49.28,2026-03-07
+Tidewater Trail Animal Hospital,50032,RAD-STD,Radiograph Read,56.75,2026-03-17
+Tidewater Trail Animal Hospital,50032,US-ASST,Ultrasound Assistance Read,30.82,2026-03-26
+Tidewater Trail Animal Hospital,50032,US-SCAN,Ultrasound Scan Read,239.01,2026-03-02
+Tidewater Trail Animal Hospital,50032,US-SCAN,Ultrasound Scan Read,63.32,2026-03-17
+Tidewater Trail Animal Hospital,50033,RAD-STD,Radiograph Read,73.57,2026-03-08
+Tidewater Trail Animal Hospital,50033,NONEMA,Non-EMA Charge,13.19,2026-03-27
+Tidewater Trail Animal Hospital,50033,OVERAGE,Overage Charge,148.48,2026-03-18
+Tidewater Trail Animal Hospital,50033,OVERAGE,Overage Charge,195.55,2026-03-10
+Tidewater Trail Animal Hospital,50033,RAD-STD,Radiograph Read,108.68,2026-03-11
+Tidewater Trail Animal Hospital,50033,RAD-STD,Radiograph Read,97.42,2026-03-23

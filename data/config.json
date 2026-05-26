@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "rebate": {
+    "ultrasound_eligible_note": "Ultrasound scan reads only.",
+    "ultrasound_excluded_categories": [
+      "stat",
+      "assistance",
+      "non_ema",
+      "cancellation",
+      "overage"
+    ],
+    "rads_note": "Rads (radiographs) flat 4% across the board; no exclusions per SOP.",
+    "rates": {
+      "ultrasound_self_funded": 0.05,
+      "ultrasound_finance": 0.10,
+      "rads_self_funded": 0.02,
+      "rads_finance": 0.04
+    }
+  },
+  "flex": {
+    "saasant_items": {
+      "monthly_credit": "Flex-Credits",
+      "unused_recapture": "Unused-Flex-Credits"
+    },
+    "terms": "Flex",
+    "calendar_groups": {
+      "A": ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"],
+      "B": ["Feb-Apr", "May-Jul", "Aug-Oct", "Nov-Jan"],
+      "C": ["Mar-May", "Jun-Aug", "Sep-Nov", "Dec-Feb"]
+    },
+    "default_contract_months": 60,
+    "finance_companies": {
+      "OnePlace": {"bank_feed_label": "Origin Bank Midwest", "ref_prefix": "OP"},
+      "GreatAmerica": {"bank_feed_label": "Accounting Services", "ref_prefix": "GA"},
+      "NewLane": {"bank_feed_label": "New Lane", "ref_prefix": "NL"}
+    },
+    "remittance_classification": {
+      "flex_contract_prefix": "04",
+      "contract_digit_length": 5,
+      "note": "Contract numbers beginning '04' (5 digits) = FLEX payments; other 5-digit = scan package payments."
+    }
+  }
+}
