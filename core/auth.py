@@ -15,6 +15,8 @@ Roles -> permissions:
 """
 from __future__ import annotations
 
+import os
+
 import streamlit as st
 
 ROLE_PERMS = {
@@ -51,10 +53,17 @@ def require_login():
         return st.session_state["auth_role"]
 
     app_pw = _secret(["APP_PASSWORD"])
-    # If no password configured at all (pure local dev), grant admin.
+    # No password configured. Grant admin ONLY for explicit local dev (FLEXREBATE_LOCAL=1).
+    # On a public Cloud URL this must NOT silently open admin access.
     if not app_pw and not _secret(["roles"]):
-        st.session_state["auth_role"] = "alex"
-        return "alex"
+        if os.environ.get("FLEXREBATE_LOCAL") == "1":
+            st.session_state["auth_role"] = "alex"
+            return "alex"
+        st.error(
+            "App password not configured. Set `APP_PASSWORD` (and optional `[roles]`) in "
+            "Streamlit secrets. For local dev, run with env var `FLEXREBATE_LOCAL=1`."
+        )
+        st.stop()
 
     st.title("Oncura FLEX + Rebate Accounting")
     st.caption("Enter the app password. Role passwords unlock approval/admin actions.")
