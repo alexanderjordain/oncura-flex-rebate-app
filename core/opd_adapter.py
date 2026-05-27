@@ -221,6 +221,47 @@ def read_upload(file) -> pd.DataFrame:
     return pd.read_csv(file)
 
 
+_HEADER_TOKENS = {"contract", "customer", "payment", "amount", "paid", "received", "invoice", "due", "date"}
+
+
+def clean_columns(cols) -> list:
+    """Collapse newlines/whitespace in header names; rename blank/nan headers to col_N."""
+    out = []
+    for i, c in enumerate(cols):
+        s = " ".join(str(c).replace("\n", " ").replace("\r", " ").split())
+        out.append(s if s and s.lower() != "nan" else f"col_{i}")
+    return out
+
+
+def _detect_header_row(raw: pd.DataFrame, max_scan: int = 15) -> int:
+    """Find the row that looks most like a header (matches the most expected tokens).
+    Handles files with title/preamble rows above the header (e.g. OnePlace)."""
+    best_idx, best_score = 0, 0
+    for i in range(min(max_scan, len(raw))):
+        cells = [str(v).lower() for v in raw.iloc[i] if pd.notna(v)]
+        score = sum(1 for cell in cells if any(tok in cell for tok in _HEADER_TOKENS))
+        if score > best_score:
+            best_score, best_idx = score, i
+    return best_idx if best_score >= 2 else 0
+
+
+def read_remittance(file) -> pd.DataFrame:
+    """Read a finance remittance, locating the real header row and cleaning column names.
+    Robust to preamble rows (OnePlace) and newline-laden headers."""
+    name = getattr(file, "name", "").lower()
+    if name.endswith((".xlsx", ".xls")):
+        raw = pd.read_excel(file, header=None)
+    else:
+        raw = pd.read_csv(file, header=None)
+    hidx = _detect_header_row(raw)
+    cols = clean_columns(list(raw.iloc[hidx]))
+    df = raw.iloc[hidx + 1:].copy()
+    df.columns = cols
+    df = df.dropna(how="all")
+    df = df.dropna(axis=1, how="all")  # drop fully-empty columns (e.g. OnePlace leading blank)
+    return df.reset_index(drop=True)
+
+
 # OPD OData Invoices tab -> FLEX overage/unused activity (Subtotal + Admin Fee per clinic).
 _INVOICE_FIELDS = {
     "clinic": "ClinicName",

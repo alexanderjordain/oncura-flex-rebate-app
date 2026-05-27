@@ -5,14 +5,17 @@ Deploy:       Streamlit Cloud, app file = app.py. Set secrets (see .streamlit/se
 """
 import streamlit as st
 
-from core import auth, loaders, store
+from core import auth, loaders, store, ui
 
 st.set_page_config(page_title="Oncura FLEX + Rebate", page_icon="*", layout="wide")
 
 auth.require_login()
+ui.inject()
 auth.sidebar_identity()
 
-st.title("Oncura FLEX + Rebate Accounting")
+ui.header("FLEX + Rebate Accounting",
+          "Receive OPD activity and finance-company remittances, calculate, and produce audit-ready imports.",
+          kicker="Oncura · Operations Ledger")
 
 rebate = loaders.rebate_master()
 flex = loaders.flex_master()

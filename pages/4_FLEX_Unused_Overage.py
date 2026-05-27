@@ -3,17 +3,16 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from core import auth, flex_unused, loaders, opd_adapter, saasant
+from core import auth, flex_unused, loaders, opd_adapter, saasant, ui
 
 st.set_page_config(page_title="FLEX Unused / Overage", layout="wide")
 auth.require_login()
+ui.inject()
 auth.sidebar_identity()
 
-st.title("FLEX Unused Recapture + Overage")
-st.caption(
-    "Runs monthly. Only clinics whose staggered quarter ENDS this month are processed. "
-    "Activity = OPD Subtotal + Admin Fee over the quarter vs the clinic's quarterly threshold."
-)
+ui.header("FLEX Unused Recapture + Overage",
+          "Monthly. Only clinics whose staggered quarter ends this month; activity (Subtotal + Admin Fee) vs threshold.",
+          kicker="Flex · Recapture")
 
 flex = loaders.flex_master()
 clinics = flex.get("clinics", [])

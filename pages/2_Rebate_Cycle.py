@@ -3,14 +3,15 @@ import os
 import pandas as pd
 import streamlit as st
 
-from core import auth, loaders, opd_adapter, rebate_calc, saasant
+from core import auth, loaders, opd_adapter, rebate_calc, saasant, ui
 
 st.set_page_config(page_title="Rebate Cycle", layout="wide")
 auth.require_login()
+ui.inject()
 auth.sidebar_identity()
 
-st.title("Rebate Cycle")
-st.caption("Upload OPD line detail (ConsultService export or QBO invoice lines), calculate, review, export.")
+ui.header("Rebate Cycle", "Upload OPD line detail, calculate two ways, review variance, export remittances.",
+          kicker="Rebates · Cycle")
 
 master = loaders.rebate_master()
 imap = loaders.item_map()

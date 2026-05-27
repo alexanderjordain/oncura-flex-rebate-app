@@ -2,14 +2,15 @@ import datetime as dt
 
 import streamlit as st
 
-from core import auth, flex_credits, loaders, saasant
+from core import auth, flex_credits, loaders, saasant, ui
 
 st.set_page_config(page_title="FLEX Credits", layout="wide")
 auth.require_login()
+ui.inject()
 auth.sidebar_identity()
 
-st.title("FLEX Monthly Credit Memos")
-st.caption("Generates the SaasAnt credit-memo import (item Flex-credits, class 03-Telemedicine).")
+ui.header("FLEX Monthly Credit Memos", "SaasAnt credit-memo import — item Flex-credits, class 03-Telemedicine.",
+          kicker="Flex · Credits")
 
 flex = loaders.flex_master()
 clinics = flex.get("clinics", [])

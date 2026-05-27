@@ -69,10 +69,16 @@ def require_login():
         )
         st.stop()
 
-    st.title("Oncura FLEX + Rebate Accounting")
-    st.caption("Enter the app password. Role passwords unlock approval/admin actions.")
-    entered = st.text_input("Password", type="password")
-    if st.button("Enter", type="primary"):
+    from . import ui
+
+    ui.inject()
+    ui.set_logo()
+    _, mid, _ = st.columns([1, 1.3, 1])
+    with mid:
+        ui.header("Enter the ledger", kicker="Oncura · Flex & Rebate")
+        entered = st.text_input("Password", type="password")
+        proceed = st.button("Enter", type="primary", use_container_width=True)
+    if proceed:
         role = _resolve_role(entered)
         if role:
             st.session_state["auth_role"] = role
@@ -104,6 +110,9 @@ def require(permission: str) -> bool:
 
 
 def sidebar_identity():
+    from . import ui
+
+    ui.sidebar_brand()
     role = current_role()
     with st.sidebar:
         st.markdown(f"**Role:** `{role}`")

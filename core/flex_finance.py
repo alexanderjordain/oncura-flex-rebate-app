@@ -44,6 +44,29 @@ SCAN_INVOICE_COLS = [
 ]
 
 
+def guess_columns(company: str, cols) -> dict:
+    """Best-effort {customer, amount, id} column names for a remittance.
+    Candidate-priority matching so specific names win over loose substrings
+    (e.g. 'Customer Name' over 'Contract Vendor Customer Number'; 'PTB Received'
+    over 'Payments Received' which is a count, not dollars)."""
+    low = [str(c).lower() for c in cols]
+
+    def pick(cands, default=0):
+        for k in cands:
+            for i, c in enumerate(low):
+                if k in c:
+                    return i
+        return default
+
+    customer = pick(["customer_name", "customer name", "customer"])
+    amount = pick(["payment_amount", "ptb received", "ptb", "paid", "amount"])
+    if company == "GreatAmerica":
+        ident = pick(["payment invoice", "invoice"])
+    else:
+        ident = pick(["contract_id", "contract #", "contract"])
+    return {"customer": cols[customer], "amount": cols[amount], "id": cols[ident]}
+
+
 def is_whole_dollar(amount) -> bool:
     """True when the amount has no cents (NewLane scan-package signature)."""
     try:
@@ -61,11 +84,27 @@ def translate_name(name, name_map: dict):
     return key, False
 
 
+def normalize_contract(c) -> str:
+    """Strip a float artifact like '40010172988.00' -> '40010172988' while preserving
+    leading-zero string contracts ('000000018333')."""
+    s = str(c).strip()
+    if "." in s:
+        head, _, tail = s.partition(".")
+        if tail.strip("0") == "":
+            s = head
+    return s
+
+
 def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, seq=None) -> str:
     if company == "GreatAmerica":
         return f"GA-{invoice_number}"
     if company == "OnePlace":
-        return f"OPC{contract}"
+        c = normalize_contract(contract)
+        # flex contracts are padded with a leading zero in the export -> strip for flex;
+        # scan contracts' leading zeros are significant -> keep (matches the SaaSAnt templates)
+        if kind == "flex":
+            c = c.lstrip("0") or c
+        return f"OPC{c}"
     if company == "NewLane":
         return f"NewLaneScan - {seq}" if kind == "scan" else f"FlexNewLane - {seq}"
     return f"{company}-{kind}-{invoice_number or contract or seq}"
@@ -104,7 +143,14 @@ def process_remittance(
     Returns dict: flex_payments, scan_invoices, scan_payments (DataFrames), plus summary + unmapped.
     Original columns are preserved; SaasAnt columns are appended.
     """
-    work = df.copy().reset_index(drop=True)
+    work = df.copy()
+    # drop summary/total rows (e.g. trailing "Pass-Thru received" line): a real payment always
+    # has a contract/invoice id, so a blank id_col is the reliable signal.
+    if id_col and id_col in work.columns:
+        work = work[work[id_col].notna()]
+        work = work[work[id_col].astype(str).str.replace("\xa0", " ").str.strip().ne("")]
+    work = work[work[customer_col].notna()]
+    work = work.reset_index(drop=True)
     amounts = work[amount_col].map(_coerce_amount)
     work = work[amounts != 0].reset_index(drop=True)
     amounts = work[amount_col].map(_coerce_amount)
@@ -161,19 +207,45 @@ def _build_payments(src, company, kind, label, payment_date, id_col, invoice_nos
     if not len(src):
         return pd.DataFrame()
     out = _passthrough(src)
-    refs = []
-    for i in range(len(src)):
+    n = len(src)
+
+    bases, refs, seen = [], [], {}
+    for i in range(n):
         ident = src[id_col].iloc[i] if id_col and id_col in src else None
-        refs.append(make_ref_no(company, kind, invoice_number=ident, contract=ident, seq=i + 1))
-    out["PaymentDate"] = _date_str(payment_date)
-    out["Customer"] = src["_qb_customer"].values
-    out["Payment Method"] = PAYMENT_METHOD
-    out["Deposit To Account Name"] = DEPOSIT_TO
-    out["Ref No (Receive Payment No)"] = refs
-    out["Amount"] = src["_amount"].values
-    out["Reference No"] = label
-    if invoice_nos is not None:
-        out["Invoice"] = invoice_nos
+        base = make_ref_no(company, kind, invoice_number=ident, contract=ident, seq=i + 1)
+        bases.append(base)
+        # a clinic paying twice in one remittance would collide; suffix to keep SaasAnt-unique
+        if base in seen:
+            seen[base] += 1
+            refs.append(f"{base}-{seen[base]}")
+        else:
+            seen[base] = 1
+            refs.append(base)
+
+    customer = src["_qb_customer"].values
+    amount = src["_amount"].values
+
+    if company == "OnePlace":
+        out["OPDAdd"] = bases
+        out["Customer"] = customer
+        out["Payment Method"] = PAYMENT_METHOD
+        out["Deposit To Account Name"] = DEPOSIT_TO
+        out["Ref No (Receive Payment No)"] = refs
+        out["Amount"] = amount
+        out["Reference No"] = label
+        out["PaymentDate"] = _date_str(payment_date)
+        out["Invoice No"] = invoice_nos if invoice_nos is not None else ["" for _ in range(n)]
+    else:
+        out["PaymentDate"] = _date_str(payment_date)
+        out["Customer"] = customer
+        out["Payment Method"] = PAYMENT_METHOD
+        out["Deposit To Account Name"] = DEPOSIT_TO
+        out["Ref No (Receive Payment No)"] = refs
+        out["Amount"] = amount
+        out["Reference No"] = label
+        if invoice_nos is not None:
+            out["Invoice"] = invoice_nos
+
     _assert_unique(out["Ref No (Receive Payment No)"], f"{company} {kind} payments")
     return out
 

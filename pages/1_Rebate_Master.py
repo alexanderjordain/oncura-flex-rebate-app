@@ -1,14 +1,15 @@
 import pandas as pd
 import streamlit as st
 
-from core import auth, loaders, store
+from core import auth, loaders, store, ui
 
 st.set_page_config(page_title="Rebate Master", layout="wide")
 auth.require_login()
+ui.inject()
 auth.sidebar_identity()
 
-st.title("Rebate Master")
-st.caption("87-clinic rebate list seeded from 'Rebate Names'. Edit rates / program type here.")
+ui.header("Rebate Master", "The clinic roster, program types, and rebate rates. Edits persist to the repo.",
+          kicker="Rebates · Reference")
 
 master = loaders.rebate_master()
 clinics = master.get("clinics", [])
