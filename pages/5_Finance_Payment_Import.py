@@ -13,7 +13,12 @@ ui.header("Finance Company Payment Import",
           "Remittance to SaasAnt imports. Every row gets a unique Ref No so payments don't collapse onto one customer.",
           kicker="Flex · Remittances")
 
-nm = loaders.name_map()
+# Base map from the store (GitHub on Cloud, local otherwise) plus any names resolved this
+# session. The session overlay makes saved names apply immediately even when the backing store
+# reloads from the public GitHub copy (which wouldn't yet have a local-only save).
+nm_base = loaders.name_map()
+session_adds = st.session_state.setdefault("name_map_additions", {})
+nm = {**nm_base, "map": {**nm_base.get("map", {}), **session_adds}}
 
 c1, c2, c3 = st.columns(3)
 company = c1.selectbox("Finance company", ["NewLane", "OnePlace", "GreatAmerica"])
@@ -86,19 +91,19 @@ if unmapped:
                 placeholder="paste QuickBooks display name",
             )
     if st.button("Save mappings", type="primary"):
-        nm_data = dict(loaders.name_map())
-        m = dict(nm_data.get("map", {}))
-        added = 0
-        for legal, qb in qb_inputs.items():
-            qb = str(qb).strip()
-            if qb:
-                m[legal.strip()] = qb
-                added += 1
-        if added:
-            nm_data["map"] = m
-            ok, msg = store.save_json("name_map.json", nm_data, f"Add {added} QB name mapping(s)")
+        new_pairs = {legal.strip(): str(qb).strip() for legal, qb in qb_inputs.items() if str(qb).strip()}
+        if new_pairs:
+            # 1) apply immediately for this session
+            st.session_state["name_map_additions"] = {**session_adds, **new_pairs}
+            # 2) persist for the future (commits to the repo on Cloud; writes local file otherwise)
+            persist = {**nm_base, "map": {**nm_base.get("map", {}), **st.session_state["name_map_additions"]}}
+            ok, _ = store.save_json("name_map.json", persist, f"Add {len(new_pairs)} QB name mapping(s)")
             loaders.name_map.clear()
-            (st.success if ok else st.warning)(f"Saved {added} mapping(s) for future use. {msg}")
+            if ok:
+                st.success(f"Saved {len(new_pairs)} mapping(s) — committed to the repo for everyone.")
+            else:
+                st.success(f"Saved {len(new_pairs)} mapping(s) — applied now and stored on this "
+                           "machine. On Cloud, set GITHUB_TOKEN to share them with all users.")
             st.rerun()
         else:
             st.warning("Enter at least one QuickBooks display name first.")

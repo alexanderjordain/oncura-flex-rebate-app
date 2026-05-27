@@ -45,10 +45,14 @@ def load_json(rel_path: str, default=None):
 
     Returns (data, sha). sha is the GitHub blob sha needed to commit an update,
     or None when the data came from the local file.
+
+    Token present -> the GitHub copy is the writable source of truth. No token -> use the local
+    file, so local edits persist instead of being shadowed by the (public, read-only) GitHub copy.
     """
-    gh = _load_github(rel_path)
-    if gh is not None:
-        return gh
+    if _github_token():
+        gh = _load_github(rel_path)
+        if gh is not None:
+            return gh
     return _load_local(rel_path, default), None
 
 
