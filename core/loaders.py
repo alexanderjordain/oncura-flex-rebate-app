@@ -37,8 +37,15 @@ def config():
     return data
 
 
+@st.cache_data(show_spinner=False)
+def name_map():
+    data, _ = _load("name_map.json", {"map": {}})
+    return data
+
+
 def clear_caches():
     rebate_master.clear()
     flex_master.clear()
     item_map.clear()
     config.clear()
+    name_map.clear()
