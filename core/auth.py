@@ -1,17 +1,20 @@
-"""Lightweight password gate + roles for a public Streamlit Cloud URL.
+"""Lightweight password gate for a public Streamlit Cloud URL.
 
 The app is deployed to a public URL, so a shared password keeps clinic financial detail from
-being world-readable. Passwords live in Streamlit secrets, never in the repo.
+being world-readable. The password lives in Streamlit secrets, never in the repo.
+
+Default (what we use): a single shared password, no roles. Anyone who enters it gets full access.
 
   secrets:
-    APP_PASSWORD = "..."        # everyone needs this
-    [roles] alex/tanya/jennifer/marty = "..."   # optional; entering a role password sets that role
+    APP_PASSWORD = "..."
 
-Roles -> permissions:
-  alex                -> admin (everything, edit masters, configure)
-  tanya               -> operator (run cycles, generate imports, approve)
-  jennifer, marty     -> approver (review + approve, no master edits)
-  viewer (APP_PASSWORD only) -> read-only
+Optional: add a [roles] table to split permissions. When [roles] exists, APP_PASSWORD becomes
+read-only and a role password unlocks actions:
+    [roles] alex/tanya/jennifer/marty = "..."
+  alex            -> admin (everything)
+  tanya           -> operator (run cycles, generate imports, approve)
+  jennifer, marty -> approver (review + approve, no master edits)
+  viewer          -> read-only
 """
 from __future__ import annotations
 
@@ -20,6 +23,7 @@ import os
 import streamlit as st
 
 ROLE_PERMS = {
+    "admin": {"admin", "operate", "approve", "view"},  # single-password setups land here
     "alex": {"admin", "operate", "approve", "view"},
     "tanya": {"operate", "approve", "view"},
     "jennifer": {"approve", "view"},
@@ -74,7 +78,9 @@ def require_login():
             st.session_state["auth_role"] = role
             st.rerun()
         elif app_pw and entered == app_pw:
-            st.session_state["auth_role"] = "viewer"
+            # If [roles] are configured, the shared password is read-only and a role password
+            # is needed for actions. With no roles, the shared password grants full access.
+            st.session_state["auth_role"] = "viewer" if _secret(["roles"]) else "admin"
             st.rerun()
         else:
             st.error("Incorrect password.")
