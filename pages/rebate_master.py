@@ -3,11 +3,6 @@ import streamlit as st
 
 from core import auth, loaders, store, ui
 
-st.set_page_config(page_title="Rebate Master", layout="wide")
-auth.require_login()
-ui.inject()
-auth.sidebar_identity()
-
 ui.header("Rebate Master", "The clinic roster, program types, and rebate rates. Edits persist to the repo.",
           kicker="Rebates · Reference")
 
