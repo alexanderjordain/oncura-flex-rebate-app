@@ -152,8 +152,23 @@ with tab_remit:
                                saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments"),
                                file_name=f"{company}_ScanPayments_{pay_date}.xlsx",
                                key="remit_dl_scan")
-        st.caption("Upload order: scan invoices → flex payments → scan payments. Match the combined "
-                   "total to the bank feed after all uploads. One SaasAnt job at a time.")
+        st.markdown(
+            """
+**Uploading to SaaSAnt**
+1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
+2. Click **Bulk Upload**.
+3. Pick the right import type for each file you downloaded above:
+   - Scan-package **invoices** → select **Invoice**
+   - Flex receive payments → select **Received Payments**
+   - Scan receive payments → select **Received Payments**
+4. Walk through the SaaSAnt wizard for each file.
+
+**Order matters:** upload **scan invoices first**, then flex payments, then scan payments.
+The scan payments reference the scan invoices by Invoice No, so the invoices must exist
+in QBO first. Run **one SaaSAnt job at a time** — wait for each to complete before starting
+the next. After all uploads, the combined total should match the bank-feed deposit.
+"""
+        )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 2 — Monthly Credit Memos
@@ -187,6 +202,12 @@ with tab_credits:
         key="cred_dl",
     )
     st.caption(f"Next available reference number after this batch: {next_ref}")
+    st.markdown(
+        """
+**Upload to SaaSAnt:** [transactions.saasant.com](https://transactions.saasant.com) →
+**Bulk Upload** → **Credit Memo** → select the file → walk through the wizard.
+"""
+    )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage
@@ -256,6 +277,10 @@ with tab_recap:
                                    file_name=f"UnusedFlex_{dt.date(2000,rec_month,1):%b}_{rec_year}.xlsx",
                                    type="primary", key="recap_dl_unused")
                 st.caption(f"Next available invoice number: {next_ref}")
+                st.markdown(
+                    "**Upload to SaaSAnt:** [transactions.saasant.com](https://transactions.saasant.com) →"
+                    " **Bulk Upload** → **Invoice** → select the file → walk through the wizard."
+                )
 
             # ── Overage billing (Accounting SOP-6 + SOP-12) ───────────────────
             overs = flex_unused.overage_rows(recap)
@@ -321,6 +346,8 @@ with tab_recap:
                     )
                     st.markdown("**Direct-bill overage invoices (SaaSAnt import)**")
                     st.markdown("""
+- **Upload to SaaSAnt:** [transactions.saasant.com](https://transactions.saasant.com) →
+  **Bulk Upload** → **Invoice** → select the file → walk through the wizard.
 - Each row will be a QBO invoice. **Void each invoice in QBO immediately after sending** — the
   revenue was already captured by the OPD invoices, so leaving these open overstates AR (SOP-6).
 - Send the clinic an **Authorize.net payment link** for the amount, or email the QBO invoice PDF
