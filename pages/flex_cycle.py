@@ -83,11 +83,16 @@ with tab_remit:
         s = res["summary"]
         unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
-        m2.metric("Scan", f"{s['scan_count']}  (${s['scan_total']:,.2f})")
-        m3.metric("Total", f"${s['total']:,.2f}")
-        m4.metric("Next invoice", s["next_invoice_no"])
+        if s["scan_count"] > 0:
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
+            m2.metric("Scan", f"{s['scan_count']}  (${s['scan_total']:,.2f})")
+            m3.metric("Total", f"${s['total']:,.2f}")
+            m4.metric("Next invoice", s["next_invoice_no"])
+        else:
+            m1, m2 = st.columns(2)
+            m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
+            m2.metric("Total", f"${s['total']:,.2f}")
 
         if unmapped:
             st.divider()
