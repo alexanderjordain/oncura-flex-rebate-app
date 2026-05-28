@@ -18,21 +18,47 @@ clinics_master = master.get("clinics", [])
 # ── month picker ──────────────────────────────────────────────────────────────
 today = dt.date.today()
 
-def _months_back(n: int) -> dt.date:
-    y, m = today.year, today.month - n
+def _months_relative(n: int) -> dt.date:
+    """First-of-month, n months from today (negative = past, positive = future)."""
+    y, m = today.year, today.month + n
     while m < 1:
-        m += 12
-        y -= 1
+        m += 12; y -= 1
+    while m > 12:
+        m -= 12; y += 1
     return dt.date(y, m, 1)
 
-month_options = [_months_back(i) for i in range(0, 24)]  # last 24 months
-prev_month = _months_back(1)
+# Default range: 24 months back through 12 months forward
+default_options = [_months_relative(i) for i in range(-23, 13)]
+extras = st.session_state.setdefault("cycle_extra_months", [])
+all_options = sorted(set(default_options + extras), reverse=True)  # newest first
+
+prev_month = _months_relative(-1)
+if "cycle_months" not in st.session_state:
+    st.session_state["cycle_months"] = [prev_month]
+
 selected = st.multiselect(
     "Cycle period — pick one or more months (chronological in the report)",
-    options=month_options,
-    default=[prev_month],
+    options=all_options,
     format_func=lambda d: d.strftime("%B %Y"),
+    key="cycle_months",
 )
+
+with st.expander("Need a month outside the default range? Add a specific one."):
+    cc1, cc2, cc3 = st.columns([1, 1, 1])
+    yr = cc1.number_input("Year", value=today.year, min_value=2000, max_value=2099, step=1, key="add_yr")
+    mo = cc2.selectbox("Month", list(range(1, 13)), index=today.month - 1,
+                       format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
+                       key="add_mo")
+    if cc3.button("Add to picker", key="add_month_btn"):
+        d = dt.date(int(yr), int(mo), 1)
+        if d not in extras:
+            extras.append(d)
+        current = list(st.session_state.get("cycle_months", []))
+        if d not in current:
+            current.append(d)
+            st.session_state["cycle_months"] = current
+        st.rerun()
+
 if not selected:
     st.info("Select at least one month.")
     st.stop()
