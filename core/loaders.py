@@ -43,9 +43,16 @@ def name_map():
     return data
 
 
+@st.cache_data(show_spinner=False)
+def service_prices():
+    data, _ = _load("service_prices.json", {"services": {}, "stat_fee": 125.0})
+    return data
+
+
 def clear_caches():
     rebate_master.clear()
     flex_master.clear()
     item_map.clear()
     config.clear()
     name_map.clear()
+    service_prices.clear()

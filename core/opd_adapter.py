@@ -58,10 +58,13 @@ _ODATA_FIELDS = {
 
 
 def detect_profile(headers) -> str:
-    """'odata' when this looks like the ConsultService feed, else 'generic'."""
+    """'odata' = ConsultService feed; 'case_grid' = OPD consult-grid export (Case ID / Services
+    string per case, no per-line prices — needs a price table); else 'generic'."""
     hset = {str(h).strip() for h in headers}
     if "ServiceName" in hset and "ScanEligible" in hset:
         return "odata"
+    if {"Case ID", "Services", "Clinic"}.issubset(hset):
+        return "case_grid"
     return "generic"
 
 
@@ -151,18 +154,23 @@ def classify_odata(service_name, trent_code, scan_eligible, item_map: dict) -> s
     return "other"
 
 
-def normalize(df: pd.DataFrame, mapping: dict | None, item_map: dict, profile: str | None = None) -> pd.DataFrame:
+def normalize(df: pd.DataFrame, mapping: dict | None, item_map: dict, profile: str | None = None,
+              price_table: dict | None = None) -> pd.DataFrame:
     """Apply the column mapping + classification to a raw export DataFrame.
 
     mapping: normalized field -> source column. If None, auto-detected.
     item_map: contents of data/opd_item_map.json.
-    profile: 'odata' | 'generic' | None (auto-detect).
+    profile: 'odata' | 'case_grid' | 'generic' | None (auto-detect).
+    price_table: contents of data/service_prices.json — required for the case_grid profile.
     """
     if profile is None:
         profile = detect_profile(list(df.columns))
 
     if profile == "odata":
         return _normalize_odata(df, item_map)
+
+    if profile == "case_grid":
+        return _normalize_case_grid(df, item_map, price_table or {})
 
     if mapping is None:
         mapping = auto_detect_mapping(list(df.columns))
@@ -211,6 +219,60 @@ def _normalize_odata(df: pd.DataFrame, item_map: dict) -> pd.DataFrame:
     for col, src in _ODATA_FEED_SOURCE.items():
         out[col] = df[src].map(_coerce_amount) if src in df else 0.0
     return out[NORM_COLUMNS + FEED_COLUMNS]
+
+
+def parse_case_grid_services(s) -> list:
+    """Split the comma-joined Services string into individual, whitespace-normalized services."""
+    if s is None or (isinstance(s, float) and pd.isna(s)):
+        return []
+    out = []
+    for part in str(s).split(","):
+        norm = " ".join(part.split())
+        if norm:
+            out.append(norm)
+    return out
+
+
+def _normalize_case_grid(df: pd.DataFrame, item_map: dict, price_table: dict) -> pd.DataFrame:
+    """Expand each case row into one normalized line per service in the Services string.
+
+    Prices and categories come from the flat price_table (data/service_prices.json). Cases with
+    Priority='STAT' get an implicit STAT line at the configured stat_fee, unless a STAT service
+    is already present in the row (avoids double-counting)."""
+    services_lut = price_table.get("services", {}) if isinstance(price_table, dict) else {}
+    norm_lut = {" ".join(str(k).split()).lower(): v for k, v in services_lut.items()}
+    stat_fee = float(price_table.get("stat_fee", 125.0) if isinstance(price_table, dict) else 125.0)
+
+    rows = []
+    for _, r in df.iterrows():
+        clinic = r.get("Clinic", "")
+        case_id = r.get("Case ID", "")
+        date_raw = r.get("Finalized Date") if "Finalized Date" in df.columns else r.get("Submitted")
+        priority = str(r.get("Priority", "")).strip().upper()
+        services = parse_case_grid_services(r.get("Services", ""))
+        has_stat = any("stat" in s.lower() for s in services)
+        if priority == "STAT" and not has_stat:
+            services = services + ["STAT Sonographer Assistance Fee"]
+        for svc in services:
+            entry = norm_lut.get(svc.lower(), {})
+            price = float(entry.get("price", 0.0)) if isinstance(entry, dict) else 0.0
+            category = entry.get("category", "other") if isinstance(entry, dict) else "other"
+            # category override: if a STAT line was synthesized for STAT priority, force the fee
+            if svc == "STAT Sonographer Assistance Fee" and price == 0.0:
+                price = stat_fee
+                category = "stat"
+            rows.append({
+                "clinic": str(clinic).strip(),
+                "invoice_id": str(case_id) if case_id is not None else "",
+                "item_code": "",
+                "item_desc": svc,
+                "category": category,
+                "amount": price,
+                "date": _coerce_date(date_raw),
+                "feed_us_finance": 0.0, "feed_us_cash": 0.0,
+                "feed_rad_finance": 0.0, "feed_rad_cash": 0.0,
+            })
+    return pd.DataFrame(rows, columns=NORM_COLUMNS + FEED_COLUMNS)
 
 
 def read_upload(file) -> pd.DataFrame:
@@ -307,3 +369,24 @@ def flex_activity_from_invoices(df: pd.DataFrame, start=None, end=None, flex_onl
     work = pd.DataFrame({"clinic": df[clinic_col].astype(str).str.strip().str.lower(), "activity": activity})
     work = work[mask]
     return work.groupby("clinic")["activity"].sum().round(2).to_dict()
+
+
+def flex_activity_from_case_grid(df: pd.DataFrame, price_table: dict, start=None, end=None) -> dict:
+    """Per-clinic FLEX activity from the case-grid export: sum of priced services per case
+    (including the STAT $125 add-on for STAT-priority cases) over [start, end].
+
+    Returns {clinic_name_lower: activity}.
+    """
+    norm = _normalize_case_grid(df, item_map={}, price_table=price_table)
+    if norm.empty:
+        return {}
+    mask = pd.Series(True, index=norm.index)
+    if start is not None or end is not None:
+        dates = pd.to_datetime(norm["date"], errors="coerce")
+        if start is not None:
+            mask &= dates >= pd.Timestamp(start)
+        if end is not None:
+            mask &= dates <= pd.Timestamp(end)
+    sub = norm[mask]
+    sub = sub.assign(clinic_lower=sub["clinic"].str.lower())
+    return sub.groupby("clinic_lower")["amount"].sum().round(2).to_dict()

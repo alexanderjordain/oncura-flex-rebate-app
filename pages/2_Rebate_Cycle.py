@@ -36,8 +36,12 @@ if raw is None:
 
 profile = opd_adapter.detect_profile(list(raw.columns))
 st.write(f"Detected source profile: **{profile}**  ·  {len(raw):,} rows  ·  columns: {list(raw.columns)[:12]}")
+if profile == "case_grid":
+    st.info("Case-grid profile: per-case Services strings priced from the flat price list "
+            "(no per-line dollars in the export). STAT priority adds a $125 line.")
 
-norm = opd_adapter.normalize(raw, None, imap, profile=profile)
+price_table = loaders.service_prices() if profile == "case_grid" else None
+norm = opd_adapter.normalize(raw, None, imap, profile=profile, price_table=price_table)
 with st.expander("Category breakdown (normalized lines)"):
     st.write(norm["category"].value_counts().to_dict())
 

@@ -31,16 +31,25 @@ st.write(
     f"clinics with a quarter-end this month: **{len(group)}**"
 )
 
-up = st.file_uploader("OPD Invoices export covering the quarter (CSV/XLSX)", type=["csv", "xlsx", "xls"])
+up = st.file_uploader("OPD activity export covering the quarter — Invoices OR case-grid (CSV/XLSX)",
+                      type=["csv", "xlsx", "xls"])
 sales_class = st.text_input("Sales class for the unused invoice", value="03-Telemedicine")
 
 if up is None:
-    st.info("Upload the OPD Invoices export to compute unused / overage.")
+    st.info("Upload an OPD activity export (Invoices tab, or the consult-grid export) for the quarter.")
     st.stop()
 
 raw = opd_adapter.read_upload(up)
-activity = opd_adapter.flex_activity_from_invoices(raw, start=win_start, end=win_end)
-st.caption(f"Parsed activity for {len(activity)} clinics from the invoice export.")
+profile = opd_adapter.detect_profile(list(raw.columns))
+if profile == "case_grid":
+    st.info("Case-grid profile: activity = sum of priced services per case from the flat price list "
+            "(no AdminFee). STAT priority adds $125.")
+    activity = opd_adapter.flex_activity_from_case_grid(
+        raw, loaders.service_prices(), start=win_start, end=win_end,
+    )
+else:
+    activity = opd_adapter.flex_activity_from_invoices(raw, start=win_start, end=win_end)
+st.caption(f"Parsed activity for {len(activity)} clinics from the {profile} export.")
 
 recap = flex_unused.compute_recapture(clinics, activity, year, month)
 rdf = pd.DataFrame(recap)
