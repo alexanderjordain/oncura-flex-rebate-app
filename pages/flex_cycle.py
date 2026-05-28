@@ -37,12 +37,20 @@ with tab_remit:
     session_adds = st.session_state.setdefault("name_map_additions", {})
     nm = {**nm_base, "map": {**nm_base.get("map", {}), **session_adds}}
 
-    c1, c2, c3 = st.columns(3)
-    company = c1.selectbox("Finance company", ["NewLane", "OnePlace", "GreatAmerica"], key="remit_company")
-    pay_date = c2.date_input("Payment date", value=dt.date.today(), key="remit_pay_date")
-    inv_date = c3.date_input("Invoice date (scan packages)", value=dt.date.today(), key="remit_inv_date")
-    start_inv = int(st.number_input("Starting scan Invoice No (QBO max + 1)",
-                                    value=49000, step=1, key="remit_start_inv"))
+    mc1, mc2 = st.columns([1, 2])
+    company = mc1.selectbox("Finance company", ["NewLane", "OnePlace", "GreatAmerica"], key="remit_company")
+    pay_date = mc2.date_input("Payment date", value=dt.date.today(), key="remit_pay_date")
+
+    if company == "GreatAmerica":
+        # GA is all-flex (Maintenance only) -> no scan invoices, so Invoice Date and the
+        # scan Invoice-No starting ref are unused. Hide them to declutter the form.
+        inv_date = pay_date
+        start_inv = 49000
+    else:
+        c1, c2 = st.columns(2)
+        inv_date = c1.date_input("Invoice date (scan packages)", value=dt.date.today(), key="remit_inv_date")
+        start_inv = int(c2.number_input("Starting scan Invoice No (QBO max + 1)",
+                                        value=49000, step=1, key="remit_start_inv"))
 
     meta = flex_finance.COMPANY_META.get(company, {})
     st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
