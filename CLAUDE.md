@@ -132,5 +132,6 @@ streamlit run app.py
 ## Repo + deploy
 
 - **Repo:** `github.com/alexanderjordain/oncura-flex-rebate-app` (public)
-- **Cloud:** `share.streamlit.io` connected to `main`
-- **Personal account** owns the repo; intended future move to Oncura GitHub org (Alex hasn't completed org invite acceptance as of 2026-05-28)
+- **Live app:** **https://oncura-programs.streamlit.app/** — Streamlit Cloud, auto-redeploys from `main` (~1 min)
+- **Local:** `streamlit run app.py` after `pip install -r requirements.txt`. Set `FLEXREBATE_LOCAL=1` to bypass the password gate during dev.
+- **Personal account** owns the repo and the Cloud workspace; intended future move to Oncura GitHub org once org-invite acceptance completes.
