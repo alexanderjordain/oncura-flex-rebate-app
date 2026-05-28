@@ -109,6 +109,10 @@ a, a:visited { color:var(--blue-deep); text-decoration-color:var(--amber); }
 
 /* top header bar -> white with a hairline (echoes the dashboard's white header) */
 [data-testid="stHeader"] { background: var(--surface) !important; border-bottom:1px solid var(--line); }
+
+/* breathing room between st.tabs labels */
+[data-baseweb="tab-list"] { gap: 2.25rem; }
+button[data-baseweb="tab"] { padding-left: .25rem; padding-right: .25rem; }
 [data-testid="stDecoration"] { display:none; }
 footer { visibility:hidden; }
 
