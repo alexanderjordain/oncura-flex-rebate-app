@@ -1,0 +1,136 @@
+# CLAUDE.md — assistant context for the FLEX + Rebate Ledger
+
+## What this app is
+
+A Streamlit app that runs the accounting workflows for Oncura's **FLEX** (telemedicine
+financing) and **Rebate** programs. Generates SaaSAnt import files for QBO — no direct QBO
+writes. The app's design driver is **audit-friendliness** (Marty's stated requirement) and
+**works without the original author** (single-point-of-failure mitigation).
+
+## Architecture (where things live)
+
+```
+app.py                        # entry: auth + theme + st.navigation
+core/
+  auth.py                     # password gate (single shared) + optional roles
+  ui.py                       # theme/CSS, page header, sidebar logo
+  loaders.py                  # cached loaders for the JSON masters
+  store.py                    # JSON persistence (GitHub Contents API + local file)
+  opd_adapter.py              # OPD ingest: 3 profiles (odata, case_grid, generic) + invoices
+  rebate_calc.py              # rate-based vs feed-based rebate calc w/ variance
+  rebate_report.py            # multi-tab xlsx report builder for the cycle
+  flex_credits.py             # SaaSAnt credit-memo import (SOP-5)
+  flex_unused.py              # quarter-end recapture (SOP-5) + overage detection
+  flex_overage.py             # overage routing + direct-bill + partner submission (SOP-6, SOP-12)
+  flex_finance.py             # finance-co remittance -> SaaSAnt imports (SOP-9, SOP-10)
+  saasant.py                  # shared SaaSAnt helpers (unique refs, last-day, xlsx bytes)
+data/
+  rebate_master.json          # 87 rebate-program clinics + rates
+  flex_master.json            # 82 FLEX clinics + thresholds + contract IDs + calendar group
+  name_map.json               # legal name -> QB payee (used for remittance Customer mapping)
+  service_prices.json         # 50 services with {price, category} from comp-app STD_PRICES
+  opd_item_map.json           # category classification rules per OPD profile
+  config.json                 # rates, calendar groups, overage routing, finance co labels
+pages/
+  home.py                     # status dashboard
+  rebate_master.py            # edit clinics + rates
+  rebate_cycle.py             # multi-month cycle -> multi-tab xlsx report
+  flex_cycle.py               # 3-tab wizard: Remittance / Credits / Unused+Overage
+scripts/
+  build_rebate_master.py      # seed rebate_master.json from Rebate Accounts Copy.xlsx
+  build_flex_master.py        # seed flex_master.json from Flex Master List.xlsx
+  build_name_map.py           # seed name_map from ScanPackage + FlexMaster
+  make_mock_opd.py            # generate mock OPD CSV for demo
+  merge_name_map.py           # bulk-add legal->QB pairs (rerunnable)
+  merge_flex_names.py         # bulk-add OnePlace flex clinic mappings
+assets/
+  oncura_logo.png             # shown via st.logo() in the sidebar
+.streamlit/
+  config.toml                 # theme (committed)
+  secrets.toml.example        # template (real secrets.toml is gitignored)
+```
+
+## SOPs implemented
+
+Source: `OneDrive\...\Oncura_Accounting_Master_Reference-5-28-26.docx` (CFO Marty McCutchen).
+
+| SOP | Title | Status |
+|---|---|---|
+| Accounting SOP-5 | FLEX Credit Memo Import | ✓ `flex_credits.py` + FLEX Cycle stage 2 |
+| Accounting SOP-6 | FLEX Overage Billing | ✓ `flex_overage.py` direct-bill flow |
+| Accounting SOP-12 | FLEX Overage — Internal Process | ✓ `flex_overage.py` routing + cutoff + credit offset |
+| Cash SOP-9 | FLEX Finance Co Payment Import | ✓ `flex_finance.py` GA path |
+| Cash SOP-10 | NewLane Pass-Through | ✓ `flex_finance.py` by-cents split + scan linkage |
+| Accounting SOP-10 | Catch-up Credit Memo Application | ✓ via FLEX Cycle stage 2 picking past months |
+| Accounting SOP-11 | Reconciliation | output computed (recapture). QBO un-apply/re-apply is manual. |
+| Accounting SOP-13/14 | Multi-clinic contracts | **GAP** — flex_master doesn't model parent contracts. See "Known gaps" below. |
+| Accounting SOP-15 | Account Locking | OPD/QBO side, out of app scope. |
+
+## Key decisions (don't re-litigate without reading the rationale)
+
+- **Self-funded rads rebate = 2%** (matches OPD feed `RadCash = RadFin/2`). Decided 2026-05-26 by Alex. Per-clinic editable in Rebate Master.
+- **STAT priority adds an implicit $125** when no STAT service is in the case row. No admin fees.
+- **OPD prices are flat across all clinics** (no per-clinic discounts modeled). From comp-app's `STD_PRICES`.
+- **OnePlace flex contracts strip the leading zero** in the Ref No / OPDAdd, but scan contracts keep all leading zeros — matches the SaaSAnt templates.
+- **NewLane + OnePlace remittances split by cents** (whole-dollar = scan, non-round = flex). GA = all flex.
+- **Unique `Ref No (Receive Payment No)` per row is mandatory** — duplicate refs collapse all rows onto the first customer in SaaSAnt (the GA bug). Every builder enforces this via `saasant.assert_unique_refs`.
+- **Direct-bill overage invoices get VOIDED after sending** (SOP-6). The app generates the invoice; voiding is a manual QBO step. The page surfaces this as coaching.
+- **No refunds on FLEX overpayments** (SOP-12, Marty policy). Apply to future overages.
+- **The app generates files; humans approve and upload.** Third-party isolation. No direct QBO writes.
+
+## Persistence model (important for handoff)
+
+`core/store.py` implements a dual-path JSON store:
+- **GitHub Contents API** when `GITHUB_TOKEN` is set in `st.secrets` (Cloud) — committed back to the repo, durable for everyone.
+- **Local file** otherwise — survives restarts on the same machine.
+
+Rule: token present → GitHub is the writable source of truth; no token → local file is. This prevents the "saved locally but reload pulls public GitHub copy" shadow bug.
+
+All masters live in `data/*.json` and are versioned with the code. Edit via the UI (Rebate Master) or by rerunning the seed scripts. The interactive name-resolver in FLEX Cycle stage 1 commits new `legal -> QB` mappings into `name_map.json` automatically.
+
+## Adding a new finance company
+
+1. Add to `flex_finance.COMPANY_META` with `flex_label`, `scan_label`, `bank_feed`.
+2. Update `make_ref_no` if its Ref No format differs.
+3. Update `guess_columns` if its remittance header names differ.
+4. Update `route_overage` config in `data/config.json` `flex.overage.finance_partner_handles` — `true` if they handle overages, `false` if they decline.
+5. The split logic in `process_remittance` is already by_cents — confirm that matches.
+
+## Adding a new OPD export shape
+
+1. Make `opd_adapter.detect_profile` return a new profile name when its headers are recognized.
+2. Implement `_normalize_<profile>(df, ...)` returning the standard schema (`NORM_COLUMNS + FEED_COLUMNS`).
+3. Route in `opd_adapter.normalize`.
+4. If it's used for FLEX activity, add `flex_activity_from_<profile>`.
+
+## Auth
+
+Single shared password (`APP_PASSWORD` in secrets) → full access. Optional `[roles]` block can split permissions (alex=admin, tanya=operator, etc.) but we don't use it currently.
+
+No-secrets fallback grants admin ONLY when `FLEXREBATE_LOCAL=1` env var is set — so a misconfigured public Cloud URL never opens admin to the world.
+
+## Known gaps / next priorities
+
+1. **Audit manifest (task #7, deferred):** per-cycle immutable record (timestamp, source file hash, params, totals, output hash, approver). The audit-friendly feature Marty cited as decisive. Should be wired into `flex_overage`, `flex_credits`, `flex_unused`, `rebate_calc` outputs and persisted via `store`.
+2. **Multi-clinic contract modeling (SOP-13/14):** River Trail, PR-vets, Mohnacky etc. are treated as independent clinics. Need `parent_contract_id` on flex_master clinics + cross-clinic reallocation logic.
+3. **OPD live API:** today is file upload only. Xavier Vera's warehouse system (`oncura-partners-warehouse-system`) ingests OPD via OQL exports — when his Mendix sync stabilizes, swap `opd_adapter` to fetch from that warehouse API instead of CSV upload. Adapter is designed so this is a small change.
+4. **`*Discounted*` service variants** in OPD case-grid fall to `$0/other` — should either be added to `service_prices.json` or have a derivation rule (base × discount %).
+5. **Rancho Pet Cure conflict** in `name_map.json`: currently mapped to "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital" (user's live resolver entry), but the earlier flex template mapped it to "Baseline Animal Hospital". Confirm.
+
+## Running
+
+```bash
+# Local
+streamlit run app.py
+# bypass password for local dev: set env FLEXREBATE_LOCAL=1 first
+
+# Cloud
+# Push to main -> Streamlit Cloud auto-redeploys from github.com/alexanderjordain/oncura-flex-rebate-app
+# Required secrets on Cloud: APP_PASSWORD; optional GITHUB_TOKEN for master-edit persistence.
+```
+
+## Repo + deploy
+
+- **Repo:** `github.com/alexanderjordain/oncura-flex-rebate-app` (public)
+- **Cloud:** `share.streamlit.io` connected to `main`
+- **Personal account** owns the repo; intended future move to Oncura GitHub org (Alex hasn't completed org invite acceptance as of 2026-05-28)

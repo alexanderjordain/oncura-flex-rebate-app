@@ -1,6 +1,8 @@
-streamlit
-pandas
-openpyxl
-xlrd
-requests
-rapidfuzz
+# Pinned for reproducibility — audit-friendly deploys (SOP-aligned).
+# Bump deliberately and re-test locally before pushing.
+streamlit==1.56.0
+pandas==3.0.1
+openpyxl==3.1.5
+xlrd==2.0.2
+requests==2.32.5
+rapidfuzz==3.14.3

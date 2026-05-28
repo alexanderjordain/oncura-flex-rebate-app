@@ -8,7 +8,10 @@ import datetime as dt
 
 import streamlit as st
 
-from core import flex_credits, flex_finance, flex_unused, loaders, opd_adapter, saasant, store, ui
+from core import (
+    flex_credits, flex_finance, flex_overage, flex_unused,
+    loaders, opd_adapter, saasant, store, ui,
+)
 
 ui.header("FLEX Cycle",
           "Walks the monthly process end-to-end: remittances → credits → unused / overage.",
@@ -241,13 +244,100 @@ with tab_recap:
                                    type="primary", key="recap_dl_unused")
                 st.caption(f"Next available invoice number: {next_ref}")
 
+            # ── Overage billing (Accounting SOP-6 + SOP-12) ───────────────────
             overs = flex_unused.overage_rows(recap)
             if overs:
-                st.subheader(f"Overage clinics — Tanya bills separately (SOP-5): {len(overs)}")
-                odf = pd.DataFrame(overs)[["clinic_name", "qb_name", "finance_company",
-                                           "quarterly_threshold", "quarter_activity", "overage"]]
-                st.dataframe(odf, use_container_width=True)
-                st.download_button("Download overage list (xlsx)",
-                                   saasant.to_xlsx_bytes(odf, "Overage"),
-                                   file_name=f"Overage_{dt.date(2000,rec_month,1):%b}_{rec_year}.xlsx",
-                                   key="recap_dl_overage")
+                st.divider()
+                st.subheader(f"Overage billing — {len(overs)} clinic(s) over threshold")
+                st.caption("SOP-6 + SOP-12. Per-overage routing: One Place handles them if "
+                           "submitted before their cutoff (typically the 5th of the following "
+                           "month). Great America and New Lane have opted out — bill directly. "
+                           "Self-Financed clinics: bill directly. Missed cutoff: bill directly.")
+
+                cfg_all = loaders.config()
+                cutoff = flex_overage.cutoff_date(rec_year, rec_month,
+                    int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)))
+                today_d = dt.date.today()
+                st.write(f"Finance partner cutoff: **{cutoff:%b %d %Y}**  ·  today: **{today_d:%b %d %Y}**  "
+                         + (":green[on time]" if today_d <= cutoff else ":red[CUTOFF MISSED — all routes to direct bill]"))
+
+                # Pre-existing credit offsets per clinic (operator-entered)
+                with st.expander("Pre-existing credit offsets (SOP-12) — optional"):
+                    st.caption("If a clinic has an unapplied credit balance in QBO, enter it here; "
+                               "the app applies it to the overage and only bills the remainder.")
+                    offset_df = pd.DataFrame([
+                        {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
+                         "Gross overage": round(float(o["overage"]), 2),
+                         "Pre-existing credit": 0.0}
+                        for o in overs
+                    ])
+                    edited_offsets = st.data_editor(
+                        offset_df, hide_index=True, use_container_width=True,
+                        disabled=["Clinic (QB)", "Gross overage"],
+                        key="overage_offsets",
+                    )
+                    credit_offsets = {r["Clinic (QB)"]: float(r["Pre-existing credit"] or 0)
+                                      for _, r in edited_offsets.iterrows()}
+
+                # Route + annotate
+                annotated = flex_overage.annotate_overages(
+                    overs, rec_year, rec_month, today_d, cfg_all, credit_offsets,
+                )
+                adf = pd.DataFrame(annotated)[[
+                    "clinic_name", "qb_name", "finance_company", "quarterly_threshold",
+                    "quarter_activity", "overage", "credit_applied", "net_overage",
+                    "route", "escalation_flag",
+                ]]
+                st.dataframe(adf, use_container_width=True, height=260)
+
+                # Escalation flags
+                flagged = [r for r in annotated if r.get("escalation_flag")]
+                if flagged:
+                    names = ", ".join(r["clinic_name"] for r in flagged)
+                    st.warning(f"⚠ Escalation clinic(s) in this batch: **{names}** — "
+                               "communication may need to come from Marty / Accounting Manager (SOP-12).")
+
+                # Direct-bill SaaSAnt invoice import (route = direct or missed_cutoff)
+                direct_count = sum(1 for r in annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
+                if direct_count:
+                    direct_start = int(st.number_input(
+                        "Starting Invoice No for direct-bill overage invoices",
+                        value=recap_start + 1000, step=1, key="overage_direct_start"))
+                    didf, direct_next = flex_overage.build_direct_invoice_import(
+                        annotated, rec_year, rec_month, direct_start, sales_class, cfg_all,
+                    )
+                    st.markdown("**Direct-bill overage invoices (SaaSAnt import)**")
+                    st.markdown("""
+- Each row will be a QBO invoice. **Void each invoice in QBO immediately after sending** — the
+  revenue was already captured by the OPD invoices, so leaving these open overstates AR (SOP-6).
+- Send the clinic an **Authorize.net payment link** for the amount, or email the QBO invoice PDF
+  if they require a formal invoice.
+- When payment arrives, apply it to zero out the clinic's flex account balance.
+- **No refunds** per SOP-12 — even large overpayments stay on account for future overages
+  (Marty's explicit approval required for exceptions).
+""")
+                    st.dataframe(didf, use_container_width=True, height=200)
+                    st.download_button(
+                        "Download direct-bill overage invoices (xlsx)",
+                        saasant.to_xlsx_bytes(didf, "OverageDirect"),
+                        file_name=f"OverageDirect_{dt.date(2000,rec_month,1):%b}_{rec_year}.xlsx",
+                        type="primary", key="recap_dl_overage_direct",
+                    )
+                    st.caption(f"Next available invoice number after this batch: {direct_next}")
+
+                # Finance partner submission list (route = partner)
+                partner_rows = [r for r in annotated if r["route"] == "partner" and r["net_overage"] > 0]
+                if partner_rows:
+                    pdf = flex_overage.build_partner_submission(annotated, rec_year, rec_month)
+                    st.markdown("**Finance partner submission (One Place)**")
+                    st.markdown(f"""
+- Submit this list to the finance partner **before {cutoff:%B %d, %Y}** (5th of next month).
+- Confirm receipt. Track on FLEX Master with expected payment 5–6 months out.
+""")
+                    st.dataframe(pdf, use_container_width=True)
+                    st.download_button(
+                        "Download partner submission list (xlsx)",
+                        saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission"),
+                        file_name=f"OnePlaceOverage_{dt.date(2000,rec_month,1):%b}_{rec_year}.xlsx",
+                        key="recap_dl_overage_partner",
+                    )

@@ -135,6 +135,10 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
                 "unused": unused,
                 "overage": overage,
                 "activity_match": q,
+                # contract IDs needed for overage routing / partner submission (SOP-6, SOP-12)
+                "contract_greatamerica": c.get("contract_greatamerica"),
+                "contract_oneplace": c.get("contract_oneplace"),
+                "contract_newlane": c.get("contract_newlane"),
             }
         )
     return rows

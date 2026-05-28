@@ -38,6 +38,20 @@
       "flex_contract_prefix": "04",
       "contract_digit_length": 5,
       "note": "Contract numbers beginning '04' (5 digits) = FLEX payments; other 5-digit = scan package payments."
+    },
+    "overage": {
+      "note": "SOP-6 + SOP-12 routing. Direct-bill invoices get VOIDED immediately after sending (revenue already captured by OPD invoices).",
+      "finance_partner_cutoff_day": 5,
+      "finance_partner_handles": {
+        "OnePlace": true,
+        "GreatAmerica": false,
+        "NewLane": false,
+        "SelfFinanced": false
+      },
+      "direct_invoice_item": "Telemedicine Overage",
+      "direct_invoice_memo_template": "Telemedicine Overages — {quarter}",
+      "no_refund_policy": "DO NOT issue refunds to Flex accounts (even large overpayments). Apply to future overages. Marty approval required for exceptions.",
+      "escalation_clinics": ["Luv-N-Care"]
     }
   }
 }
