@@ -10,7 +10,7 @@ import streamlit as st
 
 from core import (
     accounting_handoff, flex_credits, flex_finance, flex_overage, flex_unused,
-    loaders, opd_adapter, saasant, store, ui,
+    ledger, loaders, opd_adapter, saasant, store, ui,
 )
 
 ui.header("FLEX Cycle",
@@ -64,6 +64,25 @@ with tab_remit:
     if up is None:
         st.info("Upload the finance company's remittance.")
     else:
+        file_bytes = up.getvalue()
+        prior_file = ledger.check_file_seen(file_bytes)
+        if prior_file:
+            st.error(
+                f"**This exact file was already processed on "
+                f"{prior_file.get('uploaded_at', '?')[:10]}** "
+                f"({prior_file.get('row_count', '?')} rows, company "
+                f"{prior_file.get('company', '?')}, filename "
+                f"`{prior_file.get('filename', '?')}`). Re-uploading would risk "
+                f"double-posting payments to QBO. Row-level dedup will still skip already-imported "
+                f"payments below — but verify before downloading."
+            )
+            if not st.checkbox(
+                "I've verified this is intentional (e.g., recovering from a partial earlier import). "
+                "Proceed with row-level dedup.",
+                key="remit_file_override",
+            ):
+                st.stop()
+
         raw = opd_adapter.read_remittance(up)
         cols = list(raw.columns)
         st.write(f"{len(raw):,} rows.")
@@ -80,8 +99,70 @@ with tab_remit:
             payment_date=pay_date, invoice_date=inv_date, start_invoice_no=start_inv,
             name_map=nm, split=split,
         )
+
+        # ── Row-level dedup against the processed-payments ledger ──────────────
+        def _row_payment_dicts(df, kind):
+            if df is None or df.empty or id_col not in df.columns:
+                return []
+            out = []
+            for i in range(len(df)):
+                amt_val = df["Amount"].iloc[i] if "Amount" in df.columns else df[amount_col].iloc[i]
+                out.append({
+                    "kind": kind,
+                    "contract": df[id_col].iloc[i],
+                    "qb_customer": df["Customer"].iloc[i] if "Customer" in df.columns else "",
+                    "payment_date": pay_date,
+                    "amount": amt_val,
+                })
+            return out
+
+        flex_rows = _row_payment_dicts(res["flex_payments"], "flex")
+        scan_rows = _row_payment_dicts(res["scan_payments"], "scan")
+        all_rows = flex_rows + scan_rows
+        all_fps = [ledger.fingerprint(company, r["kind"], r["contract"], r["payment_date"], r["amount"])
+                   for r in all_rows]
+        seen_fps = ledger.check_payments_seen(all_fps)
+
+        if seen_fps:
+            skipped_flex = sum(1 for fp, r in zip(all_fps[:len(flex_rows)], flex_rows) if fp in seen_fps)
+            skipped_scan = sum(1 for fp, r in zip(all_fps[len(flex_rows):], scan_rows) if fp in seen_fps)
+            st.warning(
+                f"**Ledger already contains {len(seen_fps)} of these payments** "
+                f"(flex: {skipped_flex}, scan: {skipped_scan}). They've been removed from the "
+                f"downloads below so you don't double-post."
+            )
+            # Filter the output dataframes in-place
+            keep_flex = [i for i, fp in enumerate(all_fps[:len(flex_rows)]) if fp not in seen_fps]
+            keep_scan = [i for i, fp in enumerate(all_fps[len(flex_rows):]) if fp not in seen_fps]
+            if not res["flex_payments"].empty:
+                res["flex_payments"] = res["flex_payments"].iloc[keep_flex].reset_index(drop=True)
+            if not res["scan_payments"].empty:
+                res["scan_payments"] = res["scan_payments"].iloc[keep_scan].reset_index(drop=True)
+                # Scan invoices are 1:1 with scan payments by position — filter together
+                if not res["scan_invoices"].empty:
+                    res["scan_invoices"] = res["scan_invoices"].iloc[keep_scan].reset_index(drop=True)
+            # Rebuild summary metrics from the filtered frames
+            res["summary"]["flex_count"] = len(res["flex_payments"])
+            res["summary"]["scan_count"] = len(res["scan_payments"])
+            res["summary"]["flex_total"] = round(float(res["flex_payments"]["Amount"].sum()), 2) if not res["flex_payments"].empty else 0.0
+            res["summary"]["scan_total"] = round(float(res["scan_payments"]["Amount"].sum()), 2) if not res["scan_payments"].empty else 0.0
+            res["summary"]["total"] = round(res["summary"]["flex_total"] + res["summary"]["scan_total"], 2)
+
         s = res["summary"]
         unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
+
+        # ── Intra-file total check: raw file rows/amounts vs. what the app is importing
+        raw_amounts = raw[amount_col].map(opd_adapter._coerce_amount)
+        raw_total = round(float(raw_amounts.sum()), 2)
+        raw_nonzero = int((raw_amounts != 0).sum())
+        imported_total_before_dedup = raw_total  # informational only; before dedup filter
+        diff = round(raw_total - s["total"], 2)
+        if abs(diff) > 0.01 or raw_nonzero != (s["flex_count"] + s["scan_count"]):
+            st.caption(
+                f"File: {raw_nonzero} non-zero rows totalling **${raw_total:,.2f}**  ·  "
+                f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **${s['total']:,.2f}**  ·  "
+                f"Δ **${diff:,.2f}** (rows dropped: blank IDs, zero amounts, or already in the ledger)"
+            )
 
         if s["scan_count"] > 0:
             m1, m2, m3, m4 = st.columns(4)
@@ -169,6 +250,39 @@ in QBO first. Run **one SaaSAnt job at a time** — wait for each to complete be
 the next. After all uploads, the combined total should match the bank-feed deposit.
 """
         )
+
+        # ── Mark batch processed: write to ledger so future re-uploads are caught ────
+        st.divider()
+        st.markdown("### Confirm this batch has been imported to QBO")
+        st.caption(
+            "Click **after** you've uploaded the files above to SaaSAnt. This records the "
+            "payments in the dedup ledger so re-uploading this remittance later won't double-post."
+        )
+        rows_to_record = [
+            r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
+        ]
+        ack_disabled = len(rows_to_record) == 0
+        if ack_disabled:
+            st.info("Nothing new to record (all rows were already in the ledger).")
+        elif st.button(
+            f"Mark {len(rows_to_record)} payment(s) as imported",
+            key="remit_mark_processed", type="primary",
+        ):
+            ok, added, msg = ledger.record_batch(
+                file_content=file_bytes,
+                filename=up.name,
+                company=company,
+                payments=rows_to_record,
+                note=f"Stage 1 / {company} / pay_date={pay_date}",
+            )
+            if ok:
+                st.success(f"Recorded {added} payment(s) in the ledger. {msg}")
+            else:
+                st.warning(
+                    f"Recorded {added} locally (no GitHub commit). On Cloud, this means "
+                    "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
+                )
+
         subj, body = accounting_handoff.finance_payment_email(
             company=company, pay_date=pay_date, summary=s, has_scan=s["scan_count"] > 0,
         )
@@ -178,25 +292,101 @@ the next. After all uploads, the combined total should match the bank-feed depos
 # STAGE 2 — Monthly Credit Memos
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_credits:
-    st.caption("Generates the SaasAnt credit-memo import (item Flex-credits, class 03-Telemedicine). "
-               "FLEX is closed to new entrants — the active list only shrinks.")
+    st.caption(
+        "Generates one credit memo per FLEX payment received last month (SaasAnt format: item Flex-credits, "
+        "class 03-Telemedicine). Multi-payment months produce multi-credit batches; clinics that didn't pay "
+        "get nothing. Quarter-end reconciliation (Stage 3) trues up against actual usage."
+    )
 
     today = dt.date.today()
-    cc1, cc2, cc3 = st.columns(3)
-    year = cc1.number_input("Year", value=today.year, step=1, key="cred_year")
-    month = cc2.selectbox("Month", list(range(1, 13)), index=today.month - 1,
-                          format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
-                          key="cred_month")
-    start_ref = cc3.number_input("Starting Credit Memo No (from QBO max + 1)",
-                                 value=50000, step=1, key="cred_start_ref")
+    # Default to the previous month — FLEX credits are dated to the prior month's last day
+    default_month = today.month - 1 or 12
+    default_year = today.year if today.month > 1 else today.year - 1
 
-    df, next_ref = flex_credits.build_import(flex_clinics, int(year), int(month), int(start_ref))
+    cc1, cc2, cc3 = st.columns(3)
+    year = int(cc1.number_input("Year", value=default_year, step=1, key="cred_year"))
+    month = int(cc2.selectbox(
+        "Month", list(range(1, 13)), index=default_month - 1,
+        format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
+        key="cred_month",
+    ))
+    start_ref = int(cc3.number_input(
+        "Starting Credit Memo No (from QBO max + 1)",
+        value=50000, step=1, key="cred_start_ref",
+    ))
+    mname = dt.date(2000, month, 1).strftime("%B")
+
+    # ── Pull ledger rows for the target month ──────────────────────────────────
+    payments = ledger.flex_payments_for_month(year, month)
+    df, next_ref, skipped = flex_credits.build_import_from_payments(
+        flex_clinics, payments, year, month, start_ref,
+    )
+
+    # ── Payments Remitted in {Month} panel ─────────────────────────────────────
+    st.markdown(f"### Payments Remitted in {mname} {year}")
+    if not payments:
+        st.warning(
+            f"**No FLEX payments recorded in the ledger for {mname} {year}.** "
+            f"Either Stage 1 hasn't been run for this month yet, or no remittances landed. "
+            f"You can still run the **legacy active-list** mode below if you need to bootstrap."
+        )
+    else:
+        # Per-clinic payment count (so multi-payment clinics show up clearly)
+        from collections import Counter
+        by_qb = Counter()
+        amount_by_qb = {}
+        for p in payments:
+            k = p.get("qb_customer") or p.get("contract") or "?"
+            by_qb[k] += 1
+            amount_by_qb[k] = amount_by_qb.get(k, 0.0) + float(p.get("amount") or 0)
+        multi = {k: n for k, n in by_qb.items() if n > 1}
+        pm1, pm2, pm3 = st.columns(3)
+        pm1.metric("Payments received", len(payments))
+        pm2.metric("Distinct clinics", len(by_qb))
+        pm3.metric("Multi-payment clinics", len(multi))
+        if multi:
+            st.caption(
+                "**Multi-payment clinics this month** (will receive one credit memo per payment): "
+                + ", ".join(f"{k} ({n}×)" for k, n in sorted(multi.items()))
+            )
+
+        # Clinics that ARE active but received NO payment this month
+        paid_keys = {(p.get("qb_customer") or "").strip().lower() for p in payments} | \
+                    {str(p.get("contract") or "").strip() for p in payments}
+        unpaid = []
+        for c in flex_clinics:
+            if not c.get("active") or not (c.get("monthly_credit") or 0) > 0:
+                continue
+            qbn = (c.get("qb_name") or "").strip().lower()
+            contracts = [str(c.get(k) or "").strip() for k in
+                         ("contract_oneplace", "contract_greatamerica", "contract_newlane")]
+            if qbn in paid_keys or any(cv and cv in paid_keys for cv in contracts):
+                continue
+            unpaid.append(c.get("qb_name") or c.get("clinic_name"))
+        if unpaid:
+            with st.expander(f"Active clinics with NO payment in {mname} ({len(unpaid)}) — no credit memo generated"):
+                st.caption("Either they paid ahead in a prior month, are between cycles, or their FLEX program ended.")
+                st.write(unpaid)
+
+    if skipped:
+        with st.expander(f"⚠ Skipped {len(skipped)} payment(s) — no flex_master match"):
+            st.caption(
+                "These payments are in the ledger but don't map to any active flex_master clinic. "
+                "Could be name drift (fix in Rebate Master) or a non-FLEX clinic mis-classified in Stage 1."
+            )
+            import pandas as _pd
+            st.dataframe(_pd.DataFrame(skipped), use_container_width=True)
+
+    # ── Generated credit memos preview ─────────────────────────────────────────
+    st.markdown("### Credit memos to be generated")
     m1, m2 = st.columns(2)
     m1.metric("Credit memos", len(df))
-    m2.metric("Total credits", f"${df['Product/Service Amount'].sum():,.2f}" if not df.empty else "$0.00")
+    m2.metric(
+        "Total credits",
+        f"${df['Product/Service Amount'].sum():,.2f}" if not df.empty else "$0.00",
+    )
     st.dataframe(df, use_container_width=True, height=380)
 
-    mname = dt.date(2000, int(month), 1).strftime("%B")
     st.download_button(
         "Download credit-memo import (xlsx)",
         saasant.to_xlsx_bytes(df, f"FlexCredits{mname}{year}"),
@@ -206,6 +396,38 @@ with tab_credits:
         key="cred_dl",
     )
     st.caption(f"Next available reference number after this batch: {next_ref}")
+    st.info(
+        "**Quarter-end true-up:** Credit memos generated here reflect payments received this month. "
+        "Stage 3 reconciliation will absorb any unused balance into recognized revenue and bill any "
+        "overage — pre-paid credits do not carry past the quarter."
+    )
+
+    # ── Legacy bootstrap mode ──────────────────────────────────────────────────
+    with st.expander("Legacy mode — active-list credit memos (bootstrap only)"):
+        st.caption(
+            "Use only when the processed-payments ledger is empty for the target month "
+            "(e.g., first run after migration). This generates one credit memo per active clinic "
+            "regardless of payment status — the legacy behavior."
+        )
+        if st.checkbox("Show legacy active-list import", key="cred_legacy_show"):
+            df_legacy, next_ref_legacy = flex_credits.build_import(
+                flex_clinics, year, month, start_ref,
+            )
+            l1, l2 = st.columns(2)
+            l1.metric("Legacy credit memos", len(df_legacy))
+            l2.metric(
+                "Legacy total",
+                f"${df_legacy['Product/Service Amount'].sum():,.2f}" if not df_legacy.empty else "$0.00",
+            )
+            st.dataframe(df_legacy, use_container_width=True, height=300)
+            st.download_button(
+                "Download LEGACY credit-memo import",
+                saasant.to_xlsx_bytes(df_legacy, f"FlexCreditsLEGACY{mname}{year}"),
+                file_name=f"FlexCredits_LEGACY_{mname}_{year}.xlsx",
+                disabled=df_legacy.empty,
+                key="cred_dl_legacy",
+            )
+
     st.markdown(
         """
 **Upload to SaaSAnt:** [transactions.saasant.com](https://transactions.saasant.com) →
@@ -214,9 +436,9 @@ with tab_credits:
     )
     if not df.empty:
         subj, body = accounting_handoff.credit_memos_email(
-            year=int(year), month=int(month), count=len(df),
+            year=year, month=month, count=len(df),
             total=float(df["Product/Service Amount"].sum()),
-            start_ref=int(start_ref), next_ref=int(next_ref),
+            start_ref=start_ref, next_ref=next_ref,
         )
         accounting_handoff.render_handoff(subj, body, key_prefix="credits_email")
 

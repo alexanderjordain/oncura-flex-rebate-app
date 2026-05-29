@@ -28,8 +28,86 @@ _MONTHS = ["January", "February", "March", "April", "May", "June", "July",
            "August", "September", "October", "November", "December"]
 
 
+def _clinic_lookup(flex_clinics):
+    """Returns (by_qb_lower, by_contract) — maps to look up an eligible clinic from a ledger row."""
+    by_qb, by_contract = {}, {}
+    for c in flex_clinics:
+        if not c.get("active") or not (c.get("monthly_credit") or 0) > 0:
+            continue
+        qbn = (c.get("qb_name") or "").strip().lower()
+        if qbn:
+            by_qb[qbn] = c
+        cn = (c.get("clinic_name") or "").strip().lower()
+        if cn and cn != qbn:
+            by_qb.setdefault(cn, c)
+        for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
+            cv = c.get(k)
+            if cv:
+                by_contract[str(cv).strip()] = c
+    return by_qb, by_contract
+
+
+def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
+    """Payment-driven credit-memo import. One credit memo per ledger payment row.
+
+    A clinic that received THREE payments in the target month gets THREE credit memos at
+    its monthly_credit each — the quarter-end true-up (SOP-11) absorbs the over-credit if any
+    of those payments were for a future month.
+
+    Returns (DataFrame, next_ref, skipped). skipped = list of {reason, payment, clinic_name?}.
+    """
+    import pandas as pd
+
+    by_qb, by_contract = _clinic_lookup(flex_clinics)
+    date = saasant.last_day_of_month(year, month)
+    desc = f"Flex Credits for {_MONTHS[month - 1]} {year}"
+
+    matched, skipped = [], []
+    for p in payments:
+        qbn = (p.get("qb_customer") or "").strip().lower()
+        contract = str(p.get("contract") or "").strip()
+        clinic = by_qb.get(qbn) or by_contract.get(contract)
+        if clinic is None:
+            skipped.append({
+                "reason": "no flex_master match (qb_customer / contract)",
+                "qb_customer": p.get("qb_customer"),
+                "contract": contract,
+                "amount": p.get("amount"),
+            })
+            continue
+        amt = round(float(clinic["monthly_credit"]), 2)
+        matched.append((clinic, p, amt))
+
+    # Sort for stable output
+    matched.sort(key=lambda t: ((t[0].get("qb_name") or "").lower(), t[1].get("payment_date", "")))
+
+    refs = saasant.sequential_refs(start_ref, len(matched))
+    rows = []
+    for ref, (clinic, _payment, amt) in zip(refs, matched):
+        rows.append({
+            "Credit Memo No": ref,
+            "Customer": clinic.get("qb_name") or clinic.get("clinic_name"),
+            "Credit Memo Date": date.strftime("%m/%d/%Y"),
+            "Product/Service": ITEM,
+            "Product/Service Description": desc,
+            "Product/Service Quantity": 1,
+            "Product/Service Rate": amt,
+            "Product/Service Amount": amt,
+            "Product/Service Class": CLASS,
+        })
+    df = pd.DataFrame(rows, columns=COLUMNS)
+    if not df.empty:
+        saasant.assert_unique_refs(df["Credit Memo No"])
+    next_ref = (refs[-1] + 1) if refs else start_ref
+    return df, next_ref, skipped
+
+
 def build_import(flex_clinics: list[dict], year: int, month: int, start_ref: int):
-    """Return (DataFrame, next_ref). One credit-memo row per active clinic with a credit > 0."""
+    """Legacy: one credit memo per active clinic with monthly_credit > 0 (no payment check).
+
+    Use only when the processed-payments ledger is empty for the target month (bootstrap).
+    Returns (DataFrame, next_ref).
+    """
     import pandas as pd
 
     eligible = [
