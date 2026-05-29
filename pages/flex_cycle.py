@@ -221,255 +221,348 @@ with tab_credits:
         accounting_handoff.render_handoff(subj, body, key_prefix="credits_email")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 3 — Unused Recapture + Overage
+# STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_recap:
-    st.caption("Monthly run — only clinics whose staggered quarter ENDS this month are processed. "
-               "Activity vs threshold drives unused recapture (credit clawback) or overage "
-               "(partner submission or direct-bill).")
+    import io as _io
+    import pandas as pd
 
-    # ── Cycle inputs ──────────────────────────────────────────────────────────
+    SS = st.session_state
+    SS.setdefault("recap_step", 0)
+    SS.setdefault("recap_year", today.year)
+    SS.setdefault("recap_month", today.month)
+    SS.setdefault("recap_sales_class", "03-Telemedicine")
+    SS.setdefault("recap_start_ref", 60000)
+    SS.setdefault("recap_direct_start", 61000)
+    SS.setdefault("recap_uploaded_bytes", None)
+    SS.setdefault("recap_uploaded_name", "")
+    SS.setdefault("recap_credit_offsets", {})
+
+    # Pull current state into locals
+    rec_year = int(SS.recap_year)
+    rec_month = int(SS.recap_month)
+    sales_class = SS.recap_sales_class
+    recap_start = int(SS.recap_start_ref)
+    win_start, win_end = flex_unused.quarter_window(rec_year, rec_month)
+    cfg_all = loaders.config()
+    cutoff = flex_overage.cutoff_date(
+        rec_year, rec_month,
+        int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)),
+    )
+    today_d = dt.date.today()
+
+    # Compute the pipeline if a file is uploaded
+    pipe = None
+    if SS.recap_uploaded_bytes:
+        try:
+            f = _io.BytesIO(SS.recap_uploaded_bytes)
+            f.name = SS.recap_uploaded_name
+            rec_raw = opd_adapter.read_upload(f)
+            rec_profile = opd_adapter.detect_profile(list(rec_raw.columns))
+            if rec_profile == "case_grid":
+                activity = opd_adapter.flex_activity_from_case_grid(
+                    rec_raw, loaders.service_prices(), start=win_start, end=win_end,
+                )
+            else:
+                activity = opd_adapter.flex_activity_from_invoices(rec_raw, start=win_start, end=win_end)
+            recap = flex_unused.compute_recapture(flex_clinics, activity, rec_year, rec_month)
+            pipe = {"profile": rec_profile, "activity": activity, "recap": recap}
+        except Exception as e:
+            st.error(f"Could not process the uploaded file: {e}")
+
+    rdf = pd.DataFrame(pipe["recap"]) if pipe else pd.DataFrame()
+    udf = pd.DataFrame()
+    next_ref = recap_start
+    if pipe and not rdf.empty:
+        udf, next_ref = flex_unused.build_unused_invoice_import(
+            pipe["recap"], rec_year, rec_month, recap_start, sales_class,
+        )
+    overs = flex_unused.overage_rows(pipe["recap"]) if pipe else []
+    annotated = []
+    if overs:
+        annotated = flex_overage.annotate_overages(
+            overs, rec_year, rec_month, today_d, cfg_all, SS.recap_credit_offsets,
+        )
+    direct_count = sum(1 for r in annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
+    partner_count = sum(1 for r in annotated if r["route"] == "partner" and r["net_overage"] > 0)
+    flagged = [r for r in annotated if r.get("escalation_flag")]
+
+    # Dynamic step list — only include steps that have something to show
+    STEPS = [("setup", "Cycle setup"), ("upload", "Upload OPD activity")]
+    if pipe and not rdf.empty:
+        STEPS.append(("review", "Review activity"))
+        if not udf.empty:
+            STEPS.append(("recapture", "Unused recapture"))
+        if overs:
+            STEPS.append(("overage", "Overage routing & bills"))
+        STEPS.append(("handoff", "Hand off to accounting"))
+    total = len(STEPS)
+    SS.recap_step = max(0, min(SS.recap_step, total - 1))
+    step_key, step_label = STEPS[SS.recap_step]
+
+    # Stepper
+    st.markdown(f"**Step {SS.recap_step + 1} of {total} — {step_label}**")
+    st.progress((SS.recap_step + 1) / total)
+    breadcrumbs = "  ·  ".join(
+        (f"**{lbl}**" if i == SS.recap_step else f":gray[{lbl}]")
+        for i, (_, lbl) in enumerate(STEPS)
+    )
+    st.caption(breadcrumbs)
+
+    # ── Step content ──────────────────────────────────────────────────────────
     with st.container(border=True):
-        st.markdown("**Cycle inputs**")
-        rc1, rc2, rc3 = st.columns(3)
-        rec_year = int(rc1.number_input("Recapture year", value=today.year, step=1, key="recap_year"))
-        rec_month = int(rc2.selectbox("Recapture month", list(range(1, 13)), index=today.month - 1,
-                                      format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
-                                      key="recap_month"))
-        recap_start = int(rc3.number_input("Starting Invoice No (QBO max + 1)",
-                                           value=60000, step=1, key="recap_start_ref"))
-
-        win_start, win_end = flex_unused.quarter_window(rec_year, rec_month)
-        group = [c for c in flex_clinics
-                 if c.get("active") and flex_unused.is_quarter_end(c.get("calendar_spread"), rec_month)]
-        cfg_all_pre = loaders.config()
-        cutoff_pre = flex_overage.cutoff_date(
-            rec_year, rec_month,
-            int((cfg_all_pre.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)),
-        )
-        today_d_pre = dt.date.today()
-        cutoff_status = "✓ on time" if today_d_pre <= cutoff_pre else "⚠ cutoff missed — all routes to direct bill"
-
-        bc1, bc2, bc3 = st.columns(3)
-        bc1.markdown(f"**Quarter window**  \n{win_start:%b %d %Y} → {win_end:%b %d %Y}")
-        bc2.markdown(f"**Clinics with quarter-end**  \n{len(group)}")
-        bc3.markdown(f"**Partner cutoff** ({cutoff_pre:%b %d %Y})  \n{cutoff_status}")
-
-        uc1, uc2 = st.columns([2, 1])
-        rec_up = uc1.file_uploader(
-            "OPD activity export covering the quarter (Invoices or case-grid)",
-            type=["csv", "xlsx", "xls"], key="recap_file",
-        )
-        sales_class = uc2.text_input("Sales class", value="03-Telemedicine", key="recap_class")
-
-    if rec_up is None:
-        st.info("Upload an OPD activity export to compute unused / overage.")
-    else:
-        import pandas as pd
-
-        rec_raw = opd_adapter.read_upload(rec_up)
-        rec_profile = opd_adapter.detect_profile(list(rec_raw.columns))
-        if rec_profile == "case_grid":
-            activity = opd_adapter.flex_activity_from_case_grid(
-                rec_raw, loaders.service_prices(), start=win_start, end=win_end,
+        if step_key == "setup":
+            st.markdown("### Cycle setup")
+            st.caption(
+                "Pick the cycle period and starting reference number. Only clinics whose staggered "
+                "quarter ENDS in this month will be processed."
             )
-        else:
-            activity = opd_adapter.flex_activity_from_invoices(rec_raw, start=win_start, end=win_end)
+            c1, c2 = st.columns(2)
+            SS.recap_year = int(c1.number_input(
+                "Recapture year", value=rec_year, step=1, key="w_recap_year"))
+            SS.recap_month = int(c2.selectbox(
+                "Recapture month", list(range(1, 13)), index=rec_month - 1,
+                format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
+                key="w_recap_month",
+            ))
+            c3, c4 = st.columns(2)
+            SS.recap_sales_class = c3.text_input(
+                "Sales class", value=sales_class, key="w_recap_class")
+            SS.recap_start_ref = int(c4.number_input(
+                "Starting Invoice No (QBO max + 1)", value=recap_start, step=1, key="w_recap_start_ref"))
 
-        recap = flex_unused.compute_recapture(flex_clinics, activity, rec_year, rec_month)
-        rdf = pd.DataFrame(recap)
-
-        if rdf.empty:
-            st.warning("No clinics have a quarter-end this month.")
-        else:
-            cfg_all = loaders.config()
-            cutoff = cutoff_pre
-            today_d = today_d_pre
-
-            # ── Cycle summary ─────────────────────────────────────────────────
-            with st.container(border=True):
-                st.markdown("**Cycle summary**")
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Unused (recapture)", f"${rdf['unused'].fillna(0).sum():,.2f}")
-                m2.metric("Overage (gross)", f"${rdf['overage'].fillna(0).sum():,.2f}")
-                m3.metric("Clinics processed", len(rdf))
-                m4.metric("Source profile", rec_profile)
-                if rec_profile == "case_grid":
-                    st.caption("Case-grid: activity = sum of priced services per case (no AdminFee, STAT +$125).")
-
-                no_act = rdf[rdf["activity_match"] == "none"]
-                if not no_act.empty:
-                    st.warning(
-                        f"{len(no_act)} quarter-end clinic(s) had no matched OPD activity: "
-                        + ", ".join(no_act["clinic_name"].head(8))
-                        + (" …" if len(no_act) > 8 else "")
-                    )
-                with st.expander(f"Per-clinic breakdown ({len(rdf)} clinics)"):
-                    st.dataframe(rdf, use_container_width=True, height=320)
-
-            # ── A. Unused recapture ───────────────────────────────────────────
-            udf, next_ref = flex_unused.build_unused_invoice_import(
-                recap, rec_year, rec_month, recap_start, sales_class,
+            new_win_s, new_win_e = flex_unused.quarter_window(int(SS.recap_year), int(SS.recap_month))
+            new_group = [c for c in flex_clinics
+                         if c.get("active") and flex_unused.is_quarter_end(c.get("calendar_spread"), int(SS.recap_month))]
+            new_cutoff = flex_overage.cutoff_date(
+                int(SS.recap_year), int(SS.recap_month),
+                int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)),
             )
-            with st.container(border=True):
-                st.markdown("### A. Unused recapture invoices")
-                if udf.empty:
-                    st.caption("No clinics with unused balance this quarter — nothing to recapture.")
-                else:
-                    rc1, rc2 = st.columns([1, 1])
-                    rc1.metric("Recapture invoices", len(udf))
-                    rc2.metric("Recapture total", f"${udf['Product/Service Amount'].sum():,.2f}")
-                    st.download_button(
-                        "Download unused-flex invoice import (xlsx)",
-                        saasant.to_xlsx_bytes(udf, "UnusedFlex"),
-                        file_name=f"UnusedFlex_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
-                        type="primary", key="recap_dl_unused",
-                    )
-                    st.caption(f"Next available invoice number: {next_ref}")
-                    with st.expander("Preview invoice rows + SaaSAnt upload steps"):
-                        st.dataframe(udf, use_container_width=True, height=220)
-                        st.markdown(
-                            "**Upload to SaaSAnt:** "
-                            "[transactions.saasant.com](https://transactions.saasant.com) → "
-                            "**Bulk Upload → Invoice** → select the file. Verify QBO P&L "
-                            "Flex Credits line nets DOWN by the recapture total."
-                        )
+            cs = "on time" if today_d <= new_cutoff else "cutoff missed"
+            st.info(
+                f"**Quarter window:** {new_win_s:%b %d, %Y} → {new_win_e:%b %d, %Y}  ·  "
+                f"**Qualifying clinics:** {len(new_group)}  ·  "
+                f"**Partner cutoff:** {new_cutoff:%b %d, %Y} ({cs})"
+            )
 
-            # ── Overage routing (sets variables used by B and C below) ────────
-            overs = flex_unused.overage_rows(recap)
-            annotated = []
-            flagged = []
-            credit_offsets = {}
-            if overs:
-                with st.container(border=True):
-                    st.markdown("### Overage routing — SOP-6 / SOP-12")
-                    st.caption(
-                        "OnePlace handles overages if submitted before the cutoff. Great America + "
-                        "New Lane have opted out — bill directly. Self-Financed: direct. Missed "
-                        "cutoff: direct."
-                    )
-                    with st.expander("Pre-existing credit offsets (optional)"):
-                        st.caption(
-                            "If a clinic already has an unapplied credit in QBO, enter it here — "
-                            "the app applies it to the overage and only bills the remainder."
-                        )
-                        offset_df = pd.DataFrame([
-                            {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
-                             "Gross overage": round(float(o["overage"]), 2),
-                             "Pre-existing credit": 0.0}
-                            for o in overs
-                        ])
-                        edited_offsets = st.data_editor(
-                            offset_df, hide_index=True, use_container_width=True,
-                            disabled=["Clinic (QB)", "Gross overage"],
-                            key="overage_offsets",
-                        )
-                        credit_offsets = {
-                            r["Clinic (QB)"]: float(r["Pre-existing credit"] or 0)
-                            for _, r in edited_offsets.iterrows()
-                        }
+        elif step_key == "upload":
+            st.markdown("### Upload OPD activity")
+            st.caption(
+                "Upload the OPD consult-grid export (or the OPD Invoices export) covering the quarter window."
+            )
+            rec_up = st.file_uploader(
+                "OPD activity export",
+                type=["csv", "xlsx", "xls"],
+                key="w_recap_file",
+            )
+            if rec_up is not None:
+                SS.recap_uploaded_bytes = rec_up.getvalue()
+                SS.recap_uploaded_name = rec_up.name
+                st.success(f"Uploaded: **{rec_up.name}**  ({len(SS.recap_uploaded_bytes) // 1024:,} KB)")
+            elif SS.recap_uploaded_bytes:
+                st.info(
+                    f"Previously uploaded: **{SS.recap_uploaded_name}**  — re-upload to replace, "
+                    "or click Next to continue."
+                )
+            else:
+                st.warning("Upload a file to continue.")
+            if pipe:
+                pm1, pm2, pm3 = st.columns(3)
+                pm1.metric("Source profile", pipe["profile"])
+                pm2.metric("Clinics with activity", len(pipe["activity"]))
+                pm3.metric("Qualifying for this month", len(rdf))
 
-                    annotated = flex_overage.annotate_overages(
-                        overs, rec_year, rec_month, today_d, cfg_all, credit_offsets,
-                    )
-                    adf = pd.DataFrame(annotated)[[
-                        "clinic_name", "finance_company", "overage",
-                        "credit_applied", "net_overage", "route", "escalation_flag",
-                    ]]
-                    st.dataframe(adf, use_container_width=True, height=220)
-                    flagged = [r for r in annotated if r.get("escalation_flag")]
-                    if flagged:
-                        names = ", ".join(r["clinic_name"] for r in flagged)
-                        st.warning(
-                            f"Escalation clinic(s): **{names}** — communication may need to "
-                            "come from Marty / Accounting Manager (SOP-12)."
-                        )
+        elif step_key == "review":
+            st.markdown("### Review activity")
+            st.caption("What the app found in the uploaded export. Sanity-check before generating files.")
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Source", pipe["profile"])
+            m2.metric("Clinics with activity", len(pipe["activity"]))
+            m3.metric("Unused (recapture)", f"${rdf['unused'].fillna(0).sum():,.2f}")
+            m4.metric("Overage (gross)", f"${rdf['overage'].fillna(0).sum():,.2f}")
+            if pipe["profile"] == "case_grid":
+                st.caption("Case-grid: activity = sum of priced services per case (no AdminFee, STAT +$125).")
+            no_act = rdf[rdf["activity_match"] == "none"]
+            if not no_act.empty:
+                st.warning(
+                    f"{len(no_act)} quarter-end clinic(s) had no matched OPD activity: "
+                    + ", ".join(no_act["clinic_name"].head(8))
+                    + (" …" if len(no_act) > 8 else "")
+                )
+            with st.expander(f"Per-clinic breakdown ({len(rdf)} clinics)"):
+                st.dataframe(rdf, use_container_width=True, height=320)
 
-                # ── B. Direct-bill overages ───────────────────────────────────
-                direct_count = sum(1 for r in annotated
+        elif step_key == "recapture":
+            st.markdown("### A. Unused recapture invoices")
+            st.caption(
+                "These clinics fell short of their threshold. Recapture the unused portion of the credit "
+                "Oncura already issued so the P&L Flex Credits line nets down correctly."
+            )
+            rc1, rc2 = st.columns(2)
+            rc1.metric("Invoices", len(udf))
+            rc2.metric("Recapture total", f"${udf['Product/Service Amount'].sum():,.2f}")
+            st.download_button(
+                "Download unused-flex invoice import",
+                saasant.to_xlsx_bytes(udf, "UnusedFlex"),
+                file_name=f"UnusedFlex_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                type="primary",
+                key="w_recap_dl_unused",
+            )
+            st.caption(f"Next available invoice number: {next_ref}")
+            st.markdown(
+                "**Upload to SaaSAnt:** "
+                "[transactions.saasant.com](https://transactions.saasant.com) → "
+                "**Bulk Upload → Invoice** → select the file."
+            )
+            with st.expander("Preview the invoice rows"):
+                st.dataframe(udf, use_container_width=True, height=220)
+
+        elif step_key == "overage":
+            st.markdown(f"### Overage routing & bills — {len(overs)} clinic(s) over threshold")
+            st.caption(
+                "OnePlace handles overages if submitted before the cutoff. Great America + New Lane "
+                "have opted out — bill directly. Self-Financed: direct. Missed cutoff: direct."
+            )
+            with st.expander("Pre-existing credit offsets (optional)"):
+                st.caption(
+                    "If an over-threshold clinic has an unapplied credit in QBO, enter it here — the app "
+                    "applies it to the overage and only bills the remainder."
+                )
+                offset_seed = pd.DataFrame([
+                    {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
+                     "Gross overage": round(float(o["overage"]), 2),
+                     "Pre-existing credit": float(
+                         SS.recap_credit_offsets.get(o.get("qb_name") or o.get("clinic_name"), 0) or 0
+                     )}
+                    for o in overs
+                ])
+                edited = st.data_editor(
+                    offset_seed, hide_index=True, use_container_width=True,
+                    disabled=["Clinic (QB)", "Gross overage"],
+                    key="w_recap_offsets_editor",
+                )
+                SS.recap_credit_offsets = {
+                    r["Clinic (QB)"]: float(r["Pre-existing credit"] or 0)
+                    for _, r in edited.iterrows()
+                }
+
+            adf = pd.DataFrame(annotated)[[
+                "clinic_name", "finance_company", "overage",
+                "credit_applied", "net_overage", "route", "escalation_flag",
+            ]]
+            st.dataframe(adf, use_container_width=True, height=220)
+            if flagged:
+                names = ", ".join(r["clinic_name"] for r in flagged)
+                st.warning(
+                    f"Escalation clinic(s): **{names}** — communication may need to come from "
+                    "Marty / Accounting Manager (SOP-12)."
+                )
+
+            if direct_count:
+                direct_total = sum(float(r["net_overage"]) for r in annotated
                                    if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-                if direct_count:
-                    direct_total = sum(float(r["net_overage"]) for r in annotated
-                                       if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-                    with st.container(border=True):
-                        st.markdown("### B. Direct-bill overage invoices")
-                        bc1, bc2 = st.columns([1, 1])
-                        bc1.metric("Invoices", direct_count)
-                        bc2.metric("Total", f"${direct_total:,.2f}")
-                        direct_start = int(st.number_input(
-                            "Starting Invoice No",
-                            value=recap_start + 1000, step=1, key="overage_direct_start",
-                        ))
-                        didf, direct_next = flex_overage.build_direct_invoice_import(
-                            annotated, rec_year, rec_month, direct_start, sales_class, cfg_all,
+                with st.container(border=True):
+                    st.markdown("#### B. Direct-bill overage invoices")
+                    bc1, bc2 = st.columns(2)
+                    bc1.metric("Invoices", direct_count)
+                    bc2.metric("Total", f"${direct_total:,.2f}")
+                    SS.recap_direct_start = int(st.number_input(
+                        "Starting Invoice No (direct-bill)", value=int(SS.recap_direct_start),
+                        step=1, key="w_overage_direct_start",
+                    ))
+                    didf, direct_next = flex_overage.build_direct_invoice_import(
+                        annotated, rec_year, rec_month, int(SS.recap_direct_start), sales_class, cfg_all,
+                    )
+                    st.download_button(
+                        "Download direct-bill overage invoices",
+                        saasant.to_xlsx_bytes(didf, "OverageDirect"),
+                        file_name=f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                        type="primary",
+                        key="w_recap_dl_direct",
+                    )
+                    st.caption(f"Next available invoice number: {direct_next}")
+                    with st.expander("Send & void steps (SOP-6)"):
+                        st.markdown(
+                            "1. **Upload to SaaSAnt** → "
+                            "[transactions.saasant.com](https://transactions.saasant.com) → "
+                            "**Bulk Upload → Invoice** → select the file.\n"
+                            "2. **Send each clinic** an Authorize.net payment link (or QBO invoice PDF).\n"
+                            "3. **VOID each QBO invoice immediately after sending** — revenue was already "
+                            "captured by OPD invoices, so leaving them open overstates AR (SOP-6).\n"
+                            "4. Apply payment to zero out the clinic's account when received.\n"
+                            "5. **No refunds** (SOP-12) — overpayments stay on account for future overages."
                         )
-                        st.download_button(
-                            "Download direct-bill overage invoices (xlsx)",
-                            saasant.to_xlsx_bytes(didf, "OverageDirect"),
-                            file_name=f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
-                            type="primary", key="recap_dl_overage_direct",
-                        )
-                        st.caption(f"Next available invoice number: {direct_next}")
-                        with st.expander("Preview rows + SaaSAnt + send + void steps (SOP-6)"):
-                            st.dataframe(didf, use_container_width=True, height=200)
-                            st.markdown(
-                                "1. **Upload to SaaSAnt** — "
-                                "[transactions.saasant.com](https://transactions.saasant.com) → "
-                                "**Bulk Upload → Invoice** → select the file.\n"
-                                "2. **Send the clinic** an Authorize.net payment link (or email the QBO invoice PDF).\n"
-                                "3. **VOID the QBO invoice immediately after sending** — revenue was "
-                                "already captured by the OPD invoices, so leaving these open "
-                                "overstates AR (SOP-6).\n"
-                                "4. When payment arrives, apply it to zero out the clinic's flex account.\n"
-                                "5. **No refunds** (SOP-12) — overpayments stay on account for future "
-                                "overages. Marty must approve any exception."
-                            )
 
-                # ── C. Finance partner submission ─────────────────────────────
-                partner_rows = [r for r in annotated
-                                if r["route"] == "partner" and r["net_overage"] > 0]
-                if partner_rows:
-                    partner_total = sum(float(r["net_overage"]) for r in partner_rows)
-                    with st.container(border=True):
-                        st.markdown("### C. Finance partner submission (OnePlace)")
-                        pc1, pc2, pc3 = st.columns(3)
-                        pc1.metric("Clinics", len(partner_rows))
-                        pc2.metric("Total", f"${partner_total:,.2f}")
-                        pc3.metric("Submit by", f"{cutoff:%b %d %Y}")
-                        pdf = flex_overage.build_partner_submission(annotated, rec_year, rec_month)
-                        st.download_button(
-                            "Download partner submission list (xlsx)",
-                            saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission"),
-                            file_name=f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
-                            type="primary", key="recap_dl_overage_partner",
+            if partner_count:
+                partner_total = sum(float(r["net_overage"]) for r in annotated
+                                    if r["route"] == "partner" and r["net_overage"] > 0)
+                with st.container(border=True):
+                    st.markdown("#### C. Partner submission (OnePlace)")
+                    pc1, pc2, pc3 = st.columns(3)
+                    pc1.metric("Clinics", partner_count)
+                    pc2.metric("Total", f"${partner_total:,.2f}")
+                    pc3.metric("Submit by", f"{cutoff:%b %d, %Y}")
+                    pdf = flex_overage.build_partner_submission(annotated, rec_year, rec_month)
+                    st.download_button(
+                        "Download partner submission list",
+                        saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission"),
+                        file_name=f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                        type="primary",
+                        key="w_recap_dl_partner",
+                    )
+                    with st.expander("Submission steps"):
+                        st.markdown(
+                            f"- Submit to **OnePlace before {cutoff:%B %d, %Y}**.\n"
+                            "- Confirm receipt.\n"
+                            "- Track expected payment 5–6 months out on FLEX Master."
                         )
-                        with st.expander("Preview rows + submission steps (SOP-12)"):
-                            st.dataframe(pdf, use_container_width=True)
-                            st.markdown(
-                                f"- Submit to **OnePlace before {cutoff:%B %d, %Y}** (5th of next month).\n"
-                                "- Confirm receipt.\n"
-                                "- Track on FLEX Master with expected payment 5–6 months out."
-                            )
 
-            # ── Handoff email (covers unused + direct overage + partner) ──────
-            _flagged_names = [r["clinic_name"] for r in flagged]
-            _direct_total = sum(float(r["net_overage"]) for r in annotated
-                                if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-            _direct_count = sum(1 for r in annotated
-                                if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-            _partner_total = sum(float(r["net_overage"]) for r in annotated
-                                 if r["route"] == "partner" and r["net_overage"] > 0)
-            _partner_count = sum(1 for r in annotated
-                                 if r["route"] == "partner" and r["net_overage"] > 0)
-            _group_anchors = sorted({r["clinic_name"] for r in recap if r.get("group_id")})
-            _unused_total = float(udf["Product/Service Amount"].sum()) if not udf.empty else 0.0
-            _subj, _body = accounting_handoff.recapture_email(
-                year=rec_year, month=rec_month,
-                unused_total=_unused_total, unused_count=len(udf),
-                direct_total=_direct_total, direct_count=_direct_count,
-                partner_total=_partner_total, partner_count=_partner_count,
-                cutoff_date=cutoff,
-                escalations=_flagged_names,
-                group_anchors=_group_anchors,
+        elif step_key == "handoff":
+            st.markdown("### Hand off to accounting")
+            st.caption(
+                "Email accounting with this cycle's results + next steps. The body is pre-filled with "
+                "all the numbers, escalations, and the SaaSAnt + QBO action items."
             )
-            accounting_handoff.render_handoff(_subj, _body, key_prefix="recap_email")
+            unused_total = float(udf["Product/Service Amount"].sum()) if not udf.empty else 0.0
+            direct_total = sum(float(r["net_overage"]) for r in annotated
+                               if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
+            partner_total = sum(float(r["net_overage"]) for r in annotated
+                                if r["route"] == "partner" and r["net_overage"] > 0)
+            group_anchors = sorted({r["clinic_name"] for r in pipe["recap"] if r.get("group_id")})
+            flagged_names = [r["clinic_name"] for r in flagged]
+            subj, body = accounting_handoff.recapture_email(
+                year=rec_year, month=rec_month,
+                unused_total=unused_total, unused_count=len(udf),
+                direct_total=direct_total, direct_count=direct_count,
+                partner_total=partner_total, partner_count=partner_count,
+                cutoff_date=cutoff,
+                escalations=flagged_names,
+                group_anchors=group_anchors,
+            )
+            accounting_handoff.render_handoff(subj, body, key_prefix="w_recap_email")
+
+    # ── Navigation ────────────────────────────────────────────────────────────
+    can_back = SS.recap_step > 0
+    can_next = SS.recap_step < total - 1
+    next_blocked_reason = ""
+    if step_key == "upload" and not SS.recap_uploaded_bytes:
+        can_next = False
+        next_blocked_reason = "Upload a file before continuing."
+    elif step_key == "upload" and pipe is None:
+        can_next = False
+        next_blocked_reason = "Could not parse the uploaded file."
+
+    nav_b, nav_msg, nav_n = st.columns([1, 4, 1])
+    if can_back:
+        if nav_b.button("← Back", key=f"w_recap_back_{SS.recap_step}"):
+            SS.recap_step -= 1
+            st.rerun()
+    if not can_next and next_blocked_reason:
+        nav_msg.caption(f":orange[{next_blocked_reason}]")
+    if SS.recap_step < total - 1:
+        if nav_n.button("Next →", key=f"w_recap_next_{SS.recap_step}",
+                        type="primary", disabled=not can_next):
+            SS.recap_step += 1
+            st.rerun()
+    else:
+        nav_n.markdown("**Done ✓**")
