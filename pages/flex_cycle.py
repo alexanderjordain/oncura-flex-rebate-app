@@ -383,17 +383,12 @@ with tab_recap:
             if SS.get("recap_pipe_error"):
                 st.error(
                     f"**Could not parse this file:**  `{SS['recap_pipe_error']}`\n\n"
-                    "Try re-uploading or upload a different export. If the same file worked "
-                    "for you before, click **Reset wizard** below to clear cached state."
+                    "Try re-uploading, or upload a different export (case-grid xls or "
+                    "Invoices xlsx)."
                 )
                 if SS.get("recap_pipe_traceback"):
                     with st.expander("Full traceback (share this if asking for help)"):
                         st.code(SS["recap_pipe_traceback"], language="text")
-            if st.button("Reset wizard (clear cached upload + state)", key="w_recap_reset"):
-                for k in list(SS.keys()):
-                    if k.startswith("recap_") or k.startswith("w_recap_"):
-                        del SS[k]
-                st.rerun()
             if pipe:
                 pm1, pm2, pm3 = st.columns(3)
                 pm1.metric("Source profile", pipe["profile"])
