@@ -71,15 +71,14 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
   font-variant-numeric:tabular-nums; color:var(--blue) !important; letter-spacing:-.01em;
 }
 
-/* Buttons — dark blue solid w/ bold white lettering. Scoped to top-level Streamlit
-   button containers so the file uploader's internal "Browse files" button stays neutral. */
+/* Buttons — light bg, navy text, bold. Outlined style so the text is always readable. */
 .stButton > button,
 .stDownloadButton > button,
 .stLinkButton > a,
 .stLinkButton > a:visited {
-  background:#1F3D5C !important;
-  color:#FFFFFF !important;
-  border:1px solid #1F3D5C !important;
+  background:#FFFFFF !important;
+  color:#1F3D5C !important;
+  border:1.5px solid #1F3D5C !important;
   font-family:var(--sans) !important;
   font-weight:700 !important;
   border-radius:6px;
@@ -89,16 +88,16 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
 .stButton > button:hover,
 .stDownloadButton > button:hover,
 .stLinkButton > a:hover {
-  background:#152C47 !important;
-  border-color:#152C47 !important;
-  color:#FFFFFF !important;
+  background:#EAF2FA !important;
+  border-color:#1F3D5C !important;
+  color:#1F3D5C !important;
   transform:translateY(-1px);
-  box-shadow:0 4px 14px rgba(31,61,92,.30);
+  box-shadow:0 4px 14px rgba(31,61,92,.18);
 }
 .stButton > button:disabled,
 .stDownloadButton > button:disabled {
-  background:#9CA3AF !important; border-color:#9CA3AF !important;
-  color:#FFFFFF !important; cursor:not-allowed;
+  background:#F3F4F6 !important; border-color:#D1D5DB !important;
+  color:#9CA3AF !important; cursor:not-allowed;
 }
 /* Restore the file uploader's internal browse button to a neutral look */
 [data-testid="stFileUploader"] button {
