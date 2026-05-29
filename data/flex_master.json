@@ -151,7 +151,7 @@
       "parent_clinic_id": null
     },
     {
-      "clinic_name": "Animal Medical Center of Surprise AAHA",
+      "clinic_name": "Companion Pet Partners, LLC DBA Animal Medical Center of Surprise",
       "qb_name": "Animal Medical Center of Surprise AAHA",
       "clinic_id": "AMCS85374",
       "finance_company": "SelfFinanced",
@@ -508,8 +508,8 @@
       "parent_clinic_id": null
     },
     {
-      "clinic_name": "Desert Ark Vet Care - North",
-      "qb_name": "Desert Ark Vet Care - North",
+      "clinic_name": "Desert Ark Veterinary Hospital AAHA - Avondale",
+      "qb_name": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "clinic_id": "DAVCPV85032",
       "finance_company": "OnePlace",
       "monthly_credit": 982.29,
@@ -613,7 +613,7 @@
       "parent_clinic_id": null
     },
     {
-      "clinic_name": "Harborside Animal Hospital",
+      "clinic_name": "TVC - Harborside Animal Hospital",
       "qb_name": "TVC - Harborside Animal Hospital",
       "clinic_id": "HAH33759",
       "finance_company": "GreatAmerica",
