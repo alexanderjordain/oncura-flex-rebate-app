@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .opd_adapter import _coerce_amount
+from .opd_adapter import coerce_amount
 
 PAYMENT_METHOD = "Wire"
 DEPOSIT_TO = "Undeposited Funds"
@@ -151,9 +151,9 @@ def process_remittance(
         work = work[work[id_col].astype(str).str.replace("\xa0", " ").str.strip().ne("")]
     work = work[work[customer_col].notna()]
     work = work.reset_index(drop=True)
-    amounts = work[amount_col].map(_coerce_amount)
+    amounts = work[amount_col].map(coerce_amount)
     work = work[amounts != 0].reset_index(drop=True)
-    amounts = work[amount_col].map(_coerce_amount)
+    amounts = work[amount_col].map(coerce_amount)
 
     qb_pairs = [translate_name(n, name_map) for n in work[customer_col]]
     work["_qb_customer"] = [q for q, _ in qb_pairs]

@@ -10,7 +10,7 @@ from contextlib import contextmanager
 import streamlit as st
 
 from core import (
-    accounting_handoff, flex_credits, flex_finance, flex_overage, flex_unused,
+    accounting_handoff, audit, auth, flex_credits, flex_finance, flex_overage, flex_unused,
     ledger, loaders, opd_adapter, saasant, store, ui,
 )
 
@@ -172,7 +172,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
 
         # ── Intra-file total check: raw file rows/amounts vs. what the app is importing
-        raw_amounts = raw[amount_col].map(opd_adapter._coerce_amount)
+        raw_amounts = raw[amount_col].map(opd_adapter.coerce_amount)
         raw_total = round(float(raw_amounts.sum()), 2)
         raw_nonzero = int((raw_amounts != 0).sum())
         imported_total_before_dedup = raw_total  # informational only; before dedup filter
@@ -295,8 +295,41 @@ the next. After all uploads, the combined total should match the bank-feed depos
                 payments=rows_to_record,
                 note=f"Stage 1 / {company} / pay_date={pay_date}",
             )
+            # Append to immutable audit manifest alongside the ledger record
+            audit_outputs = []
+            for label, df_out in (
+                ("flex_payments", res["flex_payments"]),
+                ("scan_invoices", res["scan_invoices"]),
+                ("scan_payments", res["scan_payments"]),
+            ):
+                if df_out is not None and not df_out.empty:
+                    audit_outputs.append({
+                        "name": label,
+                        "sha256": audit.output_hash_df(df_out),
+                        "row_count": len(df_out),
+                        "total": round(float(df_out["Amount"].sum()), 2) if "Amount" in df_out.columns else None,
+                    })
+            audit.record_cycle(
+                cycle_type="stage1_finance_payment",
+                approver=auth.current_role(),
+                year=pay_date.year, month=pay_date.month,
+                params={
+                    "company": company,
+                    "payment_date": pay_date.isoformat(),
+                    "invoice_date": inv_date.isoformat(),
+                    "start_invoice_no": start_inv,
+                    "skipped_already_seen": len(seen_fps),
+                },
+                source_file={
+                    "name": up.name,
+                    "sha256": ledger.file_hash(file_bytes),
+                    "size_bytes": len(file_bytes),
+                },
+                outputs=audit_outputs,
+                note=f"{added} new payment(s) recorded; {len(seen_fps)} already in ledger",
+            )
             if ok:
-                st.success(f"Recorded {added} payment(s) in the ledger. {msg}")
+                st.success(f"Recorded {added} payment(s) in the ledger + audit manifest. {msg}")
             else:
                 st.warning(
                     f"Recorded {added} locally (no GitHub commit). On Cloud, this means "
@@ -421,6 +454,73 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         "Stage 3 reconciliation will absorb any unused balance into recognized revenue and bill any "
         "overage — pre-paid credits do not carry past the quarter."
     )
+
+    # ── Mark batch as generated: records to audit + ledger so re-runs are caught ──
+    if not df.empty:
+        st.markdown("#### Confirm this batch has been uploaded to QBO")
+        st.caption(
+            "Click **after** you've uploaded the credit memos to SaaSAnt. Records the batch in "
+            "the audit manifest and registers each emitted credit memo in the dedup ledger so "
+            "re-running Stage 2 for this month won't double-post."
+        )
+        emitted_payments_for_ledger = [
+            {
+                "kind": "credit_memo",
+                "contract": row["Customer"],  # use customer as the contract-equiv for dedup
+                "qb_customer": row["Customer"],
+                "payment_date": row["Credit Memo Date"],
+                "amount": float(row["Product/Service Amount"]),
+            }
+            for _, row in df.iterrows()
+        ]
+        emitted_fps = [
+            ledger.fingerprint(
+                "INTERNAL", "credit_memo", r["contract"], r["payment_date"], r["amount"]
+            )
+            for r in emitted_payments_for_ledger
+        ]
+        already_emitted = ledger.check_payments_seen(emitted_fps)
+        if already_emitted:
+            st.warning(
+                f"**{len(already_emitted)} credit memo(s) already recorded for this month.** "
+                f"The download above still contains them with NEW Credit Memo Nos — DO NOT upload "
+                f"those rows to QBO again. (Future enhancement: filter them out of the download.)"
+            )
+        if st.button(
+            f"Mark {len(df)} credit memo(s) as generated", key="cred_mark_processed", type="primary",
+        ):
+            ok_ledger, added, _ = ledger.record_batch(
+                file_content=None,
+                filename=f"FlexCredits_{mname}_{year}.xlsx",
+                company="INTERNAL",
+                payments=emitted_payments_for_ledger,
+                note=f"Stage 2 / {mname} {year}",
+            )
+            audit.record_cycle(
+                cycle_type="stage2_credit_memo",
+                approver=auth.current_role(),
+                year=year, month=month,
+                params={
+                    "start_ref": start_ref, "next_ref": next_ref,
+                    "payment_count": len(payments),
+                    "skipped_unmapped": len(skipped),
+                },
+                source_file=None,
+                outputs=[{
+                    "name": "credit_memo_import",
+                    "sha256": audit.output_hash_df(df),
+                    "row_count": len(df),
+                    "total": round(float(df["Product/Service Amount"].sum()), 2),
+                }],
+                note=f"{added} new credit memo(s) recorded; {len(already_emitted)} were already in ledger",
+            )
+            if ok_ledger:
+                st.success(f"Recorded {added} credit memo(s) in ledger + audit manifest.")
+            else:
+                st.warning(
+                    f"Recorded {added} locally (no GitHub commit). "
+                    "Set GITHUB_TOKEN in secrets for persistent dedup on Cloud."
+                )
 
     # ── Legacy bootstrap mode ──────────────────────────────────────────────────
     with st.expander("Legacy mode — active-list credit memos (bootstrap only)"):
@@ -711,6 +811,67 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             with st.expander("Preview the invoice rows"):
                 st.dataframe(udf, use_container_width=True, height=220)
 
+            # Mark batch as imported -> ledger + audit
+            if not udf.empty:
+                recap_ledger_rows = [
+                    {
+                        "kind": "unused_invoice",
+                        "contract": row["Customer"],
+                        "qb_customer": row["Customer"],
+                        "payment_date": row["Invoice Date"],
+                        "amount": float(row["Product/Service Amount"]),
+                    }
+                    for _, row in udf.iterrows()
+                ]
+                recap_fps = [
+                    ledger.fingerprint("INTERNAL", "unused_invoice", r["contract"],
+                                       r["payment_date"], r["amount"])
+                    for r in recap_ledger_rows
+                ]
+                already = ledger.check_payments_seen(recap_fps)
+                if already:
+                    st.warning(
+                        f"{len(already)} recapture invoice(s) already recorded for this quarter. "
+                        "Re-uploading those rows to QBO would duplicate them."
+                    )
+                if st.button(
+                    f"Mark {len(udf)} recapture invoice(s) as imported",
+                    key="w_recap_mark_unused", type="primary",
+                ):
+                    ok_l, added, _ = ledger.record_batch(
+                        file_content=None,
+                        filename=f"UnusedFlex_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                        company="INTERNAL",
+                        payments=recap_ledger_rows,
+                        note=f"Stage 3 recapture / {rec_year}-{rec_month:02d}",
+                    )
+                    audit.record_cycle(
+                        cycle_type="stage3_recapture",
+                        approver=auth.current_role(),
+                        year=rec_year, month=rec_month,
+                        params={
+                            "sales_class": sales_class,
+                            "start_ref": recap_start,
+                            "next_ref": next_ref,
+                            "quarter_window": f"{win_start:%Y-%m-%d}..{win_end:%Y-%m-%d}",
+                        },
+                        source_file={
+                            "name": SS.recap_uploaded_name,
+                            "sha256": ledger.file_hash(SS.recap_uploaded_bytes),
+                            "size_bytes": len(SS.recap_uploaded_bytes),
+                        } if SS.recap_uploaded_bytes else None,
+                        outputs=[{
+                            "name": "unused_recapture_invoices",
+                            "sha256": audit.output_hash_df(udf),
+                            "row_count": len(udf),
+                            "total": round(float(udf["Product/Service Amount"].sum()), 2),
+                        }],
+                        note=f"{added} new recapture invoice(s); {len(already)} already in ledger",
+                    )
+                    (st.success if ok_l else st.warning)(
+                        f"Recorded {added} recapture invoice(s) in ledger + audit manifest."
+                    )
+
         elif step_key == "overage":
             st.markdown(f"### Overage routing & bills — {len(overs)} clinic(s) over threshold")
             st.caption(
@@ -786,6 +947,29 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "4. Apply payment to zero out the clinic's account when received.\n"
                             "5. **No refunds** (SOP-12) — overpayments stay on account for future overages."
                         )
+                    if not didf.empty and st.button(
+                        f"Mark {len(didf)} direct-bill invoice(s) as imported",
+                        key="w_recap_mark_direct", type="primary",
+                    ):
+                        audit.record_cycle(
+                            cycle_type="stage3_overage",
+                            approver=auth.current_role(),
+                            year=rec_year, month=rec_month,
+                            params={
+                                "route": "direct_bill",
+                                "start_ref": int(SS.recap_direct_start),
+                                "next_ref": direct_next,
+                                "clinic_count": direct_count,
+                            },
+                            outputs=[{
+                                "name": "overage_direct_invoices",
+                                "sha256": audit.output_hash_df(didf),
+                                "row_count": len(didf),
+                                "total": round(float(direct_total), 2),
+                            }],
+                            note=f"Direct-bill overages for {dt.date(2000, rec_month, 1):%B %Y}",
+                        )
+                        st.success(f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest.")
 
             if partner_count:
                 partner_total = sum(float(r["net_overage"]) for r in annotated
@@ -810,6 +994,29 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "- Confirm receipt.\n"
                             "- Track expected payment 5–6 months out on FLEX Master."
                         )
+                    if not pdf.empty and st.button(
+                        f"Mark {len(pdf)} partner-submission row(s) as submitted",
+                        key="w_recap_mark_partner", type="primary",
+                    ):
+                        audit.record_cycle(
+                            cycle_type="stage3_overage",
+                            approver=auth.current_role(),
+                            year=rec_year, month=rec_month,
+                            params={
+                                "route": "partner_submission",
+                                "partner": "OnePlace",
+                                "cutoff": cutoff.isoformat(),
+                                "clinic_count": partner_count,
+                            },
+                            outputs=[{
+                                "name": "oneplace_overage_submission",
+                                "sha256": audit.output_hash_df(pdf),
+                                "row_count": len(pdf),
+                                "total": round(float(partner_total), 2),
+                            }],
+                            note=f"OnePlace overage submission for {dt.date(2000, rec_month, 1):%B %Y}",
+                        )
+                        st.success(f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest.")
 
         elif step_key == "handoff":
             st.markdown("### Hand off to accounting")

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from core import auth, ledger, loaders, store, ui
+from core import audit, auth, ledger, loaders, store, ui
 
 ui.header(
     "Settings",
@@ -174,6 +174,12 @@ if st.button("Save settings", type="primary", key="cfg_save"):
 
     ok, info = store.save_json("config.json", cfg, commit_msg)
     loaders.config.clear()
+    audit.record_cycle(
+        cycle_type="settings_save",
+        approver=auth.current_role(),
+        params={"commit_message": commit_msg},
+        note="config.json updated via Settings page",
+    )
     (st.success if ok else st.warning)(info)
 
 st.divider()
@@ -283,6 +289,17 @@ if restore_up is not None:
                     except Exception as e:
                         errors.append(f"{rel}: {type(e).__name__}: {e}")
                 loaders.clear_caches()
+                audit.record_cycle(
+                    cycle_type="settings_restore",
+                    approver=auth.current_role(),
+                    source_file={
+                        "name": restore_up.name,
+                        "sha256": ledger.file_hash(restore_up.getvalue()),
+                        "size_bytes": len(restore_up.getvalue()),
+                    },
+                    params={"applied_count": applied, "error_count": len(errors)},
+                    note=f"Restored {applied}/{len(files)} files from backup zip",
+                )
                 if errors:
                     st.warning(
                         f"Restored {applied}/{len(files)} files. Errors:\n" + "\n".join(errors)
@@ -311,3 +328,72 @@ lc4.metric(
 if summary["by_company"]:
     by_co_str = " · ".join(f"**{k}**: {v}" for k, v in sorted(summary["by_company"].items()))
     st.caption(f"By company — {by_co_str}")
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Audit manifest
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("Audit manifest")
+st.caption(
+    "Immutable record of every cycle that produced QBO-bound files. Each entry is "
+    "hash-anchored so post-hoc tampering is detectable. The GitHub commit history of "
+    "`data/audit_log.json` is the authoritative tamper trail; the entry_hash check below "
+    "is the in-app validation."
+)
+
+audit_summary = audit.summary()
+a1, a2, a3, a4 = st.columns(4)
+a1.metric("Total cycles", audit_summary["entry_count"])
+a2.metric("Distinct types", len(audit_summary["by_type"]))
+a3.metric("Distinct approvers", len(audit_summary["by_approver"]))
+a4.metric(
+    "Latest cycle",
+    (audit_summary["latest_timestamp"] or "—")[:10] if audit_summary["latest_timestamp"] else "—",
+)
+
+if audit_summary["entry_count"]:
+    ok_integ, tampered = audit.verify_integrity()
+    if ok_integ:
+        st.success(f"Integrity check: all {audit_summary['entry_count']} entries verified.")
+    else:
+        st.error(
+            f"**Integrity check FAILED** — {len(tampered)} entry/entries have hash mismatches. "
+            f"Entries: {tampered[:10]}. Investigate via the GitHub history of audit_log.json."
+        )
+
+    cycle_filter = st.selectbox(
+        "Filter by cycle type",
+        options=["(all)"] + sorted(audit_summary["by_type"].keys()),
+        key="audit_filter",
+    )
+    limit = st.number_input("Show last N entries", min_value=5, max_value=500, value=25, step=5, key="audit_limit")
+    entries = audit.list_entries(
+        limit=int(limit),
+        cycle_type=None if cycle_filter == "(all)" else cycle_filter,
+    )
+    # Flatten for table view
+    rows = []
+    for e in entries:
+        out_total = sum(o.get("total") or 0 for o in (e.get("outputs") or []))
+        out_rows = sum(o.get("row_count") or 0 for o in (e.get("outputs") or []))
+        rows.append({
+            "timestamp": e.get("timestamp", "")[:19],
+            "cycle_type": e.get("cycle_type"),
+            "approver": e.get("approver"),
+            "year": e.get("year"),
+            "month": e.get("month"),
+            "output_rows": out_rows,
+            "output_total": f"${out_total:,.2f}" if out_total else "",
+            "source_file": (e.get("source_file") or {}).get("name", ""),
+            "note": e.get("note", ""),
+            "entry_id": e.get("id", "")[:8],
+        })
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+    if entries:
+        with st.expander("Show full JSON for the most recent entry"):
+            st.json(entries[0])
+else:
+    st.info("No audit entries yet. They start appearing once you 'Mark batch as imported' in FLEX Cycle stages.")

@@ -106,7 +106,8 @@ def _coerce_date(v):
         return str(v)
 
 
-def _coerce_amount(v):
+def coerce_amount(v):
+    """Best-effort dollar parser: handles None, numeric, '$1,234.56', '(123)' negatives, ''."""
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return 0.0
     if isinstance(v, (int, float)):
@@ -187,7 +188,7 @@ def normalize(df: pd.DataFrame, mapping: dict | None, item_map: dict, profile: s
         df[mapping["item_desc"]].astype(str).str.strip() if "item_desc" in mapping else ""
     )
     out["amount"] = (
-        df[mapping["amount"]].map(_coerce_amount) if "amount" in mapping else 0.0
+        df[mapping["amount"]].map(coerce_amount) if "amount" in mapping else 0.0
     )
     out["date"] = df[mapping["date"]].map(_coerce_date) if "date" in mapping else None
 
@@ -208,7 +209,7 @@ def _normalize_odata(df: pd.DataFrame, item_map: dict) -> pd.DataFrame:
     )
     out["item_code"] = df[f["item_code"]].astype(str).str.strip() if f["item_code"] in df else ""
     out["item_desc"] = df[f["item_desc"]].astype(str).str.strip() if f["item_desc"] in df else ""
-    out["amount"] = df[f["amount"]].map(_coerce_amount) if f["amount"] in df else 0.0
+    out["amount"] = df[f["amount"]].map(coerce_amount) if f["amount"] in df else 0.0
     out["date"] = df[f["date"]].map(_coerce_date) if f["date"] in df else None
 
     scan = df[f["scan_eligible"]] if f["scan_eligible"] in df else [None] * len(df)
@@ -217,7 +218,7 @@ def _normalize_odata(df: pd.DataFrame, item_map: dict) -> pd.DataFrame:
         for sn, tc, se in zip(out["item_desc"], out["item_code"], scan)
     ]
     for col, src in _ODATA_FEED_SOURCE.items():
-        out[col] = df[src].map(_coerce_amount) if src in df else 0.0
+        out[col] = df[src].map(coerce_amount) if src in df else 0.0
     return out[NORM_COLUMNS + FEED_COLUMNS]
 
 
@@ -404,9 +405,9 @@ def flex_activity_from_invoices(df: pd.DataFrame, start=None, end=None, flex_onl
     admin = df.get(f["admin"])
     activity = pd.Series(0.0, index=df.index)
     if sub is not None:
-        activity = activity.add(sub.map(_coerce_amount), fill_value=0.0)
+        activity = activity.add(sub.map(coerce_amount), fill_value=0.0)
     if admin is not None:
-        activity = activity.add(admin.map(_coerce_amount), fill_value=0.0)
+        activity = activity.add(admin.map(coerce_amount), fill_value=0.0)
 
     mask = pd.Series(True, index=df.index)
     if start is not None or end is not None:
