@@ -25,6 +25,7 @@ pages = {
     ],
     "FLEX": [
         st.Page("pages/flex_cycle.py", title="FLEX Cycle"),
+        st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
         st.Page("pages/settings.py", title="Settings"),
