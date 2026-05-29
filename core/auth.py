@@ -72,7 +72,20 @@ def require_login():
     from . import ui
 
     ui.inject()
-    ui.set_logo()
+    # Hide the sidebar (and its toggle) on the login screen: the auto-discovered
+    # page list from pages/ leaks into the sidebar before st.navigation runs,
+    # and it's noise on a password gate. Once logged in, the next rerun skips
+    # this block and st.navigation builds the proper sidebar.
+    st.markdown(
+        """
+        <style>
+        section[data-testid="stSidebar"] { display: none !important; }
+        [data-testid="stSidebarCollapsedControl"] { display: none !important; }
+        button[kind="headerNoPadding"][data-testid="baseButton-headerNoPadding"] { display: none !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     _, mid, _ = st.columns([1, 1.3, 1])
     with mid:
         ui.header("Enter the ledger", kicker="Oncura · Flex & Rebate")
