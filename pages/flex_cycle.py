@@ -468,7 +468,7 @@ with tab_recap:
                 unused_total=_unused_total, unused_count=len(udf),
                 direct_total=_direct_total, direct_count=_direct_count,
                 partner_total=_partner_total, partner_count=_partner_count,
-                cutoff_date=_cutoff,
+                cutoff_date=cutoff,
                 escalations=_flagged_names,
                 group_anchors=_group_anchors,
             )
