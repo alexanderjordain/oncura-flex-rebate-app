@@ -22,11 +22,6 @@ st.divider()
 col_flex, col_rebate = st.columns(2)
 with col_flex:
     st.subheader("FLEX program")
-    by_fc = {}
-    for c in fc:
-        by_fc[c.get("finance_company")] = by_fc.get(c.get("finance_company"), 0) + 1
-    st.write("Clinics by finance company:")
-    st.write(by_fc)
     st.markdown(
         "Single **FLEX Cycle** page walks the monthly process end-to-end:\n"
         "1. Finance company remittance → SaasAnt flex/scan imports\n"
@@ -37,11 +32,6 @@ with col_flex:
 
 with col_rebate:
     st.subheader("Rebate program")
-    by_prog = {}
-    for c in rc:
-        by_prog[c.get("program_type")] = by_prog.get(c.get("program_type"), 0) + 1
-    st.write("Clinics by program type:")
-    st.write(by_prog)
     st.markdown(
         "- **Rebate Master** — view/edit the clinic list + rates\n"
         "- **Rebate Cycle** — pick one or more months, upload OPD detail, download a multi-tab "
