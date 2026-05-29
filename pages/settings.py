@@ -48,7 +48,7 @@ if _app_pw and not st.session_state.get(SETTINGS_UNLOCK_KEY):
     _, mid, _ = st.columns([1, 2, 1])
     with mid:
         pw = st.text_input("Password", type="password", key="settings_unlock_pw")
-        if st.button("Unlock Settings", type="primary", use_container_width=True):
+        if st.button("Unlock Settings", use_container_width=True):
             if pw == _app_pw:
                 st.session_state[SETTINGS_UNLOCK_KEY] = True
                 st.rerun()
@@ -185,7 +185,7 @@ commit_msg = st.text_input(
     "Commit message", value=f"Settings update — {dt.date.today().isoformat()}",
     key="cfg_commit_msg",
 )
-if st.button("Save settings", type="primary", key="cfg_save"):
+if st.button("Save settings", key="cfg_save"):
     # Reassemble the config dict
     rates["ultrasound_finance"] = round(new_us_fin, 6)
     rates["ultrasound_self_funded"] = round(new_us_sf, 6)
@@ -262,7 +262,6 @@ bcol2.download_button(
     data=_build_backup_zip(),
     file_name=f"flexrebate_backup_{dt.date.today().isoformat()}.zip",
     mime="application/zip",
-    type="primary",
     key="cfg_backup_dl",
 )
 
@@ -300,7 +299,7 @@ if restore_up is not None:
             key="cfg_restore_confirm",
         )
         if confirm_text == "RESTORE":
-            if st.button("Apply restore", type="primary", key="cfg_restore_apply"):
+            if st.button("Apply restore", key="cfg_restore_apply"):
                 applied, errors = 0, []
                 msg = f"Restore from backup ({dt.date.today().isoformat()})"
                 for member in files:
