@@ -129,7 +129,11 @@ def recapture_email(
     cutoff_date: dt.date,
     escalations: list[str],
     group_anchors: list[str],
+    unused_recapture_clinics: list[dict] | None = None,
 ) -> tuple[str, str]:
+    """unused_recapture_clinics: [{"clinic": qb_name, "amount": float}, ...] — per-clinic
+    list of recapture invoices that need their accumulated customer credit applied in QBO
+    after the SaaSAnt import. Listed verbatim in the email so accounting can work down it."""
     month_name = dt.date(year, month, 1).strftime("%B")
     next_month = dt.date(cutoff_date.year, cutoff_date.month, 1).strftime("%B %Y")
     subj = f"[Action Required] FLEX Quarter-End Recapture & Overage — {month_name} {year}"
@@ -147,10 +151,29 @@ def recapture_email(
         lines.append(f"  - Multi-clinic groups pooled at: {', '.join(group_anchors)}")
     lines += [
         "",
-        "A. Unused recapture (Accounting SOP-5)",
+        "A. Unused recapture (Accounting SOP-5 + SOP-11)",
         f"  1. SaaSAnt -> Bulk Upload -> Invoice -> UnusedFlex_{month_name}_{year}.xlsx",
         f"  2. Verify QBO P&L: Flex Credits line nets DOWN by ${unused_total:,.2f}.",
+        "  3. **Apply each clinic's accumulated customer credit to its new recapture invoice**",
+        "     so the account zeros out (the invoice alone doesn't consume the credit balance).",
+        "     For each clinic listed below:",
+        "       a. Open the customer in QBO.",
+        "       b. Receive Payment -> select the Unused-Flex-Credits invoice in 'Outstanding Transactions'.",
+        "       c. In the 'Credits' panel, check the unapplied payment(s) + credit memo(s) that",
+        "          collectively equal the invoice amount.",
+        "       d. Save. The account balance should drop to zero (or close to it).",
         "",
+    ]
+    # Per-clinic checklist — what the operator needs to work down line-by-line in QBO
+    if unused_recapture_clinics:
+        lines.append("  Clinics needing credit-application against the new recapture invoices:")
+        # Stable sort by clinic name; show amount aligned for readability in monospace clients
+        for entry in sorted(unused_recapture_clinics, key=lambda r: (r.get("clinic") or "").lower()):
+            cname = entry.get("clinic", "")
+            amt = float(entry.get("amount") or 0)
+            lines.append(f"    [ ]  {cname}  —  ${amt:,.2f}")
+        lines.append("")
+    lines += [
         "B. Direct-bill overages (SOP-6) — clinics Oncura bills directly",
         f"  1. SaaSAnt -> Bulk Upload -> Invoice -> OverageDirect_{month_name}_{year}.xlsx",
         "  2. For each invoice: send the clinic an Authorize.net payment link (or QBO PDF).",

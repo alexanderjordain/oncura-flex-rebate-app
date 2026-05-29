@@ -1031,6 +1031,11 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                                 if r["route"] == "partner" and r["net_overage"] > 0)
             group_anchors = sorted({r["clinic_name"] for r in pipe["recap"] if r.get("group_id")})
             flagged_names = [r["clinic_name"] for r in flagged]
+            # Per-clinic recapture list — each gets an explicit checklist line in the email
+            unused_clinics = [
+                {"clinic": row["Customer"], "amount": float(row["Product/Service Amount"])}
+                for _, row in udf.iterrows()
+            ] if not udf.empty else []
             subj, body = accounting_handoff.recapture_email(
                 year=rec_year, month=rec_month,
                 unused_total=unused_total, unused_count=len(udf),
@@ -1039,6 +1044,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 cutoff_date=cutoff,
                 escalations=flagged_names,
                 group_anchors=group_anchors,
+                unused_recapture_clinics=unused_clinics,
             )
             accounting_handoff.render_handoff(subj, body, key_prefix="w_recap_email")
 
