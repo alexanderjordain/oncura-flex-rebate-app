@@ -12,7 +12,7 @@
     "rads_note": "Rads (radiographs) flat 4% across the board; no exclusions per SOP.",
     "rates": {
       "ultrasound_self_funded": 0.05,
-      "ultrasound_finance": 0.10,
+      "ultrasound_finance": 0.1,
       "rads_self_funded": 0.02,
       "rads_finance": 0.04
     }
@@ -24,15 +24,39 @@
     },
     "terms": "Flex",
     "calendar_groups": {
-      "A": ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"],
-      "B": ["Feb-Apr", "May-Jul", "Aug-Oct", "Nov-Jan"],
-      "C": ["Mar-May", "Jun-Aug", "Sep-Nov", "Dec-Feb"]
+      "A": [
+        "Jan-Mar",
+        "Apr-Jun",
+        "Jul-Sep",
+        "Oct-Dec"
+      ],
+      "B": [
+        "Feb-Apr",
+        "May-Jul",
+        "Aug-Oct",
+        "Nov-Jan"
+      ],
+      "C": [
+        "Mar-May",
+        "Jun-Aug",
+        "Sep-Nov",
+        "Dec-Feb"
+      ]
     },
     "default_contract_months": 60,
     "finance_companies": {
-      "OnePlace": {"bank_feed_label": "Origin Bank Midwest", "ref_prefix": "OP"},
-      "GreatAmerica": {"bank_feed_label": "Accounting Services", "ref_prefix": "GA"},
-      "NewLane": {"bank_feed_label": "New Lane", "ref_prefix": "NL"}
+      "OnePlace": {
+        "bank_feed_label": "Origin Bank Midwest",
+        "ref_prefix": "OP"
+      },
+      "GreatAmerica": {
+        "bank_feed_label": "Accounting Services",
+        "ref_prefix": "GA"
+      },
+      "NewLane": {
+        "bank_feed_label": "New Lane",
+        "ref_prefix": "NL"
+      }
     },
     "remittance_classification": {
       "flex_contract_prefix": "04",
@@ -41,17 +65,19 @@
     },
     "overage": {
       "note": "SOP-6 + SOP-12 routing. Direct-bill invoices get VOIDED immediately after sending (revenue already captured by OPD invoices).",
-      "finance_partner_cutoff_day": 5,
+      "finance_partner_cutoff_day": 6,
       "finance_partner_handles": {
-        "OnePlace": true,
         "GreatAmerica": false,
         "NewLane": false,
+        "OnePlace": true,
         "SelfFinanced": false
       },
       "direct_invoice_item": "Telemedicine Overage",
       "direct_invoice_memo_template": "Telemedicine Overages — {quarter}",
       "no_refund_policy": "DO NOT issue refunds to Flex accounts (even large overpayments). Apply to future overages. Marty approval required for exceptions.",
-      "escalation_clinics": ["Luv-N-Care"]
+      "escalation_clinics": [
+        "Luv-N-Care"
+      ]
     }
   }
 }
