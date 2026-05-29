@@ -30,6 +30,21 @@
       "outputs": [],
       "note": "config.json updated via Settings page",
       "entry_hash": "7ef8e7a599b8fbb745d214dfbb2a06a58abd15108c667977f28454fd4d5dae58"
+    },
+    {
+      "id": "c0b1e975-d08f-4d58-a5be-cbef8840db2d",
+      "timestamp": "2026-05-29T06:57:27",
+      "cycle_type": "settings_save",
+      "approver": "admin",
+      "year": null,
+      "month": null,
+      "params": {
+        "commit_message": "Settings update — 2026-05-29"
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "config.json updated via Settings page",
+      "entry_hash": "efe7dc3959a5756542acf4836164e37cb1df1d2c698a5d3fcea0543d1a32f0f6"
     }
   ]
 }
