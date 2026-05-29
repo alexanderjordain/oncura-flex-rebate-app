@@ -26,5 +26,8 @@ pages = {
     "FLEX": [
         st.Page("pages/flex_cycle.py", title="FLEX Cycle"),
     ],
+    "Admin": [
+        st.Page("pages/settings.py", title="Settings"),
+    ],
 }
 st.navigation(pages).run()

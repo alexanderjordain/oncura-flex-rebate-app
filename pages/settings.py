@@ -1,0 +1,313 @@
+"""Settings — edit operational config without touching code.
+
+UI front-end for `data/config.json`: rebate rates, FLEX overage routing, finance partner
+metadata, escalation clinics. Also: full backup (download everything as a zip) + restore.
+
+Admin-role gated. Persists via core.store (GitHub Contents API when token set, local file
+otherwise).
+"""
+from __future__ import annotations
+
+import datetime as dt
+import io
+import json
+import zipfile
+from pathlib import Path
+
+import streamlit as st
+
+from core import auth, ledger, loaders, store, ui
+
+ui.header(
+    "Settings",
+    "Operational configuration, backup, and module health. Admin-only.",
+    kicker="App · Settings",
+)
+
+# ── Admin gate ────────────────────────────────────────────────────────────────
+if not auth.can("admin"):
+    st.warning("Settings are admin-only. Your current role is read-only here.")
+    auth.require("admin")
+    st.stop()
+
+cfg = dict(loaders.config())  # deep-ish copy via dict(); we'll re-nest when saving
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Persistence health
+# ═════════════════════════════════════════════════════════════════════════════
+gh_token_set = bool(store._github_token())
+ph1, ph2, ph3 = st.columns(3)
+ph1.metric(
+    "GitHub persistence",
+    "configured" if gh_token_set else "NOT set",
+    help="When set, edits commit to the repo and survive restarts. When NOT set, "
+         "edits are session-only on Cloud (the container's filesystem doesn't persist).",
+)
+ph2.metric("Repo", store.GITHUB_REPO.split("/")[-1])
+ph3.metric("Branch", store.GITHUB_BRANCH)
+if not gh_token_set:
+    st.warning(
+        "**GITHUB_TOKEN is not set.** Changes you make here will only last for this "
+        "session on Cloud. Set the token in **Manage app → Settings → Secrets** to "
+        "make settings persistent."
+    )
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Rebate rates
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("Rebate rates")
+st.caption(
+    "Default percentages applied to OPD scan activity. Per-clinic overrides live in "
+    "Rebate Master; these are the program defaults."
+)
+rebate = cfg.setdefault("rebate", {})
+rates = rebate.setdefault("rates", {})
+
+rc1, rc2, rc3, rc4 = st.columns(4)
+new_us_fin = rc1.number_input(
+    "Ultrasound — finance", value=float(rates.get("ultrasound_finance", 0.10)),
+    min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_us_fin",
+)
+new_us_sf = rc2.number_input(
+    "Ultrasound — self-funded", value=float(rates.get("ultrasound_self_funded", 0.05)),
+    min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_us_sf",
+)
+new_rads_fin = rc3.number_input(
+    "Rads — finance", value=float(rates.get("rads_finance", 0.04)),
+    min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_rads_fin",
+)
+new_rads_sf = rc4.number_input(
+    "Rads — self-funded", value=float(rates.get("rads_self_funded", 0.02)),
+    min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_rads_sf",
+)
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# FLEX overage routing
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("FLEX overage routing (SOP-12)")
+st.caption(
+    "Whether each finance partner handles overage billing for us, or whether we direct-bill "
+    "the clinic. Per SOP-12: OnePlace handles overages by the cutoff (typically the 5th); "
+    "Great America and NewLane decline and we invoice the clinic directly."
+)
+
+flex_cfg = cfg.setdefault("flex", {})
+overage = flex_cfg.setdefault("overage", {})
+handles = overage.setdefault("finance_partner_handles", {})
+
+oc1, oc2 = st.columns(2)
+new_handles = {}
+finance_cos = sorted(set(list(handles.keys()) + ["OnePlace", "GreatAmerica", "NewLane", "SelfFinanced"]))
+for i, co in enumerate(finance_cos):
+    col = oc1 if i % 2 == 0 else oc2
+    new_handles[co] = col.checkbox(
+        f"{co} handles overages",
+        value=bool(handles.get(co, False)),
+        key=f"cfg_handles_{co}",
+        help="When checked: we submit the overage to them by their cutoff. Unchecked: we invoice the clinic directly.",
+    )
+
+cc1, cc2 = st.columns(2)
+new_cutoff = cc1.number_input(
+    "Finance-partner cutoff day of month",
+    min_value=1, max_value=28,
+    value=int(overage.get("finance_partner_cutoff_day", 5)),
+    key="cfg_cutoff_day",
+    help="The day each month by which we must submit overages to a partner that handles them.",
+)
+new_direct_item = cc2.text_input(
+    "Direct invoice item (QBO product/service)",
+    value=overage.get("direct_invoice_item", "Telemedicine Overage"),
+    key="cfg_direct_item",
+)
+
+new_memo_template = st.text_input(
+    "Direct invoice memo template (use {quarter} for the quarter label)",
+    value=overage.get("direct_invoice_memo_template", "Telemedicine Overages — {quarter}"),
+    key="cfg_memo_tmpl",
+)
+
+new_no_refund = st.text_area(
+    "No-refund policy text (surfaced in Stage 3 handoff emails)",
+    value=overage.get("no_refund_policy", ""),
+    key="cfg_no_refund",
+    height=80,
+)
+
+new_escalations = st.text_area(
+    "Escalation clinics (one per line) — flagged automatically when an overage hits these",
+    value="\n".join(overage.get("escalation_clinics", [])),
+    key="cfg_escalation",
+    height=80,
+)
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Save settings
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("Save")
+commit_msg = st.text_input(
+    "Commit message", value=f"Settings update — {dt.date.today().isoformat()}",
+    key="cfg_commit_msg",
+)
+if st.button("Save settings", type="primary", key="cfg_save"):
+    # Reassemble the config dict
+    rates["ultrasound_finance"] = round(new_us_fin, 6)
+    rates["ultrasound_self_funded"] = round(new_us_sf, 6)
+    rates["rads_finance"] = round(new_rads_fin, 6)
+    rates["rads_self_funded"] = round(new_rads_sf, 6)
+    overage["finance_partner_handles"] = new_handles
+    overage["finance_partner_cutoff_day"] = int(new_cutoff)
+    overage["direct_invoice_item"] = new_direct_item.strip()
+    overage["direct_invoice_memo_template"] = new_memo_template.strip()
+    overage["no_refund_policy"] = new_no_refund.strip()
+    overage["escalation_clinics"] = [s.strip() for s in new_escalations.splitlines() if s.strip()]
+
+    ok, info = store.save_json("config.json", cfg, commit_msg)
+    loaders.config.clear()
+    (st.success if ok else st.warning)(info)
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Backup / restore
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("Backup")
+st.caption(
+    "Download every JSON in `data/` (masters, config, ledger, name map) as one zip. "
+    "Restore later by uploading that same zip below. Use this before any risky settings "
+    "change or operator handoff."
+)
+
+DATA_DIR = Path(store.DATA_DIR).resolve()
+
+def _build_backup_zip() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # Snapshot every json under data/. Prefer the GitHub copy via store.load_json
+        # so the backup reflects the live source-of-truth, not stale local files.
+        for path in sorted(DATA_DIR.glob("*.json")):
+            rel = path.name
+            data, _ = store.load_json(rel, default=None)
+            if data is None:
+                continue
+            zf.writestr(
+                f"data/{rel}",
+                json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8"),
+            )
+        # Include a small manifest for human readability + restore validation
+        manifest = {
+            "exported_at": dt.datetime.now().isoformat(timespec="seconds"),
+            "repo": store.GITHUB_REPO,
+            "branch": store.GITHUB_BRANCH,
+            "github_persistence": gh_token_set,
+            "files": sorted(p.name for p in DATA_DIR.glob("*.json")),
+        }
+        zf.writestr(
+            "manifest.json",
+            json.dumps(manifest, indent=2, ensure_ascii=False).encode("utf-8"),
+        )
+    return buf.getvalue()
+
+
+bcol1, bcol2 = st.columns([2, 1])
+bcol1.caption(
+    "Backup includes: rebate_master, flex_master, config, name_map, opd_item_map, "
+    "service_prices, processed_payments (the ledger), plus a manifest.json with timestamp + repo info."
+)
+bcol2.download_button(
+    "Download backup (.zip)",
+    data=_build_backup_zip(),
+    file_name=f"flexrebate_backup_{dt.date.today().isoformat()}.zip",
+    mime="application/zip",
+    type="primary",
+    key="cfg_backup_dl",
+)
+
+st.divider()
+
+
+st.subheader("Restore")
+st.caption(
+    "Replace data/ with the contents of a previously-downloaded backup zip. **This is "
+    "destructive** — every file in the zip overwrites its counterpart. Double-confirm "
+    "before applying."
+)
+
+restore_up = st.file_uploader("Backup zip", type=["zip"], key="cfg_restore_file")
+if restore_up is not None:
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(restore_up.getvalue()))
+        files = [n for n in zf.namelist() if n.startswith("data/") and n.endswith(".json")]
+        try:
+            manifest = json.loads(zf.read("manifest.json"))
+        except KeyError:
+            manifest = None
+
+        st.write(f"Zip contains {len(files)} data file(s):")
+        for f in files:
+            st.write(f"- `{f}`")
+        if manifest:
+            st.caption(
+                f"Exported {manifest.get('exported_at', '?')} from "
+                f"{manifest.get('repo', '?')}@{manifest.get('branch', '?')}."
+            )
+
+        confirm_text = st.text_input(
+            'Type **RESTORE** (all caps) to confirm — this overwrites every data file in the zip.',
+            key="cfg_restore_confirm",
+        )
+        if confirm_text == "RESTORE":
+            if st.button("Apply restore", type="primary", key="cfg_restore_apply"):
+                applied, errors = 0, []
+                msg = f"Restore from backup ({dt.date.today().isoformat()})"
+                for member in files:
+                    rel = member.removeprefix("data/")
+                    try:
+                        data = json.loads(zf.read(member))
+                        ok, info = store.save_json(rel, data, msg)
+                        if ok:
+                            applied += 1
+                        else:
+                            errors.append(f"{rel}: {info}")
+                    except Exception as e:
+                        errors.append(f"{rel}: {type(e).__name__}: {e}")
+                loaders.clear_caches()
+                if errors:
+                    st.warning(
+                        f"Restored {applied}/{len(files)} files. Errors:\n" + "\n".join(errors)
+                    )
+                else:
+                    st.success(f"Restored {applied} file(s). Reload pages to see updated data.")
+    except zipfile.BadZipFile:
+        st.error("That doesn't look like a valid zip file.")
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Ledger summary
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("Processed-payments ledger")
+summary = ledger.summary()
+lc1, lc2, lc3, lc4 = st.columns(4)
+lc1.metric("Files processed", summary["file_count"])
+lc2.metric("Payments recorded", summary["payment_count"])
+lc3.metric("Companies", len(summary["by_company"]))
+lc4.metric(
+    "Latest file",
+    (summary["latest_uploaded_at"] or "—")[:10] if summary["latest_uploaded_at"] else "—",
+)
+if summary["by_company"]:
+    by_co_str = " · ".join(f"**{k}**: {v}" for k, v in sorted(summary["by_company"].items()))
+    st.caption(f"By company — {by_co_str}")

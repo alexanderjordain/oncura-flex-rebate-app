@@ -1,6 +1,6 @@
 import streamlit as st
 
-from core import loaders, store, ui
+from core import ledger, loaders, store, ui
 
 ui.header("FLEX + Rebate Accounting",
           "Receive OPD activity and finance-company remittances, calculate, and produce audit-ready imports.",
@@ -10,12 +10,14 @@ rebate = loaders.rebate_master()
 flex = loaders.flex_master()
 rc = rebate.get("clinics", [])
 fc = flex.get("clinics", [])
+ledger_summary = ledger.summary()
 
-c1, c2, c3 = st.columns(3)
+c1, c2, c3, c4 = st.columns(4)
 c1.metric("Rebate clinics", len(rc))
 c2.metric("FLEX clinics", len(fc))
+c3.metric("Ledger: payments", ledger_summary["payment_count"])
 gh = "configured" if store._github_token() else "NOT set"
-c3.metric("GitHub persistence", gh)
+c4.metric("GitHub persistence", gh)
 
 st.divider()
 
@@ -40,6 +42,29 @@ with col_rebate:
     )
 
 st.divider()
+
+# ── Module health (catches partial-deploy / import-broken state) ─────────────
+with st.expander("Module health — verify every core module imports cleanly"):
+    import importlib
+    core_modules = [
+        "accounting_handoff", "auth", "flex_credits", "flex_finance", "flex_overage",
+        "flex_unused", "ledger", "loaders", "opd_adapter", "rebate_calc",
+        "rebate_report", "saasant", "store", "ui",
+    ]
+    health = []
+    for m in core_modules:
+        try:
+            importlib.import_module(f"core.{m}")
+            health.append({"module": f"core.{m}", "status": "OK"})
+        except Exception as e:
+            health.append({"module": f"core.{m}", "status": f"{type(e).__name__}: {e}"})
+    failed = [h for h in health if h["status"] != "OK"]
+    if failed:
+        st.error(f"{len(failed)} module(s) failed to import — see Recovery runbook (docs/RECOVERY.md).")
+    else:
+        st.success(f"All {len(health)} core modules import cleanly.")
+    st.dataframe(health, use_container_width=True, hide_index=True)
+
 with st.expander("Setup / status notes"):
     st.markdown(
         f"""

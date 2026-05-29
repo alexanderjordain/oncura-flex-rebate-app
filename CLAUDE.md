@@ -12,18 +12,20 @@ writes. The app's design driver is **audit-friendliness** (Marty's stated requir
 ```
 app.py                        # entry: auth + theme + st.navigation
 core/
-  auth.py                     # password gate (single shared) + optional roles
+  auth.py                     # password gate (single shared) + optional roles; hides sidebar on login screen
   ui.py                       # theme/CSS, page header, sidebar logo
   loaders.py                  # cached loaders for the JSON masters
   store.py                    # JSON persistence (GitHub Contents API + local file)
+  ledger.py                   # processed-payments ledger: fingerprint + dedup + persist
   opd_adapter.py              # OPD ingest: 3 profiles (odata, case_grid, generic) + invoices
   rebate_calc.py              # rate-based vs feed-based rebate calc w/ variance
   rebate_report.py            # multi-tab xlsx report builder for the cycle
-  flex_credits.py             # SaaSAnt credit-memo import (SOP-5)
+  flex_credits.py             # payment-driven credit-memo import + legacy active-list fallback (SOP-5)
   flex_unused.py              # quarter-end recapture (SOP-5) + overage detection
   flex_overage.py             # overage routing + direct-bill + partner submission (SOP-6, SOP-12)
   flex_finance.py             # finance-co remittance -> SaaSAnt imports (SOP-9, SOP-10)
   saasant.py                  # shared SaaSAnt helpers (unique refs, last-day, xlsx bytes)
+  accounting_handoff.py       # per-workflow email-draft builders + render helpers
 data/
   rebate_master.json          # 87 rebate-program clinics + rates
   flex_master.json            # 82 FLEX clinics + thresholds + contract IDs + calendar group
@@ -31,18 +33,31 @@ data/
   service_prices.json         # 50 services with {price, category} from comp-app STD_PRICES
   opd_item_map.json           # category classification rules per OPD profile
   config.json                 # rates, calendar groups, overage routing, finance co labels
+  processed_payments.json     # ledger: file hashes + per-payment fingerprints (created on first Stage 1 commit)
 pages/
-  home.py                     # status dashboard
+  home.py                     # status dashboard + module-health panel
   rebate_master.py            # edit clinics + rates
   rebate_cycle.py             # multi-month cycle -> multi-tab xlsx report
-  flex_cycle.py               # 3-tab wizard: Remittance / Credits / Unused+Overage
+  flex_cycle.py               # 3-tab wizard wrapped in safe_stage() guards; ledger-aware Stage 1+2
+  settings.py                 # config.json editor + backup/restore + ledger summary (admin-only)
+tests/                        # pytest suite — `python -m pytest tests/`
+  test_ledger.py              # fingerprint stability + dedup
+  test_flex_unused.py         # quarter math + multi-clinic group pooling
+  test_flex_credits.py        # payment-driven builder + legacy fallback
 scripts/
+  smoke_test.py               # pre-deploy static checker (syntax + cross-module references)
   build_rebate_master.py      # seed rebate_master.json from Rebate Accounts Copy.xlsx
   build_flex_master.py        # seed flex_master.json from Flex Master List.xlsx
   build_name_map.py           # seed name_map from ScanPackage + FlexMaster
   make_mock_opd.py            # generate mock OPD CSV for demo
   merge_name_map.py           # bulk-add legal->QB pairs (rerunnable)
   merge_flex_names.py         # bulk-add OnePlace flex clinic mappings
+.github/workflows/
+  smoke.yml                   # runs smoke_test.py + pytest on every push/PR
+docs/
+  ACCOUNTING_HANDOFF.md       # manual-step catalog for accounting after files are generated
+  FLEX_PROGRAM_EXPLAINED.md   # explainer + brand-system spec for the tutorial deck
+  RECOVERY.md                 # runbook for the 7 failure modes we've seen
 assets/
   oncura_logo.png             # shown via st.logo() in the sidebar
 .streamlit/
@@ -109,6 +124,31 @@ Single shared password (`APP_PASSWORD` in secrets) → full access. Optional `[r
 
 No-secrets fallback grants admin ONLY when `FLEXREBATE_LOCAL=1` env var is set — so a misconfigured public Cloud URL never opens admin to the world.
 
+## Bulletproofing layers (don't remove without replacing)
+
+The app survives an Alex-leaves scenario via four layers:
+
+1. **`scripts/smoke_test.py` + `.github/workflows/smoke.yml`** — static checker that ASTs every `module.attr` reference in `pages/` and verifies the imported core module has that attribute. Runs in CI on every push. Negative-tested to catch the exact AttributeError class we hit.
+2. **`tests/` pytest suite** — frozen tests for the calculation modules (recapture math, credit-memo builder, ledger fingerprints, group pooling). 32 tests, ~1s runtime. Wired into CI.
+3. **`safe_stage()` context manager in `pages/flex_cycle.py`** — `with tab_X, safe_stage(...):` traps exceptions inside each tab so one broken stage doesn't kill the others. Chains with the tab context manager so existing indentation is untouched.
+4. **`docs/RECOVERY.md`** — runbook for the 7 failure modes we've actually hit. Anyone (not just Alex) can recover from a broken Cloud deploy by reading it.
+
+## FLEX accounting model — the part nobody figures out on their own
+
+Each FLEX clinic gets **TWO credit entries per month**, not one:
+
+- **Finance-co payment** (cash wired to Oncura by OnePlace/GA/NewLane) — recorded as an unapplied Receive Payment on the clinic's QBO account. Per Cash SOP-9 these are *intentionally* unapplied; they sit as a credit balance.
+- **Monthly credit memo** (`Flex-credits` item, class `03-Telemedicine`) — generated by Stage 2 of the wizard, one per ledger payment row. Per Accounting SOP-10 description: "one Flex payment in, one credit out."
+
+The two together fund the clinic's quarterly entitlement: `payment + credit memo` per month × 3 ≈ `quarterly_threshold` ≈ 6 × `monthly_credit`. The ratio isn't exactly 2:1 (e.g., Chenango 1.93×, Alum Rock 2.23×) — that's contract-term asymmetry between wholesale (what the finance co pays) and retail (what the threshold is denominated in).
+
+At quarter end, the Accounting Manager (SOP-11) un-applies auto-matches and re-applies in payment→credit→payment→credit pattern against the quarter's scan invoices. Whatever's left determines the outcome:
+- **Zero balance** → reconciled, done.
+- **Positive remaining** (clinic owes) → overage → SOP-12 (partner or direct bill).
+- **Negative remaining** (credit) → unused → `Unused-Flex-Credits` invoice **on the clinic's account but NOT mailed** — it's an internal accounting entry that converts the credit balance into recognized revenue.
+
+Full explainer in `docs/FLEX_PROGRAM_EXPLAINED.md`.
+
 ## Known gaps / next priorities
 
 1. **Audit manifest (task #7, deferred):** per-cycle immutable record (timestamp, source file hash, params, totals, output hash, approver). The audit-friendly feature Marty cited as decisive. Should be wired into `flex_overage`, `flex_credits`, `flex_unused`, `rebate_calc` outputs and persisted via `store`.
@@ -116,13 +156,18 @@ No-secrets fallback grants admin ONLY when `FLEXREBATE_LOCAL=1` env var is set �
 3. **OPD live API:** today is file upload only. Xavier Vera's warehouse system (`oncura-partners-warehouse-system`) ingests OPD via OQL exports — when his Mendix sync stabilizes, swap `opd_adapter` to fetch from that warehouse API instead of CSV upload. Adapter is designed so this is a small change.
 4. **`*Discounted*` service variants** in OPD case-grid fall to `$0/other` — should either be added to `service_prices.json` or have a derivation rule (base × discount %).
 5. **Rancho Pet Cure conflict** in `name_map.json`: currently mapped to "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital" (user's live resolver entry), but the earlier flex template mapped it to "Baseline Animal Hospital". Confirm.
+6. **Extend ledger dedup to Stages 2 & 3 (task #21):** Stage 1 dedups payment imports already. Stages 2 (credit memos) and 3 (recapture invoices) don't record what they emit, so re-running them could double-post to QBO via different SaaSAnt ref numbers. Same fingerprint pattern, applied to two more emission points.
 
-## Running
+## Running + pre-push checks
 
 ```bash
-# Local
+# Local dev
 streamlit run app.py
-# bypass password for local dev: set env FLEXREBATE_LOCAL=1 first
+# bypass password: set env FLEXREBATE_LOCAL=1 first
+
+# Pre-push checks (also run by CI on every push)
+python scripts/smoke_test.py          # static cross-module reference check
+python -m pytest tests/ -v            # calculation correctness suite
 
 # Cloud
 # Push to main -> Streamlit Cloud auto-redeploys from github.com/alexanderjordain/oncura-flex-rebate-app

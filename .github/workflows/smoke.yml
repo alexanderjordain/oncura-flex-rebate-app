@@ -26,6 +26,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest
 
       - name: smoke test (syntax + cross-module references)
         run: python scripts/smoke_test.py
+
+      - name: pytest (core calculation suite)
+        run: python -m pytest tests/ -v
