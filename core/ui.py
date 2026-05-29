@@ -71,12 +71,9 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
   font-variant-numeric:tabular-nums; color:var(--blue) !important; letter-spacing:-.01em;
 }
 
-/* buttons — dark blue solid w/ bold white lettering, uniform throughout the app */
+/* Buttons — dark blue solid w/ bold white lettering. Scoped to top-level Streamlit
+   button containers so the file uploader's internal "Browse files" button stays neutral. */
 .stButton > button,
-.stButton > button[kind="primary"],
-.stButton > button[kind="secondary"],
-[data-testid="stBaseButton-primary"],
-[data-testid="stBaseButton-secondary"],
 .stDownloadButton > button,
 .stLinkButton > a,
 .stLinkButton > a:visited {
@@ -90,8 +87,6 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
   transition:transform .08s ease, box-shadow .15s ease, background .15s ease;
 }
 .stButton > button:hover,
-[data-testid="stBaseButton-primary"]:hover,
-[data-testid="stBaseButton-secondary"]:hover,
 .stDownloadButton > button:hover,
 .stLinkButton > a:hover {
   background:#152C47 !important;
@@ -101,10 +96,21 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
   box-shadow:0 4px 14px rgba(31,61,92,.30);
 }
 .stButton > button:disabled,
-[data-testid="stBaseButton-primary"]:disabled,
-[data-testid="stBaseButton-secondary"]:disabled {
+.stDownloadButton > button:disabled {
   background:#9CA3AF !important; border-color:#9CA3AF !important;
   color:#FFFFFF !important; cursor:not-allowed;
+}
+/* Restore the file uploader's internal browse button to a neutral look */
+[data-testid="stFileUploader"] button {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+  font-weight: 500 !important;
+}
+[data-testid="stFileUploader"] button:hover {
+  background: #F3F4F6 !important;
+  color: var(--ink) !important;
+  border-color: var(--blue) !important;
 }
 
 /* sidebar (no * selector — it breaks Material icon fonts) */

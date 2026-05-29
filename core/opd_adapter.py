@@ -275,24 +275,67 @@ def _normalize_case_grid(df: pd.DataFrame, item_map: dict, price_table: dict) ->
     return pd.DataFrame(rows, columns=NORM_COLUMNS + FEED_COLUMNS)
 
 
-def read_upload(file) -> pd.DataFrame:
-    """Read an uploaded CSV / XLSX / legacy XLS file-like object.
+def _sniff_format(file) -> str:
+    """Detect file format by magic bytes (more reliable than extension).
 
-    Explicit engine selection so a BytesIO with a spoofed `.name` (used by the wizard
-    when persisting uploads across reruns) parses reliably — pandas can't always
-    auto-detect engine from a BytesIO.
+    Returns one of 'html' / 'xlsx' / 'xls' / 'csv'. Some portal 'Export to Excel'
+    features (Great America, certain Mendix grids) emit an HTML <table> with an
+    .xls extension — xlrd/openpyxl can't read those; pd.read_html can.
     """
     name = getattr(file, "name", "").lower()
+    head = b""
+    if hasattr(file, "read"):
+        try:
+            pos = file.tell() if hasattr(file, "tell") else 0
+            head = file.read(64) or b""
+            if hasattr(file, "seek"):
+                file.seek(pos)
+        except Exception:
+            pass
+    head_lc = head.lstrip().lower()
+    if head_lc.startswith((b"<html", b"<!doc", b"<head", b"<table", b"<?xml")):
+        return "html"
+    if head.startswith(b"\xd0\xcf\x11\xe0"):
+        return "xls"  # OLE2 compound (real legacy Excel)
+    if head.startswith(b"PK\x03\x04"):
+        return "xlsx"  # zip container (modern Excel)
+    if name.endswith(".xlsx"):
+        return "xlsx"
+    if name.endswith(".xls"):
+        return "xls"
+    return "csv"
+
+
+def _seek0(file):
     if hasattr(file, "seek"):
         try:
             file.seek(0)
         except Exception:
             pass
-    if name.endswith(".xlsx"):
-        return pd.read_excel(file, engine="openpyxl")
-    if name.endswith(".xls"):
-        return pd.read_excel(file, engine="xlrd")
-    return pd.read_csv(file)
+
+
+def read_upload(file, *, header=0) -> pd.DataFrame:
+    """Read an uploaded CSV / XLSX / legacy XLS / HTML-disguised-as-XLS file-like
+    object. Routes to the right engine via magic-byte sniffing so BytesIO with a
+    spoofed .name (wizard) and odd portal exports both parse reliably.
+
+    header: integer (default 0 = first row as header) or None (caller will detect
+    the header row itself — see read_remittance). pd.read_excel does NOT accept the
+    string 'infer'; pass an integer or None.
+    """
+    _seek0(file)
+    fmt = _sniff_format(file)
+    _seek0(file)
+    if fmt == "html":
+        tables = pd.read_html(file, header=header)
+        if not tables:
+            raise ValueError("No HTML tables found in this file.")
+        return max(tables, key=len)  # pick the largest table when multiple
+    if fmt == "xlsx":
+        return pd.read_excel(file, engine="openpyxl", header=header)
+    if fmt == "xls":
+        return pd.read_excel(file, engine="xlrd", header=header)
+    return pd.read_csv(file, header=header)
 
 
 _HEADER_TOKENS = {"contract", "customer", "payment", "amount", "paid", "received", "invoice", "due", "date"}
@@ -321,12 +364,9 @@ def _detect_header_row(raw: pd.DataFrame, max_scan: int = 15) -> int:
 
 def read_remittance(file) -> pd.DataFrame:
     """Read a finance remittance, locating the real header row and cleaning column names.
-    Robust to preamble rows (OnePlace) and newline-laden headers."""
-    name = getattr(file, "name", "").lower()
-    if name.endswith((".xlsx", ".xls")):
-        raw = pd.read_excel(file, header=None)
-    else:
-        raw = pd.read_csv(file, header=None)
+    Robust to preamble rows (OnePlace), newline-laden headers, and HTML-disguised .xls
+    (some Great America / portal exports)."""
+    raw = read_upload(file, header=None)
     hidx = _detect_header_row(raw)
     cols = clean_columns(list(raw.iloc[hidx]))
     df = raw.iloc[hidx + 1:].copy()
