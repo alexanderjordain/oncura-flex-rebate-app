@@ -1,8 +1,8 @@
-"""FLEX Program tutorial — in-app deck for onboarding + reference.
+"""FLEX Program tutorial — click-through deck viewer for onboarding + reference.
 
-Renders the slides exported from assets/flex_tutorial.pptx as a scrollable gallery.
-Also offers a one-click download of the source .pptx so anyone can present from it or
-update it. Companion document: docs/FLEX_PROGRAM_EXPLAINED.md.
+Displays one slide at a time in a constrained-width window with prev/next navigation.
+The .pptx source is downloadable so anyone can present from it or update it.
+Companion document: docs/FLEX_PROGRAM_EXPLAINED.md.
 
 To refresh slides after editing the .pptx:
   1. Replace assets/flex_tutorial.pptx with the new file.
@@ -30,57 +30,104 @@ ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
 PPTX_PATH = ASSETS_DIR / "flex_tutorial.pptx"
 SLIDES_DIR = ASSETS_DIR / "flex_tutorial_slides"
 
-# ── Download button for the source .pptx ─────────────────────────────────────
-dl_col1, dl_col2 = st.columns([3, 1])
-dl_col1.caption(
-    "The deck is rendered below as a scrollable gallery. For presenting or editing, "
-    "download the .pptx — same on-brand color palette and font stack as this app."
+slide_paths = sorted(
+    list(SLIDES_DIR.glob("Slide*.PNG")) + list(SLIDES_DIR.glob("Slide*.png")),
+    key=lambda p: int("".join(c for c in p.stem if c.isdigit()) or "0"),
+)
+total = len(slide_paths)
+
+# ── Top toolbar: download + slide jumper ─────────────────────────────────────
+tb1, tb2, tb3 = st.columns([2, 2, 1])
+tb1.caption(
+    "Click through the deck with the arrows below, or jump directly to a slide. "
+    "Download the .pptx for presenting or editing."
 )
 if PPTX_PATH.exists():
-    dl_col2.download_button(
+    tb3.download_button(
         "Download .pptx",
         data=PPTX_PATH.read_bytes(),
         file_name="flex_tutorial.pptx",
         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         type="primary",
         key="tut_dl_pptx",
+        use_container_width=True,
     )
-else:
-    dl_col2.warning("pptx missing")
+
+if total == 0:
+    st.warning(
+        "No slide images found under `assets/flex_tutorial_slides/`. Re-export the deck "
+        "as PNGs (one per slide, named `SlideN.PNG`) and commit them."
+    )
+    st.stop()
+
+# ── State ────────────────────────────────────────────────────────────────────
+SS = st.session_state
+SS.setdefault("tutorial_slide_idx", 0)
+SS.tutorial_slide_idx = max(0, min(SS.tutorial_slide_idx, total - 1))
+
+
+def _go(delta: int):
+    SS.tutorial_slide_idx = max(0, min(SS.tutorial_slide_idx + delta, total - 1))
+
+
+def _jump_to(idx: int):
+    SS.tutorial_slide_idx = max(0, min(idx, total - 1))
+
+
+# Jump-to-slide selector
+jumper = tb2.selectbox(
+    "Jump to slide",
+    options=list(range(total)),
+    index=SS.tutorial_slide_idx,
+    format_func=lambda i: f"Slide {i + 1}",
+    key="tut_jumper",
+    label_visibility="collapsed",
+)
+if jumper != SS.tutorial_slide_idx:
+    _jump_to(jumper)
+    st.rerun()
 
 st.divider()
 
-# ── Slide gallery ────────────────────────────────────────────────────────────
-slide_paths = sorted(
-    list(SLIDES_DIR.glob("Slide*.PNG")) + list(SLIDES_DIR.glob("Slide*.png")),
-    key=lambda p: int("".join(c for c in p.stem if c.isdigit()) or "0"),
+# ── Slide display (constrained width, centered) ──────────────────────────────
+_, slide_col, _ = st.columns([1, 4, 1])
+with slide_col:
+    st.image(str(slide_paths[SS.tutorial_slide_idx]), use_container_width=True)
+    st.progress((SS.tutorial_slide_idx + 1) / total)
+
+# ── Bottom nav: prev / indicator / next ──────────────────────────────────────
+nav_prev, nav_mid, nav_next = st.columns([1, 4, 1])
+if SS.tutorial_slide_idx > 0:
+    if nav_prev.button("← Previous", key="tut_prev", use_container_width=True):
+        _go(-1)
+        st.rerun()
+else:
+    nav_prev.button("← Previous", key="tut_prev_d", disabled=True, use_container_width=True)
+
+nav_mid.markdown(
+    f"<div style='text-align:center; padding-top: 0.4rem; font-family: var(--mono); "
+    f"color: var(--muted); letter-spacing: 0.1em;'>"
+    f"Slide {SS.tutorial_slide_idx + 1} of {total}</div>",
+    unsafe_allow_html=True,
 )
 
-if not slide_paths:
-    st.warning(
-        "No slide images found under `assets/flex_tutorial_slides/`. Re-export the deck "
-        "as PNGs (one per slide, named `SlideN.PNG`) and commit them. The download "
-        "button above still works."
-    )
+if SS.tutorial_slide_idx < total - 1:
+    if nav_next.button("Next →", key="tut_next", use_container_width=True, type="primary"):
+        _go(1)
+        st.rerun()
 else:
-    st.caption(f"{len(slide_paths)} slides — scroll to read or jump via the sidebar buttons.")
-
-    for i, slide in enumerate(slide_paths, start=1):
-        with st.container(border=False):
-            st.image(str(slide), use_container_width=True)
-            st.caption(f"Slide {i} of {len(slide_paths)}")
-            st.write("")
+    nav_next.button("Next →", key="tut_next_d", disabled=True, use_container_width=True)
 
 st.divider()
 
 # ── Companion materials ──────────────────────────────────────────────────────
-st.subheader("Related material")
-st.markdown(
-    "- **`docs/FLEX_PROGRAM_EXPLAINED.md`** — the source explainer this deck was generated from. "
-    "Includes the full brand-system specification so the deck can be regenerated by feeding the "
-    "doc back into Claude.\n"
-    "- **`docs/RECOVERY.md`** — what to do when the app breaks (Cloud entry-file reset, "
-    "AttributeError mid-deploy, etc.).\n"
-    "- **`docs/ACCOUNTING_HANDOFF.md`** — manual steps each cycle hands off to accounting "
-    "(SaaSAnt uploads, QBO matching, OPD credit-box updates)."
-)
+with st.expander("Related material"):
+    st.markdown(
+        "- **`docs/FLEX_PROGRAM_EXPLAINED.md`** — the source explainer this deck was generated from. "
+        "Includes the full brand-system specification so the deck can be regenerated by feeding the "
+        "doc back into Claude.\n"
+        "- **`docs/RECOVERY.md`** — what to do when the app breaks (Cloud entry-file reset, "
+        "AttributeError mid-deploy, etc.).\n"
+        "- **`docs/ACCOUNTING_HANDOFF.md`** — manual steps each cycle hands off to accounting "
+        "(SaaSAnt uploads, QBO matching, OPD credit-box updates)."
+    )
