@@ -26,7 +26,9 @@ except ImportError:
 
 UNUSED_ITEM = "Unused-Flex-Credits"
 TERMS = "Flex"
-FUZZY_THRESHOLD = 88
+# Tightened from 88 -> 92 after Encanto/Chenango false positive (89%): two real,
+# distinct flex clinics whose names happen to be phonetically close.
+FUZZY_THRESHOLD = 92
 
 _MONTH_NUM = {
     "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
@@ -92,16 +94,22 @@ def _index(flex_clinics):
 
 
 def match_activity(clinic_rec, activity_by_name):
-    """Look up a clinic's quarterly activity by exact then fuzzy name."""
+    """Look up a clinic's quarterly activity by exact then fuzzy name.
+
+    Returns (amount, quality, matched_opd_name, score).
+    matched_opd_name = the key in activity_by_name we ended up using (or None).
+    score = fuzzy similarity 0–100 for fuzzy matches, None otherwise.
+    """
     for k in (clinic_rec.get("qb_name"), clinic_rec.get("clinic_name")):
         if k and str(k).strip().lower() in activity_by_name:
-            return activity_by_name[str(k).strip().lower()], "exact"
+            key = str(k).strip().lower()
+            return activity_by_name[key], "exact", key, None
     if _HAVE_FUZZ and activity_by_name:
         name = (clinic_rec.get("qb_name") or clinic_rec.get("clinic_name") or "").lower()
         hit = process.extractOne(name, list(activity_by_name.keys()), scorer=fuzz.token_sort_ratio)
         if hit and hit[1] >= FUZZY_THRESHOLD:
-            return activity_by_name[hit[0]], "fuzzy"
-    return None, "none"
+            return activity_by_name[hit[0]], "fuzzy", hit[0], float(hit[1])
+    return None, "none", None, None
 
 
 def _build_group_index(flex_clinics):
@@ -166,12 +174,19 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
             threshold += float(m.get("quarterly_threshold") or 0.0)
         threshold = round(threshold, 2)
 
-        activity, q = match_activity(c, pooled_activity)
+        activity, q, matched_opd, fuzzy_score = match_activity(c, pooled_activity)
         activity_val = float(activity) if activity is not None else None
         unused = overage = None
         if activity_val is not None:
             unused = round(max(threshold - activity_val, 0.0), 2)
             overage = round(max(activity_val - threshold, 0.0), 2)
+        fc = c.get("finance_company")
+        contract_number = (
+            c.get("contract_greatamerica") if fc == "GreatAmerica"
+            else c.get("contract_oneplace") if fc == "OnePlace"
+            else c.get("contract_newlane") if fc == "NewLane"
+            else None
+        )
         rows.append(
             {
                 "clinic_name": c.get("clinic_name"),
@@ -183,11 +198,15 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
                 "unused": unused,
                 "overage": overage,
                 "activity_match": q,
-                # contract IDs needed for overage routing / partner submission (SOP-6, SOP-12)
+                "matched_opd_name": matched_opd,
+                "fuzzy_score": fuzzy_score,
+                # Consolidated single contract field for display + downstream lookups.
+                "contract_number": contract_number,
+                # Per-company contract IDs preserved for partner submission lookup.
                 "contract_greatamerica": c.get("contract_greatamerica"),
                 "contract_oneplace": c.get("contract_oneplace"),
                 "contract_newlane": c.get("contract_newlane"),
-                # multi-clinic group context (pooled rows show how many locations rolled up)
+                # Multi-clinic group context (kept for downstream code; not displayed by default).
                 "group_id": c.get("group_id"),
                 "group_member_count": (1 + len(members)) if members else None,
             }

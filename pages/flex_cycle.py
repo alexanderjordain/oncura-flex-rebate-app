@@ -421,8 +421,28 @@ with tab_recap:
                     + ", ".join(no_act["clinic_name"].head(8))
                     + (" …" if len(no_act) > 8 else "")
                 )
+            display_cols = [
+                "clinic_name", "qb_name", "finance_company", "contract_number",
+                "calendar_spread", "quarterly_threshold", "quarter_activity",
+                "unused", "overage", "activity_match",
+            ]
             with st.expander(f"Per-clinic breakdown ({len(rdf)} clinics)"):
-                st.dataframe(rdf, use_container_width=True, height=320)
+                st.dataframe(
+                    rdf[[c for c in display_cols if c in rdf.columns]],
+                    use_container_width=True, height=320,
+                )
+            fuzzy = rdf[rdf["activity_match"] == "fuzzy"]
+            if not fuzzy.empty:
+                with st.expander(f"Fuzzy name matches ({len(fuzzy)}) — eyeball these"):
+                    st.caption(
+                        "These clinic names didn't match exactly between OPD and FLEX master, but were "
+                        "similar enough (rapidfuzz ≥ 88) to pair up. Verify each pair looks right; if "
+                        "any are wrong, fix the name in flex_master / name_map and re-run."
+                    )
+                    fz = fuzzy[["clinic_name", "qb_name", "matched_opd_name", "fuzzy_score"]].copy()
+                    fz.columns = ["FLEX master clinic_name", "QB name", "OPD clinic name (matched)", "Similarity"]
+                    fz["Similarity"] = fz["Similarity"].map(lambda v: f"{int(v)}%" if v is not None else "")
+                    st.dataframe(fz, use_container_width=True, hide_index=True)
 
         elif step_key == "recapture":
             st.markdown("### A. Unused recapture invoices")
