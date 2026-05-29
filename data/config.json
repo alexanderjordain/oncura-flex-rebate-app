@@ -65,7 +65,7 @@
     },
     "overage": {
       "note": "SOP-6 + SOP-12 routing. Direct-bill invoices get VOIDED immediately after sending (revenue already captured by OPD invoices).",
-      "finance_partner_cutoff_day": 6,
+      "finance_partner_cutoff_day": 5,
       "finance_partner_handles": {
         "GreatAmerica": false,
         "NewLane": false,
