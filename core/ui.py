@@ -71,7 +71,8 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
   font-variant-numeric:tabular-nums; color:var(--blue) !important; letter-spacing:-.01em;
 }
 
-/* Buttons — light bg, navy text, bold. Outlined style so the text is always readable. */
+/* Buttons — outlined by default (secondary). Primary buttons are filled steel blue
+   so commit / "Mark as imported" actions visually pop. */
 .stButton > button,
 .stDownloadButton > button,
 .stLinkButton > a,
@@ -98,6 +99,38 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
 .stDownloadButton > button:disabled {
   background:#F3F4F6 !important; border-color:#D1D5DB !important;
   color:#9CA3AF !important; cursor:not-allowed;
+}
+/* PRIMARY buttons (type="primary") — filled, larger, prominent. These are the
+   commit points: Mark as imported, Save settings, Restore, Unlock, Download
+   primary file. They should feel like a destination, not an option. */
+.stButton > button[kind="primary"],
+.stDownloadButton > button[kind="primary"],
+.stFormSubmitButton > button[kind="primary"] {
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-deep) 100%) !important;
+  color: #FFFFFF !important;
+  border: 1.5px solid var(--blue-deep) !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em;
+  padding: .55rem 1.2rem !important;
+  font-size: 1.02rem !important;
+  box-shadow: 0 2px 6px rgba(31,61,92,.18), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.stButton > button[kind="primary"]:hover,
+.stDownloadButton > button[kind="primary"]:hover,
+.stFormSubmitButton > button[kind="primary"]:hover {
+  background: var(--blue-deep) !important;
+  color: #FFFFFF !important;
+  border-color: var(--blue-deep) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(31,61,92,.28), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.stButton > button[kind="primary"]:disabled,
+.stDownloadButton > button[kind="primary"]:disabled {
+  background: #C5CDD6 !important;
+  border-color: #B0B9C3 !important;
+  color: #FFFFFF !important;
+  box-shadow: none;
+  opacity: .85;
 }
 /* Restore the file uploader's internal browse button to a neutral look */
 [data-testid="stFileUploader"] button {
