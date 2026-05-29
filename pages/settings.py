@@ -30,6 +30,32 @@ if not auth.can("admin"):
     auth.require("admin")
     st.stop()
 
+# ── Second password gate ──────────────────────────────────────────────────────
+# Settings can rewrite rates, restore from backup, etc. — irreversible changes.
+# Even though the user is already authenticated as admin, re-prompt for the same
+# APP_PASSWORD before exposing the controls. Unlocked for the rest of the session;
+# a "Lock Settings" button at the bottom restores the gate without affecting the
+# main session login.
+SETTINGS_UNLOCK_KEY = "settings_unlocked"
+_app_pw = auth._secret(["APP_PASSWORD"])
+
+if _app_pw and not st.session_state.get(SETTINGS_UNLOCK_KEY):
+    st.markdown("### Confirm password to unlock Settings")
+    st.caption(
+        "Settings allow editing rates, restoring from backup, and other irreversible "
+        "changes. Re-enter the app password — same one you used to log in."
+    )
+    _, mid, _ = st.columns([1, 2, 1])
+    with mid:
+        pw = st.text_input("Password", type="password", key="settings_unlock_pw")
+        if st.button("Unlock Settings", type="primary", use_container_width=True):
+            if pw == _app_pw:
+                st.session_state[SETTINGS_UNLOCK_KEY] = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+    st.stop()
+
 cfg = dict(loaders.config())  # deep-ish copy via dict(); we'll re-nest when saving
 
 
@@ -397,3 +423,16 @@ if audit_summary["entry_count"]:
             st.json(entries[0])
 else:
     st.info("No audit entries yet. They start appearing once you 'Mark batch as imported' in FLEX Cycle stages.")
+
+st.divider()
+
+# ── Lock Settings (require re-auth on next visit, without logging out) ────────
+if _app_pw:
+    lc1, lc2 = st.columns([3, 1])
+    lc1.caption(
+        "Done editing? Lock Settings again — the next visit will require the password "
+        "without affecting your main session login on the other pages."
+    )
+    if lc2.button("Lock Settings", key="settings_lock", use_container_width=True):
+        st.session_state.pop(SETTINGS_UNLOCK_KEY, None)
+        st.rerun()
