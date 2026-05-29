@@ -9,7 +9,7 @@ import datetime as dt
 import streamlit as st
 
 from core import (
-    flex_credits, flex_finance, flex_overage, flex_unused,
+    accounting_handoff, flex_credits, flex_finance, flex_overage, flex_unused,
     loaders, opd_adapter, saasant, store, ui,
 )
 
@@ -169,6 +169,10 @@ in QBO first. Run **one SaaSAnt job at a time** — wait for each to complete be
 the next. After all uploads, the combined total should match the bank-feed deposit.
 """
         )
+        subj, body = accounting_handoff.finance_payment_email(
+            company=company, pay_date=pay_date, summary=s, has_scan=s["scan_count"] > 0,
+        )
+        accounting_handoff.render_handoff(subj, body, key_prefix="remit_email")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 2 — Monthly Credit Memos
@@ -208,6 +212,13 @@ with tab_credits:
 **Bulk Upload** → **Credit Memo** → select the file → walk through the wizard.
 """
     )
+    if not df.empty:
+        subj, body = accounting_handoff.credit_memos_email(
+            year=int(year), month=int(month), count=len(df),
+            total=float(df["Product/Service Amount"].sum()),
+            start_ref=int(start_ref), next_ref=int(next_ref),
+        )
+        accounting_handoff.render_handoff(subj, body, key_prefix="credits_email")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage
@@ -381,3 +392,24 @@ with tab_recap:
                         file_name=f"OnePlaceOverage_{dt.date(2000,rec_month,1):%b}_{rec_year}.xlsx",
                         key="recap_dl_overage_partner",
                     )
+
+            # ── Accounting handoff email (covers unused + direct overage + partner) ──
+            _flagged_names = [r["clinic_name"] for r in (flagged if "flagged" in locals() else [])]
+            _annotated = annotated if "annotated" in locals() else []
+            _cutoff = cutoff if "cutoff" in locals() else flex_overage.cutoff_date(rec_year, rec_month, 5)
+            _direct_total = sum(float(r["net_overage"]) for r in _annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
+            _direct_count = sum(1 for r in _annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
+            _partner_total = sum(float(r["net_overage"]) for r in _annotated if r["route"] == "partner" and r["net_overage"] > 0)
+            _partner_count = sum(1 for r in _annotated if r["route"] == "partner" and r["net_overage"] > 0)
+            _group_anchors = sorted({r["clinic_name"] for r in recap if r.get("group_id")})
+            _unused_total = float(udf["Product/Service Amount"].sum()) if not udf.empty else 0.0
+            _subj, _body = accounting_handoff.recapture_email(
+                year=rec_year, month=rec_month,
+                unused_total=_unused_total, unused_count=len(udf),
+                direct_total=_direct_total, direct_count=_direct_count,
+                partner_total=_partner_total, partner_count=_partner_count,
+                cutoff_date=_cutoff,
+                escalations=_flagged_names,
+                group_anchors=_group_anchors,
+            )
+            accounting_handoff.render_handoff(_subj, _body, key_prefix="recap_email")

@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from core import loaders, opd_adapter, rebate_calc, rebate_report, ui
+from core import accounting_handoff, loaders, opd_adapter, rebate_calc, rebate_report, ui
 
 ui.header("Rebate Cycle",
           "Select the month(s), upload OPD detail, get a multi-tab rebate report.",
@@ -170,3 +170,16 @@ st.download_button(
     file_name=fname,
     type="primary",
 )
+
+# Accounting handoff
+_period_label = rebate_report.long_period(months)
+_per_bucket_totals = {
+    bucket: round(sum(sum(d.values()) for d in clinics.values()), 2)
+    for bucket, clinics in per_bucket.items()
+}
+_subj, _body = accounting_handoff.rebate_email(
+    period_label=_period_label,
+    per_bucket_totals=_per_bucket_totals,
+    grand_total=round(grand, 2),
+)
+accounting_handoff.render_handoff(_subj, _body, key_prefix="rebate_email")
