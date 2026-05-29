@@ -21,17 +21,18 @@ def mailto_link(subject: str, body: str, to: str = TO) -> str:
 
 
 def render_handoff(subject: str, body: str, key_prefix: str = "handoff"):
-    """Render the email-draft button + full text fallback."""
-    st.markdown("---")
-    st.markdown("**Hand off to accounting**")
-    st.link_button(
-        f"Open email draft to {TO}",
-        mailto_link(subject, body),
-        type="primary",
-    )
-    with st.expander("Or copy the full email body (for clients that truncate long mailto links)"):
-        st.caption(f"To: {TO}  ·  Subject: {subject}")
-        st.code(body, language="text")
+    """Render the email-draft button + full text fallback in a bordered card."""
+    with st.container(border=True):
+        st.markdown("### Hand off to accounting")
+        st.caption(f"Sends to **{TO}** with this cycle's numbers + action items pre-filled.")
+        st.link_button(
+            "Open email draft",
+            mailto_link(subject, body),
+            type="primary",
+        )
+        with st.expander("Preview / copy the full email body"):
+            st.caption(f"To: {TO}  ·  Subject: {subject}")
+            st.code(body, language="text")
 
 
 # ── Workflow-specific builders ────────────────────────────────────────────────
