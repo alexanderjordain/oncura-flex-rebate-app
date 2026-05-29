@@ -5,6 +5,7 @@ Stage 2: Monthly Credit Memos (credit-memo SaasAnt file)
 Stage 3: Unused / Overage (quarter-end recapture invoice + overage list)
 """
 import datetime as dt
+from contextlib import contextmanager
 
 import streamlit as st
 
@@ -12,6 +13,25 @@ from core import (
     accounting_handoff, flex_credits, flex_finance, flex_overage, flex_unused,
     ledger, loaders, opd_adapter, saasant, store, ui,
 )
+
+
+@contextmanager
+def safe_stage(label: str):
+    """Catch + render an error inside a tab so one broken stage doesn't kill the others.
+
+    Chains with `with tab_X, safe_stage(...):` so the existing indentation stays the same.
+    """
+    try:
+        yield
+    except Exception as _e:
+        import traceback as _tb
+
+        st.error(f"**{label} failed:** `{type(_e).__name__}: {_e}`")
+        st.caption(
+            "The other stages are still usable. Share the traceback below if you need a fix."
+        )
+        with st.expander("Show full traceback"):
+            st.code(_tb.format_exc(), language="text")
 
 ui.header("FLEX Cycle",
           "Walks the monthly process end-to-end: remittances → credits → unused / overage.",
@@ -29,7 +49,7 @@ tab_remit, tab_credits, tab_recap = st.tabs([
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 1 — Finance Company Payment Imports
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab_remit:
+with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
     st.caption("Upload a finance-company remittance — produces the SaasAnt receive-payments "
                "(and scan invoices + scan payments for OnePlace / NewLane).")
 
@@ -291,7 +311,7 @@ the next. After all uploads, the combined total should match the bank-feed depos
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 2 — Monthly Credit Memos
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab_credits:
+with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
     st.caption(
         "Generates one credit memo per FLEX payment received last month (SaasAnt format: item Flex-credits, "
         "class 03-Telemedicine). Multi-payment months produce multi-credit batches; clinics that didn't pay "
@@ -445,7 +465,7 @@ with tab_credits:
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab_recap:
+with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     import io as _io
     import pandas as pd
 
