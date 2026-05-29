@@ -361,8 +361,17 @@ with tab_recap:
                 key="w_recap_file",
             )
             if rec_up is not None:
+                # The pipeline runs at the TOP of tab_recap, before this widget renders.
+                # If we capture bytes now and DON'T rerun, the pipeline saw empty bytes for
+                # this run and won't catch up until the next user interaction (which is why
+                # clicking X used to make it "work" — that was the extra rerun). Force the
+                # rerun immediately on a new upload so the pipeline picks it up right away.
+                is_new = (rec_up.name != SS.get("recap_uploaded_name")
+                          or SS.get("recap_uploaded_bytes") is None)
                 SS.recap_uploaded_bytes = rec_up.getvalue()
                 SS.recap_uploaded_name = rec_up.name
+                if is_new:
+                    st.rerun()
                 st.success(f"Uploaded: **{rec_up.name}**  ({len(SS.recap_uploaded_bytes) // 1024:,} KB)")
             elif SS.recap_uploaded_bytes:
                 st.info(
