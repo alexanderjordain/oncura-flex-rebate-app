@@ -390,10 +390,19 @@ with tab_recap:
                     with st.expander("Full traceback (share this if asking for help)"):
                         st.code(SS["recap_pipe_traceback"], language="text")
             if pipe:
+                total_qualifying = sum(
+                    1 for c in flex_clinics
+                    if c.get("active") and flex_unused.is_quarter_end(c.get("calendar_spread"), rec_month)
+                )
                 pm1, pm2, pm3 = st.columns(3)
                 pm1.metric("Source profile", pipe["profile"])
                 pm2.metric("Clinics with activity", len(pipe["activity"]))
-                pm3.metric("Qualifying for this month", len(rdf))
+                pm3.metric(
+                    "Qualifying for this month",
+                    f"{len(rdf)} / {total_qualifying}",
+                    help="Rows emitted (group anchors only) over all active clinics whose quarter ends this month. "
+                         "Difference = group members (e.g. Mohnacky / River Trail / PR-vets non-anchors) rolled into their anchor's row.",
+                )
 
         elif step_key == "review":
             st.markdown("### Review activity")
