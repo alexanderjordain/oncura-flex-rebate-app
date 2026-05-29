@@ -104,21 +104,69 @@ def match_activity(clinic_rec, activity_by_name):
     return None, "none"
 
 
+def _build_group_index(flex_clinics):
+    """Returns (members_by_anchor_lower, member_name_to_anchor_lower).
+
+    A group is identified by parent_clinic_id (members) pointing at an anchor's clinic_name.
+    Independent clinics (no group_id) are absent from both maps.
+    """
+    members_by_anchor = {}
+    member_name_to_anchor = {}
+    for c in flex_clinics:
+        parent = c.get("parent_clinic_id")
+        if not parent:
+            continue
+        a = parent.strip().lower()
+        members_by_anchor.setdefault(a, []).append(c)
+        for k in (c.get("clinic_name"), c.get("qb_name")):
+            if k:
+                member_name_to_anchor[k.strip().lower()] = a
+    return members_by_anchor, member_name_to_anchor
+
+
+def _pool_activity_by_group(activity_by_name: dict, member_to_anchor: dict) -> dict:
+    """Sum each member clinic's activity into its anchor's bucket. Independent clinics pass through."""
+    if not member_to_anchor:
+        return activity_by_name
+    pooled = {}
+    for name, amt in activity_by_name.items():
+        anchor = member_to_anchor.get(name)
+        key = anchor if anchor else name
+        pooled[key] = pooled.get(key, 0.0) + float(amt or 0)
+    return pooled
+
+
 def compute_recapture(flex_clinics, activity_by_name, year, month):
     """Per-clinic unused/overage for clinics whose quarter ends in (year, month).
 
+    Multi-clinic groups (Mohnacky, River Trail, PR-vets) are pooled at the anchor:
+    member activity rolls up, member thresholds sum, child clinics are not emitted as
+    independent rows. Recapture / overage invoice (downstream) is emitted on the anchor.
+
     activity_by_name: {clinic_name_lower: total OPD activity over the quarter}.
-    Returns list of dicts (clinic, threshold, activity, unused, overage, match, group).
     """
+    members_by_anchor, member_to_anchor = _build_group_index(flex_clinics)
+    pooled_activity = _pool_activity_by_group(activity_by_name, member_to_anchor)
+
     rows = []
     for c in flex_clinics:
         if not c.get("active"):
             continue
+        # Children are aggregated into their anchor — don't emit a row for them.
+        if c.get("parent_clinic_id"):
+            continue
         spread = c.get("calendar_spread")
         if not is_quarter_end(spread, month):
             continue
+        # Pool threshold: anchor's own + all member thresholds (for groups; identity for independents).
+        anchor_key = (c.get("clinic_name") or "").strip().lower()
         threshold = float(c.get("quarterly_threshold") or 0.0)
-        activity, q = match_activity(c, activity_by_name)
+        members = members_by_anchor.get(anchor_key, [])
+        for m in members:
+            threshold += float(m.get("quarterly_threshold") or 0.0)
+        threshold = round(threshold, 2)
+
+        activity, q = match_activity(c, pooled_activity)
         activity_val = float(activity) if activity is not None else None
         unused = overage = None
         if activity_val is not None:
@@ -139,6 +187,9 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
                 "contract_greatamerica": c.get("contract_greatamerica"),
                 "contract_oneplace": c.get("contract_oneplace"),
                 "contract_newlane": c.get("contract_newlane"),
+                # multi-clinic group context (pooled rows show how many locations rolled up)
+                "group_id": c.get("group_id"),
+                "group_member_count": (1 + len(members)) if members else None,
             }
         )
     return rows

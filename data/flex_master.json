@@ -20,7 +20,9 @@
       "support_ema_end": "2025-03-18",
       "hardware_ema_end": "2029-07-18",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Abell Animal Hospital",
@@ -39,7 +41,9 @@
       "support_ema_end": "2024-11-19",
       "hardware_ema_end": "2029-03-19",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Allen Veterinary Hospital",
@@ -58,7 +62,9 @@
       "support_ema_end": "2025-05-05",
       "hardware_ema_end": "2029-09-05",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Alum Rock Animal Hospital",
@@ -77,7 +83,9 @@
       "support_ema_end": "2025-01-23",
       "hardware_ema_end": "2029-05-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Animal Care Experts",
@@ -96,7 +104,9 @@
       "support_ema_end": "2025-06-02",
       "hardware_ema_end": "2029-10-02",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Animal Health Center of Santa Clara",
@@ -115,7 +125,9 @@
       "support_ema_end": "2026-01-30",
       "hardware_ema_end": "2030-01-30",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Animal Medical Center of Redlands",
@@ -134,7 +146,9 @@
       "support_ema_end": "2025-09-04",
       "hardware_ema_end": "2030-01-04",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Animal Medical Center of Surprise AAHA",
@@ -153,7 +167,9 @@
       "support_ema_end": "2025-02-19",
       "hardware_ema_end": "2029-06-19",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Baseline Animal Hospital",
@@ -172,7 +188,9 @@
       "support_ema_end": "2025-09-11",
       "hardware_ema_end": "2030-01-11",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Berkeley Veterinary Clinic",
@@ -191,7 +209,9 @@
       "support_ema_end": "2025-05-18",
       "hardware_ema_end": "2029-09-18",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Best Friends Pet Hospital - CA",
@@ -210,7 +230,9 @@
       "support_ema_end": "2025-11-24",
       "hardware_ema_end": "2030-03-24",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Bridges Professional Park Animal Hospital",
@@ -229,7 +251,9 @@
       "support_ema_end": "2025-08-20",
       "hardware_ema_end": "2029-12-20",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Cedar Veterinary Clinic",
@@ -248,7 +272,9 @@
       "support_ema_end": "2025-06-10",
       "hardware_ema_end": "2029-10-10",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Chenango Animal Hospital",
@@ -267,7 +293,9 @@
       "support_ema_end": "2025-01-14",
       "hardware_ema_end": "2029-05-14",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "CityVet Preston Forest",
@@ -286,7 +314,9 @@
       "support_ema_end": "2025-03-08",
       "hardware_ema_end": "2029-07-08",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "CityVet Whiterock",
@@ -305,7 +335,9 @@
       "support_ema_end": "2025-06-21",
       "hardware_ema_end": "2029-10-21",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Clark Veterinary Hospital",
@@ -324,7 +356,9 @@
       "support_ema_end": "2026-03-26",
       "hardware_ema_end": "2029-07-11",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Clinica Veterinaria Acuario",
@@ -343,7 +377,9 @@
       "support_ema_end": "2025-06-14",
       "hardware_ema_end": "2029-10-14",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "pr-vets",
+      "parent_clinic_id": "Clinica Veterinaria Gardenville"
     },
     {
       "clinic_name": "Clinica Veterinaria Diaz Umpierre",
@@ -362,7 +398,9 @@
       "support_ema_end": "2025-04-21",
       "hardware_ema_end": "2029-08-21",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "pr-vets",
+      "parent_clinic_id": "Clinica Veterinaria Gardenville"
     },
     {
       "clinic_name": "Clinica Veterinaria Gardenville",
@@ -381,7 +419,9 @@
       "support_ema_end": "2025-04-21",
       "hardware_ema_end": "2029-08-21",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "pr-vets",
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Clinica Veterinaria La Muda",
@@ -400,7 +440,9 @@
       "support_ema_end": "2025-03-22",
       "hardware_ema_end": "2029-07-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "pr-vets",
+      "parent_clinic_id": "Clinica Veterinaria Gardenville"
     },
     {
       "clinic_name": "Crossroads Animal Hospital TX",
@@ -419,7 +461,9 @@
       "support_ema_end": "2025-02-19",
       "hardware_ema_end": "2029-06-19",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Day Hollow Animal Hospital",
@@ -438,7 +482,9 @@
       "support_ema_end": "2025-10-07",
       "hardware_ema_end": "2029-06-06",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Delmar Animal Hospital",
@@ -457,7 +503,9 @@
       "support_ema_end": "2027-06-14",
       "hardware_ema_end": "2029-06-14",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Desert Ark Vet Care - North",
@@ -476,7 +524,9 @@
       "support_ema_end": "2024-12-05",
       "hardware_ema_end": "2029-04-05",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Doctor Pet Puerto Nuevo",
@@ -495,7 +545,9 @@
       "support_ema_end": "2025-04-22",
       "hardware_ema_end": "2029-08-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Encanto Animal Hospital",
@@ -514,7 +566,9 @@
       "support_ema_end": "2025-07-11",
       "hardware_ema_end": "2029-12-11",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Galloway Village Veterinary",
@@ -533,7 +587,9 @@
       "support_ema_end": "2025-06-14",
       "hardware_ema_end": "2029-10-14",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Goodfriends Veterinary Clinic",
@@ -552,7 +608,9 @@
       "support_ema_end": "2025-02-17",
       "hardware_ema_end": "2029-06-17",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Harborside Animal Hospital",
@@ -571,7 +629,9 @@
       "support_ema_end": "2025-03-16",
       "hardware_ema_end": "2029-07-16",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Hiawassee Animal Hospital",
@@ -590,7 +650,9 @@
       "support_ema_end": null,
       "hardware_ema_end": null,
       "active": false,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Hospital Veterinario Condado",
@@ -609,7 +671,9 @@
       "support_ema_end": "2025-04-22",
       "hardware_ema_end": "2029-08-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "pr-vets",
+      "parent_clinic_id": "Clinica Veterinaria Gardenville"
     },
     {
       "clinic_name": "Innovetive Petcare DBA Melrose Animal Clinic",
@@ -628,7 +692,9 @@
       "support_ema_end": "2025-03-25",
       "hardware_ema_end": "2029-07-25",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "La Canada Pet Clinic",
@@ -647,7 +713,9 @@
       "support_ema_end": "2025-06-21",
       "hardware_ema_end": "2029-10-21",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Lake Road Animal Hospital",
@@ -666,7 +734,9 @@
       "support_ema_end": "2025-10-14",
       "hardware_ema_end": "2030-01-14",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Liberty Veterinary Hospital",
@@ -685,7 +755,9 @@
       "support_ema_end": "2025-07-06",
       "hardware_ema_end": "2029-11-06",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Logan County Animal Clinic",
@@ -704,7 +776,9 @@
       "support_ema_end": "2025-07-14",
       "hardware_ema_end": "2029-11-14",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Longleaf Animal Hospital",
@@ -723,7 +797,9 @@
       "support_ema_end": "2025-08-11",
       "hardware_ema_end": "2029-12-11",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Love Animal Hospital and Urgent Care",
@@ -742,7 +818,9 @@
       "support_ema_end": "2025-05-23",
       "hardware_ema_end": "2029-09-23",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Luv-N-Care Animal Hospital of Windermere",
@@ -761,7 +839,9 @@
       "support_ema_end": "2025-03-31",
       "hardware_ema_end": "2029-07-31",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Marin City Animal Hospital",
@@ -780,7 +860,9 @@
       "support_ema_end": "2025-05-17",
       "hardware_ema_end": "2029-09-17",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Miller Mobile Veterinary Services & Animal Hospital",
@@ -799,7 +881,9 @@
       "support_ema_end": "2025-03-26",
       "hardware_ema_end": "2029-07-26",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Mitchell Veterinary Hospital",
@@ -818,7 +902,9 @@
       "support_ema_end": "2025-03-30",
       "hardware_ema_end": "2029-07-30",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Mohnacky Animal Hospital of Carlsbad",
@@ -837,7 +923,9 @@
       "support_ema_end": "2025-02-06",
       "hardware_ema_end": "2029-06-06",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "mohnacky",
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Mohnacky Veterinary Hospital of Escondido",
@@ -856,7 +944,9 @@
       "support_ema_end": "2026-03-30",
       "hardware_ema_end": "2026-03-30",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "mohnacky",
+      "parent_clinic_id": "Mohnacky Animal Hospital of Carlsbad"
     },
     {
       "clinic_name": "Mohnacky Veterinary Hospital of Vista",
@@ -875,7 +965,9 @@
       "support_ema_end": "2026-03-30",
       "hardware_ema_end": "2026-03-30",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "mohnacky",
+      "parent_clinic_id": "Mohnacky Animal Hospital of Carlsbad"
     },
     {
       "clinic_name": "Northwest Animal Hospital - Grapevine",
@@ -894,7 +986,9 @@
       "support_ema_end": "2025-03-23",
       "hardware_ema_end": "2029-07-23",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Northwest Pet Hospital",
@@ -913,7 +1007,9 @@
       "support_ema_end": "2025-06-22",
       "hardware_ema_end": "2029-10-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "On Point Animal Hospital",
@@ -932,7 +1028,9 @@
       "support_ema_end": "2025-03-29",
       "hardware_ema_end": "2029-07-29",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Orchard Lake Animal Hospital",
@@ -951,7 +1049,9 @@
       "support_ema_end": "2025-06-23",
       "hardware_ema_end": "2029-10-23",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Pine Tree Veterinary Hospital",
@@ -970,7 +1070,9 @@
       "support_ema_end": "2025-08-17",
       "hardware_ema_end": "2029-12-17",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Reata Veterinary Hospital",
@@ -989,7 +1091,9 @@
       "support_ema_end": "2024-12-15",
       "hardware_ema_end": "2029-04-15",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Ridgeview Animal Clinic",
@@ -1008,7 +1112,9 @@
       "support_ema_end": "2025-08-13",
       "hardware_ema_end": "2029-11-13",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "River Trail Animal Hospital - Memorial",
@@ -1027,7 +1133,9 @@
       "support_ema_end": "2025-06-03",
       "hardware_ema_end": "1902-07-09",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "river-trail",
+      "parent_clinic_id": "River Trail Animal Hospital - Tulsa"
     },
     {
       "clinic_name": "River Trail Animal Hospital - Tulsa",
@@ -1046,7 +1154,9 @@
       "support_ema_end": "2025-06-03",
       "hardware_ema_end": "2029-10-03",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": "river-trail",
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Riverdale Integrative Veterinary Care",
@@ -1065,7 +1175,9 @@
       "support_ema_end": "2025-05-05",
       "hardware_ema_end": "2029-09-04",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Riverlin Animal Hospital",
@@ -1084,7 +1196,9 @@
       "support_ema_end": "2025-05-26",
       "hardware_ema_end": "2029-09-26",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Roseville Animal Hospital",
@@ -1103,7 +1217,9 @@
       "support_ema_end": "2025-07-07",
       "hardware_ema_end": "2029-11-07",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Silicon Valley Pet Clinic",
@@ -1122,7 +1238,9 @@
       "support_ema_end": "2026-01-25",
       "hardware_ema_end": "2030-01-25",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "South Bay Veterinary Group - Charles St",
@@ -1141,7 +1259,9 @@
       "support_ema_end": "2025-03-16",
       "hardware_ema_end": "2029-07-16",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "South Central Veterinary Clinic",
@@ -1160,7 +1280,9 @@
       "support_ema_end": "2024-12-01",
       "hardware_ema_end": "2029-04-01",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "St. Michael Veterinary Clinic",
@@ -1179,7 +1301,9 @@
       "support_ema_end": "2025-07-08",
       "hardware_ema_end": "2029-11-08",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "State Line Animal Hospital",
@@ -1198,7 +1322,9 @@
       "support_ema_end": "2025-04-13",
       "hardware_ema_end": "2029-08-13",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "SVP Lynn Animal Hospital",
@@ -1217,7 +1343,9 @@
       "support_ema_end": "2025-07-13",
       "hardware_ema_end": "2029-11-13",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Sycamore Veterinary Services",
@@ -1236,7 +1364,9 @@
       "support_ema_end": "2025-06-22",
       "hardware_ema_end": "2029-10-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "The Animal Hospital of Telluride",
@@ -1255,7 +1385,9 @@
       "support_ema_end": "2025-04-12",
       "hardware_ema_end": "2029-08-12",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "The Scaredy Cat Hospital",
@@ -1274,7 +1406,9 @@
       "support_ema_end": "2026-02-03",
       "hardware_ema_end": "2029-05-17",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TLC Animal Hospital",
@@ -1293,7 +1427,9 @@
       "support_ema_end": "2025-06-22",
       "hardware_ema_end": "2029-10-22",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TLC Pet Hospital NM",
@@ -1312,7 +1448,9 @@
       "support_ema_end": "2025-01-23",
       "hardware_ema_end": "2029-05-23",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Town and Country Animal Hospital - TN",
@@ -1331,7 +1469,9 @@
       "support_ema_end": "2025-03-26",
       "hardware_ema_end": "2029-07-26",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Trinity Pet Hospital",
@@ -1350,7 +1490,9 @@
       "support_ema_end": "2025-04-03",
       "hardware_ema_end": "2029-06-03",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TVC - Foster Veterinary Clinic",
@@ -1369,7 +1511,9 @@
       "support_ema_end": "2025-06-02",
       "hardware_ema_end": "2029-10-02",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TVC - Kindness Small Animal Hospital - TX",
@@ -1388,7 +1532,9 @@
       "support_ema_end": "2024-12-19",
       "hardware_ema_end": "2029-04-19",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TVC- Berkley Pet Hospital",
@@ -1407,7 +1553,9 @@
       "support_ema_end": "2026-03-31",
       "hardware_ema_end": "2030-07-31",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TVC-Driftwood Animal Hospital",
@@ -1426,7 +1574,9 @@
       "support_ema_end": "2026-03-02",
       "hardware_ema_end": "2029-08-02",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "TVC-Luv N Care Animal Hospital - Longwood",
@@ -1445,7 +1595,9 @@
       "support_ema_end": "2026-04-20",
       "hardware_ema_end": "2029-07-31",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Veterinary Cancer Care NM",
@@ -1464,7 +1616,9 @@
       "support_ema_end": "2025-01-29",
       "hardware_ema_end": "2029-05-29",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "VETFORPET Wellness & Emergency Animal Hospital",
@@ -1483,7 +1637,9 @@
       "support_ema_end": "2024-12-10",
       "hardware_ema_end": "2029-04-10",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Waldorf Emergency Care",
@@ -1502,7 +1658,9 @@
       "support_ema_end": "2024-12-02",
       "hardware_ema_end": "2029-04-02",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "West Charleston Animal Hospital",
@@ -1521,7 +1679,9 @@
       "support_ema_end": "2025-02-10",
       "hardware_ema_end": "2029-06-10",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "West Hollywood Animal Hospital",
@@ -1540,7 +1700,9 @@
       "support_ema_end": "2025-01-13",
       "hardware_ema_end": "2029-05-13",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Woodland Veterinary Clinic - CO",
@@ -1559,7 +1721,9 @@
       "support_ema_end": "2025-03-01",
       "hardware_ema_end": "2029-06-12",
       "active": true,
-      "notes": ""
+      "notes": "",
+      "group_id": null,
+      "parent_clinic_id": null
     }
   ]
 }
