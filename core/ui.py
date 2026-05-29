@@ -71,21 +71,41 @@ h1, h2, h3, h4 { font-family: var(--serif) !important; color: var(--blue) !impor
   font-variant-numeric:tabular-nums; color:var(--blue) !important; letter-spacing:-.01em;
 }
 
-/* buttons */
-.stButton > button, [data-testid="stBaseButton-secondary"] {
-  font-family:var(--sans); font-weight:600; border-radius:6px;
-  border:1px solid var(--blue); color:var(--blue-deep); background:var(--surface);
-  transition:transform .08s ease, box-shadow .15s ease;
+/* buttons — dark blue solid w/ bold white lettering, uniform throughout the app */
+.stButton > button,
+.stButton > button[kind="primary"],
+.stButton > button[kind="secondary"],
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-secondary"],
+.stDownloadButton > button,
+.stLinkButton > a,
+.stLinkButton > a:visited {
+  background:#1F3D5C !important;
+  color:#FFFFFF !important;
+  border:1px solid #1F3D5C !important;
+  font-family:var(--sans) !important;
+  font-weight:700 !important;
+  border-radius:6px;
+  text-decoration:none !important;
+  transition:transform .08s ease, box-shadow .15s ease, background .15s ease;
 }
-.stButton > button[kind="primary"], [data-testid="stBaseButton-primary"] {
-  background:var(--blue-deep); border-color:var(--blue-deep); color:#FFFFFF;
+.stButton > button:hover,
+[data-testid="stBaseButton-primary"]:hover,
+[data-testid="stBaseButton-secondary"]:hover,
+.stDownloadButton > button:hover,
+.stLinkButton > a:hover {
+  background:#152C47 !important;
+  border-color:#152C47 !important;
+  color:#FFFFFF !important;
+  transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(31,61,92,.30);
 }
-.stButton > button:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(47,86,126,.18); }
-.stDownloadButton > button {
-  font-family:var(--mono); font-size:.82rem; letter-spacing:.02em;
-  border-radius:6px; border:1px dashed var(--green); color:var(--green); background:transparent;
+.stButton > button:disabled,
+[data-testid="stBaseButton-primary"]:disabled,
+[data-testid="stBaseButton-secondary"]:disabled {
+  background:#9CA3AF !important; border-color:#9CA3AF !important;
+  color:#FFFFFF !important; cursor:not-allowed;
 }
-.stDownloadButton > button:hover { background:rgba(70,155,104,.10); }
 
 /* sidebar (no * selector — it breaks Material icon fonts) */
 section[data-testid="stSidebar"] { background:var(--surface); border-right:1px solid var(--line); }

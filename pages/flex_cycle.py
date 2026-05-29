@@ -251,8 +251,10 @@ with tab_recap:
     )
     today_d = dt.date.today()
 
-    # Compute the pipeline if a file is uploaded
+    # Compute the pipeline if a file is uploaded. Errors are captured into SS so the
+    # upload step can render them inline instead of as a banner that scrolls off-screen.
     pipe = None
+    SS["recap_pipe_error"] = None
     if SS.recap_uploaded_bytes:
         try:
             f = _io.BytesIO(SS.recap_uploaded_bytes)
@@ -268,7 +270,7 @@ with tab_recap:
             recap = flex_unused.compute_recapture(flex_clinics, activity, rec_year, rec_month)
             pipe = {"profile": rec_profile, "activity": activity, "recap": recap}
         except Exception as e:
-            st.error(f"Could not process the uploaded file: {e}")
+            SS["recap_pipe_error"] = f"{type(e).__name__}: {e}"
 
     rdf = pd.DataFrame(pipe["recap"]) if pipe else pd.DataFrame()
     udf = pd.DataFrame()
@@ -366,6 +368,12 @@ with tab_recap:
                 )
             else:
                 st.warning("Upload a file to continue.")
+            if SS.get("recap_pipe_error"):
+                st.error(
+                    f"Could not parse this file: {SS['recap_pipe_error']}\n\n"
+                    "Try re-uploading, or upload a different export (case-grid xls or "
+                    "Invoices xlsx)."
+                )
             if pipe:
                 pm1, pm2, pm3 = st.columns(3)
                 pm1.metric("Source profile", pipe["profile"])

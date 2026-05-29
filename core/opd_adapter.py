@@ -276,10 +276,22 @@ def _normalize_case_grid(df: pd.DataFrame, item_map: dict, price_table: dict) ->
 
 
 def read_upload(file) -> pd.DataFrame:
-    """Read an uploaded CSV/XLSX file-like object into a raw DataFrame."""
+    """Read an uploaded CSV / XLSX / legacy XLS file-like object.
+
+    Explicit engine selection so a BytesIO with a spoofed `.name` (used by the wizard
+    when persisting uploads across reruns) parses reliably — pandas can't always
+    auto-detect engine from a BytesIO.
+    """
     name = getattr(file, "name", "").lower()
-    if name.endswith((".xlsx", ".xls")):
-        return pd.read_excel(file)
+    if hasattr(file, "seek"):
+        try:
+            file.seek(0)
+        except Exception:
+            pass
+    if name.endswith(".xlsx"):
+        return pd.read_excel(file, engine="openpyxl")
+    if name.endswith(".xls"):
+        return pd.read_excel(file, engine="xlrd")
     return pd.read_csv(file)
 
 
