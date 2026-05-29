@@ -60,63 +60,62 @@ if total == 0:
     )
     st.stop()
 
-# ── State ────────────────────────────────────────────────────────────────────
+# ── State (the selectbox's session_state key is the single source of truth) ──
 SS = st.session_state
-SS.setdefault("tutorial_slide_idx", 0)
-SS.tutorial_slide_idx = max(0, min(SS.tutorial_slide_idx, total - 1))
+SS.setdefault("tut_jumper", 0)
+SS.tut_jumper = max(0, min(SS.tut_jumper, total - 1))
 
 
-def _go(delta: int):
-    SS.tutorial_slide_idx = max(0, min(SS.tutorial_slide_idx + delta, total - 1))
+def _prev():
+    SS.tut_jumper = max(0, SS.tut_jumper - 1)
 
 
-def _jump_to(idx: int):
-    SS.tutorial_slide_idx = max(0, min(idx, total - 1))
+def _next():
+    SS.tut_jumper = min(total - 1, SS.tut_jumper + 1)
 
 
-# Jump-to-slide selector
-jumper = tb2.selectbox(
+# Jump-to-slide selector — no `index` arg; Streamlit reads/writes via the key
+tb2.selectbox(
     "Jump to slide",
     options=list(range(total)),
-    index=SS.tutorial_slide_idx,
     format_func=lambda i: f"Slide {i + 1}",
     key="tut_jumper",
     label_visibility="collapsed",
 )
-if jumper != SS.tutorial_slide_idx:
-    _jump_to(jumper)
-    st.rerun()
+
+current = SS.tut_jumper
 
 st.divider()
 
 # ── Slide display (constrained width, centered) ──────────────────────────────
 _, slide_col, _ = st.columns([1, 4, 1])
 with slide_col:
-    st.image(str(slide_paths[SS.tutorial_slide_idx]), use_container_width=True)
-    st.progress((SS.tutorial_slide_idx + 1) / total)
+    st.image(str(slide_paths[current]), use_container_width=True)
+    st.progress((current + 1) / total)
 
 # ── Bottom nav: prev / indicator / next ──────────────────────────────────────
 nav_prev, nav_mid, nav_next = st.columns([1, 4, 1])
-if SS.tutorial_slide_idx > 0:
-    if nav_prev.button("← Previous", key="tut_prev", use_container_width=True):
-        _go(-1)
-        st.rerun()
-else:
-    nav_prev.button("← Previous", key="tut_prev_d", disabled=True, use_container_width=True)
-
+nav_prev.button(
+    "← Previous",
+    key="tut_prev",
+    on_click=_prev,
+    disabled=(current == 0),
+    use_container_width=True,
+)
 nav_mid.markdown(
     f"<div style='text-align:center; padding-top: 0.4rem; font-family: var(--mono); "
     f"color: var(--muted); letter-spacing: 0.1em;'>"
-    f"Slide {SS.tutorial_slide_idx + 1} of {total}</div>",
+    f"Slide {current + 1} of {total}</div>",
     unsafe_allow_html=True,
 )
-
-if SS.tutorial_slide_idx < total - 1:
-    if nav_next.button("Next →", key="tut_next", use_container_width=True, type="primary"):
-        _go(1)
-        st.rerun()
-else:
-    nav_next.button("Next →", key="tut_next_d", disabled=True, use_container_width=True)
+nav_next.button(
+    "Next →",
+    key="tut_next",
+    on_click=_next,
+    disabled=(current == total - 1),
+    use_container_width=True,
+    type="primary",
+)
 
 st.divider()
 
