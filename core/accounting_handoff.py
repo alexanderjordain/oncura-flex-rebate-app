@@ -89,9 +89,21 @@ def _send_smtp(subject: str, body: str, to: str,
 
 
 def _build_eml_bytes(subject: str, body: str, to: str,
-                     attachments: list[tuple[str, bytes]] | None,
-                     sender: str = "draft@oncurapartners.com") -> bytes:
-    msg = _build_message(subject, body, to, sender, attachments)
+                     attachments: list[tuple[str, bytes]] | None) -> bytes:
+    """Build an .eml file. Omits From/Date/Message-ID so the user's mail client
+    fills From from their own account on open. Adds X-Unsent:1 — classic Outlook
+    recognizes this and opens the file in compose mode rather than read mode.
+    OWA / new Outlook still tends to open in reader (Microsoft limitation);
+    Microsoft Graph integration is the proper path for those clients."""
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["To"]      = to
+    msg["X-Unsent"] = "1"
+    msg.set_content(body)
+    for filename, blob in attachments or []:
+        ctype, _ = mimetypes.guess_type(filename)
+        maintype, subtype = (ctype.split("/", 1) if ctype else ("application", "octet-stream"))
+        msg.add_attachment(blob, maintype=maintype, subtype=subtype, filename=filename)
     return msg.as_bytes()
 
 
@@ -228,7 +240,10 @@ def _render_smtp_path(subject, body, attachments, key_prefix, cfg):
 
 
 def _render_eml_path(subject, body, attachments, key_prefix):
-    """Universal fallback: download a .eml file that opens in any mail client."""
+    """Universal fallback: download a .eml file that opens in any mail client.
+    Note: in new Outlook / OWA, .eml typically opens in read-only viewer (Microsoft
+    limitation). Set up Microsoft Graph (see docs/AZURE_AD_SETUP.md) for a real
+    editable draft in the user's Drafts folder."""
     eml_bytes = _build_eml_bytes(subject, body, TO, attachments)
     safe_subj = "".join(c if c.isalnum() or c in "-_" else "_" for c in subject)[:60]
     st.download_button(
@@ -239,15 +254,14 @@ def _render_eml_path(subject, body, attachments, key_prefix):
         key=f"{key_prefix}_eml",
     )
     st.caption(
-        "Double-click the downloaded `.eml` to open it in Outlook / Apple Mail / etc. "
-        "Body and attachments are pre-loaded — review and click **Send**. "
-        "(SMTP credentials aren't configured in secrets; set `SMTP_HOST` + `SMTP_USER` + "
-        "`SMTP_PASSWORD` to enable one-click send.)"
+        "Double-click the downloaded `.eml` to open it. Classic Outlook opens it as "
+        "an editable draft (From auto-fills from your account). **New Outlook / OWA open "
+        "it as a read-only viewer** — for those, configure Microsoft Graph "
+        "(`docs/AZURE_AD_SETUP.md`) to get a real draft in your Drafts folder."
     )
-    # Lightweight mailto as a last resort (no attachment)
     with st.expander("Or open mailto (no attachment)"):
         st.link_button("Open mailto link", mailto_link(subject, body))
-        st.caption("mailto: cannot carry attachments. Use this only if .eml doesn't work in your environment.")
+        st.caption("mailto: cannot carry attachments. Last resort only.")
 
 
 # ── Workflow-specific builders (unchanged signatures) ─────────────────────────
