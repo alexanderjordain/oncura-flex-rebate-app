@@ -69,7 +69,17 @@ month_labels = [m.strftime("%B") for m in months]
 up = st.file_uploader("OPD detail export covering the selected months (CSV/XLSX)",
                       type=["csv", "xlsx", "xls"])
 if up is None:
-    st.info("Upload an OPD export — consult-grid or OData ConsultService.")
+    st.info(
+        "**How to pull the OPD export:**\n\n"
+        "1. OPD → **Consults** → **Completed**\n"
+        "2. **Department** dropdown — select **Cardiology**, **General Radiology**, "
+        "**Internal Medicine**, and **Ultrasound** (titles capitalized exactly as shown)\n"
+        "3. Set **Finalized From** and **Finalized To** dates to cover the selected months above\n"
+        "4. Click **Search**\n"
+        "5. Click **Export to Excel**\n"
+        "6. Upload the file here\n\n"
+        "_Accepts the consult-grid export or an OData ConsultService export._"
+    )
     st.stop()
 
 raw = opd_adapter.read_upload(up)
