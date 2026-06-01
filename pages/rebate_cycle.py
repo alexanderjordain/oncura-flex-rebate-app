@@ -85,7 +85,7 @@ if step_key == "setup":
         prev = _months_relative(-1)
         year_options  = list(range(today.year - 5, today.year + 3))
         month_options = list(range(1, 13))
-        yc, mc, bc = st.columns([1, 2, 1])
+        yc, mc, bc = st.columns([1, 2, 1], vertical_alignment="bottom")
         with yc:
             pick_year = st.selectbox(
                 "Year", year_options,
@@ -99,7 +99,6 @@ if step_key == "setup":
                 key="cycle_add_month",
             )
         with bc:
-            st.markdown("&nbsp;", unsafe_allow_html=True)
             add_clicked = st.button("Add month", key="cycle_add_btn", use_container_width=True)
 
         if add_clicked:
