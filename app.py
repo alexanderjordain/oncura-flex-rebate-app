@@ -32,3 +32,32 @@ pages = {
     ],
 }
 st.navigation(pages).run()
+
+# Default-collapse the sidebar nav sections (Rebates / FLEX / Admin). Streamlit renders
+# them as <details> elements; this script flips them closed on render. Lives at the end
+# so the DOM is built by the time it runs.
+import streamlit.components.v1 as components
+components.html(
+    """
+    <script>
+      const closeNavSections = () => {
+        const doc = window.parent.document;
+        const sb  = doc.querySelector('section[data-testid="stSidebar"]');
+        if (!sb) return false;
+        const details = sb.querySelectorAll('details');
+        if (!details.length) return false;
+        details.forEach(d => d.open = false);
+        return true;
+      };
+      // Try a few times — Streamlit hydrates the sidebar asynchronously
+      if (!closeNavSections()) {
+        let tries = 0;
+        const t = setInterval(() => {
+          tries++;
+          if (closeNavSections() || tries > 20) clearInterval(t);
+        }, 100);
+      }
+    </script>
+    """,
+    height=0,
+)
