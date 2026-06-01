@@ -110,18 +110,22 @@ if step_key == "setup":
             if new_month not in current:
                 current.append(new_month)
                 SS["selected_months"] = sorted(current)
+                # ALSO update the widget's own state; Streamlit ignores `default`
+                # once a widget has stored state, so we have to set it explicitly.
+                SS["cycle_months_widget"] = sorted(current)
                 st.rerun()
 
-        # Selected months display. Widget key differs from persistent key
-        # so the state survives navigation to steps where this widget isn't on screen.
+        # On first render after a step nav (widget had no state), seed from persistent.
+        if "cycle_months_widget" not in SS:
+            SS["cycle_months_widget"] = list(SS.get("selected_months", []))
+
         widget_value = st.multiselect(
             "Selected months (click ✕ to remove)",
             options=sorted(set(default_options + extras + list(SS.get("selected_months", []))), reverse=True),
-            default=list(SS.get("selected_months", [])),
             format_func=lambda d: d.strftime("%B %Y"),
             key="cycle_months_widget",
         )
-        # Mirror widget state into the persistent key
+        # Mirror widget state into the persistent key (handles ✕ removals)
         SS["selected_months"] = widget_value
 
         if not SS["selected_months"]:
