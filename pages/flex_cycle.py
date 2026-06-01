@@ -345,7 +345,18 @@ the next. After all uploads, the combined total should match the bank-feed depos
         subj, body = accounting_handoff.finance_payment_email(
             company=company, pay_date=pay_date, summary=s, has_scan=s["scan_count"] > 0,
         )
-        accounting_handoff.render_handoff(subj, body, key_prefix="remit_email")
+        attachments = [
+            (f"FlexPayments_{company}_{pay_date}.xlsx",
+             saasant.to_xlsx_bytes(res["flex_payments"], "FlexPayments")),
+        ]
+        if s["scan_count"] > 0:
+            attachments += [
+                (f"ScanInvoices_{company}_{pay_date}.xlsx",
+                 saasant.to_xlsx_bytes(res["scan_invoices"], "ScanInvoices")),
+                (f"ScanPayments_{company}_{pay_date}.xlsx",
+                 saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments")),
+            ]
+        accounting_handoff.render_handoff(subj, body, key_prefix="remit_email", attachments=attachments)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 2 — Monthly Credit Memos
@@ -566,7 +577,11 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             total=float(df["Product/Service Amount"].sum()),
             start_ref=start_ref, next_ref=next_ref,
         )
-        accounting_handoff.render_handoff(subj, body, key_prefix="credits_email")
+        attachments = [
+            (f"FlexCredits_{mname}_{year}.xlsx",
+             saasant.to_xlsx_bytes(df, f"FlexCredits{mname}{year}")),
+        ]
+        accounting_handoff.render_handoff(subj, body, key_prefix="credits_email", attachments=attachments)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
@@ -953,10 +968,40 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "4. Apply payment to zero out the clinic's account when received.\n"
                             "5. **No refunds** (SOP-12) — overpayments stay on account for future overages."
                         )
+                    # Dedup against ledger — flag rows already emitted in prior runs
+                    if not didf.empty:
+                        direct_payments_for_ledger = [
+                            {
+                                "kind": "direct_overage",
+                                "contract": row["Customer"],
+                                "qb_customer": row["Customer"],
+                                "payment_date": row.get("Invoice Date") or f"{rec_year:04d}-{rec_month:02d}-01",
+                                "amount": float(row.get("Product/Service Amount") or row.get("Amount") or 0),
+                            }
+                            for _, row in didf.iterrows()
+                        ]
+                        direct_fps = [
+                            ledger.fingerprint("INTERNAL", "direct_overage", r["contract"],
+                                               r["payment_date"], r["amount"])
+                            for r in direct_payments_for_ledger
+                        ]
+                        already_direct = ledger.check_payments_seen(direct_fps)
+                        if already_direct:
+                            st.warning(
+                                f"**{len(already_direct)} direct-bill invoice(s) already recorded for this period.** "
+                                f"Re-uploading them to QBO will double-bill — review the download before importing."
+                            )
                     if not didf.empty and st.button(
                         f"Mark {len(didf)} direct-bill invoice(s) as imported",
                         key="w_recap_mark_direct", type="primary",
                     ):
+                        ok_l, added_l, _ = ledger.record_batch(
+                            file_content=None,
+                            filename=f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                            company="INTERNAL",
+                            payments=direct_payments_for_ledger,
+                            note=f"Stage 3 direct-bill / {dt.date(2000, rec_month, 1):%B} {rec_year}",
+                        )
                         audit.record_cycle(
                             cycle_type="stage3_overage",
                             approver=auth.current_role(),
@@ -975,7 +1020,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             }],
                             note=f"Direct-bill overages for {dt.date(2000, rec_month, 1):%B %Y}",
                         )
-                        st.success(f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest.")
+                        st.success(
+                            f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest "
+                            f"and {added_l} fingerprint(s) in the dedup ledger."
+                        )
 
             if partner_count:
                 partner_total = sum(float(r["net_overage"]) for r in annotated
@@ -1000,10 +1048,44 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "- Confirm receipt.\n"
                             "- Track expected payment 5–6 months out on FLEX Master."
                         )
+                    # Dedup against ledger — flag rows already submitted in prior runs
+                    if not pdf.empty:
+                        cust_col = "Customer" if "Customer" in pdf.columns else pdf.columns[0]
+                        amt_col = "Amount" if "Amount" in pdf.columns else next(
+                            (c for c in pdf.columns if "amount" in str(c).lower() or "net" in str(c).lower()), None
+                        )
+                        partner_payments_for_ledger = [
+                            {
+                                "kind": "partner_overage",
+                                "contract": str(row[cust_col]),
+                                "qb_customer": str(row[cust_col]),
+                                "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
+                                "amount": float(row[amt_col]) if amt_col else 0.0,
+                            }
+                            for _, row in pdf.iterrows()
+                        ]
+                        partner_fps = [
+                            ledger.fingerprint("INTERNAL", "partner_overage", r["contract"],
+                                               r["payment_date"], r["amount"])
+                            for r in partner_payments_for_ledger
+                        ]
+                        already_partner = ledger.check_payments_seen(partner_fps)
+                        if already_partner:
+                            st.warning(
+                                f"**{len(already_partner)} partner submission(s) already recorded for this period.** "
+                                f"Re-submitting will create a duplicate at OnePlace — review before sending."
+                            )
                     if not pdf.empty and st.button(
                         f"Mark {len(pdf)} partner-submission row(s) as submitted",
                         key="w_recap_mark_partner", type="primary",
                     ):
+                        ok_l, added_l, _ = ledger.record_batch(
+                            file_content=None,
+                            filename=f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                            company="INTERNAL",
+                            payments=partner_payments_for_ledger,
+                            note=f"Stage 3 partner submission / {dt.date(2000, rec_month, 1):%B} {rec_year}",
+                        )
                         audit.record_cycle(
                             cycle_type="stage3_overage",
                             approver=auth.current_role(),
@@ -1022,7 +1104,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             }],
                             note=f"OnePlace overage submission for {dt.date(2000, rec_month, 1):%B %Y}",
                         )
-                        st.success(f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest.")
+                        st.success(
+                            f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest "
+                            f"and {added_l} fingerprint(s) in the dedup ledger."
+                        )
 
         elif step_key == "handoff":
             st.markdown("### Hand off to accounting")

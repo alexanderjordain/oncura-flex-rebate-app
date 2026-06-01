@@ -166,11 +166,6 @@ with st.expander("Preview a bucket"):
             rows.append(r)
         st.dataframe(pd.DataFrame(rows), use_container_width=True, height=420)
 
-if unmatched_total:
-    with st.expander(f"OPD clinics not in rebate master ({len(unmatched_total)})"):
-        st.caption("These OPD clinic names didn't match any rebate-program clinic and aren't in the report.")
-        st.write(sorted(unmatched_total)[:30])
-
 # ── export ────────────────────────────────────────────────────────────────────
 xlsx_bytes = rebate_report.build(per_bucket, months)
 fname = f"Rebates_{rebate_report.short_period(months).replace(' ', '_').replace('&','and')}.xlsx"
@@ -192,4 +187,5 @@ _subj, _body = accounting_handoff.rebate_email(
     per_bucket_totals=_per_bucket_totals,
     grand_total=round(grand, 2),
 )
-accounting_handoff.render_handoff(_subj, _body, key_prefix="rebate_email")
+accounting_handoff.render_handoff(_subj, _body, key_prefix="rebate_email",
+                                  attachments=[(fname, xlsx_bytes)])
