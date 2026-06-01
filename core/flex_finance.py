@@ -262,7 +262,7 @@ def _build_payments(src, company, kind, label, payment_date, id_col, invoice_nos
         out["Amount"] = amount
         out["Reference No"] = label
         if invoice_nos is not None:
-            out["Invoice"] = invoice_nos
+            out["Invoice No"] = invoice_nos
 
     _assert_unique(out["Ref No (Receive Payment No)"], f"{company} {kind} payments")
     return out
