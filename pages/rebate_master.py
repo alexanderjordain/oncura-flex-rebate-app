@@ -40,7 +40,7 @@ if editable:
         key="rebate_editor",
     )
     msg = st.text_input("Commit message", value="Update rebate master")
-    if st.button("Save rebate master", type="primary"):
+    if st.button("Save rebate master"):
         new_clinics = edited.to_dict(orient="records")
         payload = dict(master)
         payload["clinics"] = new_clinics
