@@ -38,22 +38,29 @@ if "cycle_months" not in st.session_state:
 
 st.markdown("**Cycle period** — months included in this report (chronological).")
 
-# Inline calendar picker (year + month nav is native to st.date_input)
-pick_col, add_col = st.columns([3, 1])
-with pick_col:
-    picked = st.date_input(
-        "Add a month",
-        value=_months_relative(-1),
-        format="MM/DD/YYYY",
-        key="cycle_add_date",
-        help="Open the calendar — click the year/month header to jump to any year, then pick any day in the target month.",
+# Month-only picker: Year + Month dropdowns side-by-side, no day grid
+prev = _months_relative(-1)
+year_options  = list(range(today.year - 5, today.year + 3))
+month_options = list(range(1, 13))
+yc, mc, bc = st.columns([1, 2, 1])
+with yc:
+    pick_year = st.selectbox(
+        "Year", year_options,
+        index=year_options.index(prev.year), key="cycle_add_year",
     )
-with add_col:
-    st.markdown("&nbsp;", unsafe_allow_html=True)  # spacer so button aligns with input
+with mc:
+    pick_month = st.selectbox(
+        "Month", month_options,
+        index=month_options.index(prev.month),
+        format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
+        key="cycle_add_month",
+    )
+with bc:
+    st.markdown("&nbsp;", unsafe_allow_html=True)
     add_clicked = st.button("Add month", key="cycle_add_btn", use_container_width=True)
 
 if add_clicked:
-    new_month = dt.date(picked.year, picked.month, 1)
+    new_month = dt.date(int(pick_year), int(pick_month), 1)
     if new_month not in extras and new_month not in default_options:
         extras.append(new_month)
     current = list(st.session_state.get("cycle_months", []))
