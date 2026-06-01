@@ -8,7 +8,7 @@ Deploy:       Streamlit Cloud, app file = app.py. Set APP_PASSWORD (+ GITHUB_TOK
 """
 import streamlit as st
 
-from core import auth, ui
+from core import auth, ui, graph_email
 
 st.set_page_config(page_title="Oncura FLEX + Rebate", page_icon="*", layout="wide")
 
@@ -16,6 +16,17 @@ st.set_page_config(page_title="Oncura FLEX + Rebate", page_icon="*", layout="wid
 auth.require_login()
 ui.inject()
 auth.sidebar_identity()
+
+# OAuth callback handler — Microsoft Graph redirects here with ?code=... after sign-in
+_qp = st.query_params
+if _qp.get("code") and graph_email.is_configured():
+    ok, info = graph_email.handle_callback(_qp["code"])
+    # Clear the code from the URL so a refresh doesn't try to re-exchange it
+    st.query_params.clear()
+    if ok:
+        st.success(f"Outlook connected. {info}")
+    else:
+        st.error(f"Outlook connection failed: {info}")
 
 pages = {
     "": [st.Page("pages/home.py", title="Home", default=True)],

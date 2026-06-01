@@ -108,18 +108,28 @@ def render_handoff(
     key_prefix: str = "handoff",
     attachments: list[tuple[str, bytes]] | None = None,
 ):
-    """Render the email-draft card with SMTP send + .eml fallback + mailto.
-
-    attachments: list of (filename, bytes) — file blobs to attach to the email.
+    """Render the email-draft card. Priority order:
+        1. Microsoft Graph (draft in user's own Outlook — user clicks Send there)
+        2. SMTP send (auto-send from configured account, with confirm step)
+        3. .eml download (universal fallback)
+        4. mailto: link (last resort, no attachment)
     """
+    from core import graph_email  # local import keeps module load-time small
     with st.container(border=True):
         st.markdown("### Hand off to accounting")
         st.caption(f"Sends to **{TO}** with this cycle's numbers + action items pre-filled.")
 
+        used_path = False
+        if graph_email.is_configured():
+            _render_graph_path(subject, body, attachments, key_prefix, graph_email)
+            used_path = True
+
         cfg = _smtp_config()
-        if cfg:
+        if cfg and not used_path:
             _render_smtp_path(subject, body, attachments, key_prefix, cfg)
-        else:
+            used_path = True
+
+        if not used_path:
             _render_eml_path(subject, body, attachments, key_prefix)
 
         # Preview is always available
@@ -128,6 +138,49 @@ def render_handoff(
             if attachments:
                 st.caption("Attached: " + ", ".join(f"**{n}** ({len(b):,} bytes)" for n, b in attachments))
             st.code(body, language="text")
+
+
+def _render_graph_path(subject, body, attachments, key_prefix, graph_email):
+    """Create a draft in the user's own Outlook. User clicks Send in Outlook."""
+    if not graph_email.is_connected():
+        st.info(
+            "**Sign in to Outlook once per session.** The draft will be created in your own "
+            "Outlook → Drafts folder. You open Outlook, review, click Send — the email goes "
+            "from your address with your signature."
+        )
+        auth_url = graph_email.get_auth_url()
+        st.link_button("Connect Outlook", auth_url, type="primary")
+        return
+
+    user = graph_email.get_user_info() or {}
+    cols = st.columns([3, 1])
+    cols[0].markdown(
+        f"Signed in as **{user.get('name') or user.get('email') or 'Outlook user'}**"
+        + (f" ({user['email']})" if user.get('email') and user.get('name') else "")
+    )
+    if cols[1].button("Disconnect", key=f"{key_prefix}_disc", use_container_width=True):
+        graph_email.disconnect()
+        st.rerun()
+
+    created_key = f"{key_prefix}_graph_created"
+    if st.session_state.get(created_key):
+        link = st.session_state[created_key]
+        st.success("Draft created in your Outlook → Drafts folder. Open Outlook, review, click Send.")
+        if link and link.startswith("http"):
+            st.link_button("Open the draft in Outlook (web)", link)
+        if st.button("Create another draft", key=f"{key_prefix}_graph_again"):
+            del st.session_state[created_key]
+            st.rerun()
+        return
+
+    if st.button("Create draft in my Outlook", key=f"{key_prefix}_graph_create", type="primary"):
+        with st.spinner("Creating draft via Microsoft Graph…"):
+            ok, info = graph_email.create_draft(subject, body, TO, attachments)
+        if ok:
+            st.session_state[created_key] = info
+            st.rerun()
+        else:
+            st.error(info)
 
 
 def _render_smtp_path(subject, body, attachments, key_prefix, cfg):
