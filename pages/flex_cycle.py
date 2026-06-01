@@ -78,10 +78,11 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
 
     if company == "GreatAmerica":
         split = "all_flex"
-    elif company == "OnePlace":
-        split = "by_contract_prefix_oneplace"
-        st.caption("OnePlace splits by contract prefix: `04…` = FLEX, otherwise scan package (per Cash SOP-9).")
     else:
+        # OnePlace + NewLane: whole-dollar = scan, odd-cents = flex
+        # (Confirmed against May OPC pass-through file: Easthaven $595.00 + Innovative
+        # Animal Care $295.00 both have "04..." contracts but are scan packages —
+        # SOP-9's "04 = FLEX" prefix rule has exceptions, cents is the reliable signal.)
         split = "by_cents"
         st.caption(f"{company} splits flex vs scan by cents: whole-dollar = scan, odd-cents = flex.")
 
