@@ -36,28 +36,39 @@ prev_month = _months_relative(-1)
 if "cycle_months" not in st.session_state:
     st.session_state["cycle_months"] = [prev_month]
 
+st.markdown("**Cycle period** — months included in this report (chronological).")
+
+# Inline calendar picker (year + month nav is native to st.date_input)
+pick_col, add_col = st.columns([3, 1])
+with pick_col:
+    picked = st.date_input(
+        "Add a month",
+        value=_months_relative(-1),
+        format="MM/DD/YYYY",
+        key="cycle_add_date",
+        help="Open the calendar — click the year/month header to jump to any year, then pick any day in the target month.",
+    )
+with add_col:
+    st.markdown("&nbsp;", unsafe_allow_html=True)  # spacer so button aligns with input
+    add_clicked = st.button("Add month", key="cycle_add_btn", use_container_width=True)
+
+if add_clicked:
+    new_month = dt.date(picked.year, picked.month, 1)
+    if new_month not in extras and new_month not in default_options:
+        extras.append(new_month)
+    current = list(st.session_state.get("cycle_months", []))
+    if new_month not in current:
+        current.append(new_month)
+        st.session_state["cycle_months"] = sorted(current)
+        st.rerun()
+
+# Multiselect retains pill display + click-X-to-remove behavior
 selected = st.multiselect(
-    "Cycle period — pick one or more months (chronological in the report)",
-    options=all_options,
+    "Selected months (click ✕ to remove)",
+    options=sorted(set(default_options + extras + list(st.session_state.get("cycle_months", []))), reverse=True),
     format_func=lambda d: d.strftime("%B %Y"),
     key="cycle_months",
 )
-
-with st.expander("Need a month outside the default range? Add a specific one."):
-    cc1, cc2, cc3 = st.columns([1, 1, 1])
-    yr = cc1.number_input("Year", value=today.year, min_value=2000, max_value=2099, step=1, key="add_yr")
-    mo = cc2.selectbox("Month", list(range(1, 13)), index=today.month - 1,
-                       format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
-                       key="add_mo")
-    if cc3.button("Add to picker", key="add_month_btn"):
-        d = dt.date(int(yr), int(mo), 1)
-        if d not in extras:
-            extras.append(d)
-        current = list(st.session_state.get("cycle_months", []))
-        if d not in current:
-            current.append(d)
-            st.session_state["cycle_months"] = current
-        st.rerun()
 
 if not selected:
     st.info("Select at least one month.")
