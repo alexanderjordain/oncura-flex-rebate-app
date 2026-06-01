@@ -43,8 +43,12 @@ def _months_relative(n: int) -> dt.date:
 default_options = [_months_relative(i) for i in range(-23, 13)]
 extras = SS.setdefault("cycle_extra_months", [])
 
-# Default empty — user fills it explicitly
-SS.setdefault("cycle_months", [])
+# Default empty — user fills it explicitly. We deliberately use 'selected_months'
+# (not 'cycle_months') because Streamlit clears widget-keyed state when the widget
+# isn't on the current page; the multiselect's key 'cycle_months_widget' only
+# renders on Step 1, so we mirror its value into 'selected_months' for cross-step
+# persistence.
+SS.setdefault("selected_months", [])
 SS.setdefault("cycle_step", 0)
 SS.setdefault("cycle_uploaded_bytes", None)
 SS.setdefault("cycle_uploaded_name", None)
@@ -102,21 +106,25 @@ if step_key == "setup":
             new_month = dt.date(int(pick_year), int(pick_month), 1)
             if new_month not in extras and new_month not in default_options:
                 extras.append(new_month)
-            current = list(SS.get("cycle_months", []))
+            current = list(SS.get("selected_months", []))
             if new_month not in current:
                 current.append(new_month)
-                SS["cycle_months"] = sorted(current)
+                SS["selected_months"] = sorted(current)
                 st.rerun()
 
-        # Selected months display
-        st.multiselect(
+        # Selected months display. Widget key differs from persistent key
+        # so the state survives navigation to steps where this widget isn't on screen.
+        widget_value = st.multiselect(
             "Selected months (click ✕ to remove)",
-            options=sorted(set(default_options + extras + list(SS.get("cycle_months", []))), reverse=True),
+            options=sorted(set(default_options + extras + list(SS.get("selected_months", []))), reverse=True),
+            default=list(SS.get("selected_months", [])),
             format_func=lambda d: d.strftime("%B %Y"),
-            key="cycle_months",
+            key="cycle_months_widget",
         )
+        # Mirror widget state into the persistent key
+        SS["selected_months"] = widget_value
 
-        if not SS["cycle_months"]:
+        if not SS["selected_months"]:
             st.info("Add at least one month above to continue.")
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -124,7 +132,7 @@ if step_key == "setup":
 # ══════════════════════════════════════════════════════════════════════════════
 elif step_key == "upload":
     with safe_stage("Upload OPD detail"):
-        months = sorted(SS["cycle_months"])
+        months = sorted(SS["selected_months"])
         st.caption(
             "Cycle: "
             + ", ".join(m.strftime("%B %Y") for m in months)
@@ -163,7 +171,7 @@ elif step_key == "upload":
 # ══════════════════════════════════════════════════════════════════════════════
 elif step_key == "review":
     with safe_stage("Review the numbers"):
-        months = sorted(SS["cycle_months"])
+        months = sorted(SS["selected_months"])
         month_labels = [m.strftime("%B") for m in months]
 
         # (Re)compute if we don't have cached results for this upload yet
@@ -277,7 +285,7 @@ elif step_key == "export":
         if not SS.get("cycle_results"):
             st.warning("Go back to Step 3 to compute the report first.")
         else:
-            months = sorted(SS["cycle_months"])
+            months = sorted(SS["selected_months"])
             results = SS["cycle_results"]
             per_bucket = results["per_bucket"]
             grand      = results["grand"]
@@ -312,7 +320,7 @@ can_back = SS.cycle_step > 0
 can_next = SS.cycle_step < total - 1
 next_blocked_reason = ""
 
-if step_key == "setup" and not SS["cycle_months"]:
+if step_key == "setup" and not SS["selected_months"]:
     can_next = False
     next_blocked_reason = "Add at least one month to continue."
 elif step_key == "upload" and not SS.get("cycle_uploaded_bytes"):
