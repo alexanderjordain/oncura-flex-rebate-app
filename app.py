@@ -31,8 +31,8 @@ if _qp.get("code") and graph_email.is_configured():
 pages = {
     "": [st.Page("pages/home.py", title="Home", default=True)],
     "Rebates": [
-        st.Page("pages/rebate_master.py", title="Rebate Master"),
         st.Page("pages/rebate_cycle.py", title="Rebate Cycle"),
+        st.Page("pages/rebate_master.py", title="Rebate Clinic Roster"),
     ],
     "FLEX": [
         st.Page("pages/flex_cycle.py", title="FLEX Cycle"),

@@ -88,7 +88,7 @@ st.divider()
 st.subheader("Rebate rates")
 st.caption(
     "Default percentages applied to OPD scan activity. Per-clinic overrides live in "
-    "Rebate Master; these are the program defaults."
+    "Rebate Clinic Roster; these are the program defaults."
 )
 rebate = cfg.setdefault("rebate", {})
 rates = rebate.setdefault("rates", {})

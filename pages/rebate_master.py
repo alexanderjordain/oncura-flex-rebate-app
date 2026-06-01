@@ -3,7 +3,7 @@ import streamlit as st
 
 from core import auth, loaders, store, ui
 
-ui.header("Rebate Master", "The clinic roster, program types, and rebate rates. Edits persist to the repo.",
+ui.header("Rebate Clinic Roster", "The clinic roster, program types, and rebate rates. Edits persist to the repo.",
           kicker="Rebates · Reference")
 
 master = loaders.rebate_master()
@@ -39,8 +39,8 @@ if editable:
         },
         key="rebate_editor",
     )
-    msg = st.text_input("Commit message", value="Update rebate master")
-    if st.button("Save rebate master"):
+    msg = st.text_input("Commit message", value="Update rebate clinic roster")
+    if st.button("Save roster"):
         new_clinics = edited.to_dict(orient="records")
         payload = dict(master)
         payload["clinics"] = new_clinics
