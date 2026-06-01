@@ -155,13 +155,33 @@ def render_handoff(
 def _render_graph_path(subject, body, attachments, key_prefix, graph_email):
     """Create a draft in the user's own Outlook. User clicks Send in Outlook."""
     if not graph_email.is_connected():
-        st.info(
-            "**Sign in to Outlook once per session.** The draft will be created in your own "
-            "Outlook → Drafts folder. You open Outlook, review, click Send — the email goes "
-            "from your address with your signature."
-        )
+        with st.expander("**First time? Read this before clicking the button below.**", expanded=False):
+            st.markdown(
+                "**What this does**\n"
+                "- Creates an email **draft** in *your* Outlook Drafts folder, with the body and "
+                "all attachments already in place.\n"
+                "- You open Outlook (web or desktop), review the draft, edit anything you want, "
+                "then click **Send** there. The email goes **from your address**, with your "
+                "signature — exactly like an email you composed yourself.\n\n"
+                "**Step-by-step (first time only — ~30 seconds)**\n"
+                "1. Click **Connect Outlook** below.\n"
+                "2. You'll be redirected to Microsoft's sign-in page. **Don't worry — your work in "
+                "the app is saved.** Sign in with your Oncura email (`@oncurapartners.com`).\n"
+                "3. Microsoft will ask you to grant the app permission to read/write email. "
+                "Click **Accept**. (This is required so the app can create the draft.)\n"
+                "4. You'll be redirected back to the app. A green **'Outlook connected'** banner "
+                "appears at the top.\n"
+                "5. A new button appears: **Create draft in my Outlook**. Click it.\n"
+                "6. Open Outlook in another tab/window. Look in **Drafts** — the email is there "
+                "with the attachment(s). Review, edit if needed, click **Send** in Outlook.\n\n"
+                "**Every other time:** if you've already signed in this browser session, the app "
+                "remembers you. Just click **Create draft in my Outlook**, then open Outlook → "
+                "Drafts → Send. (If you closed and reopened the browser, you'll sign in once more.)\n\n"
+                "**Permission granted is narrow:** the app can only create drafts in your mailbox. "
+                "It cannot read your inbox, send without you, or access anything else."
+            )
         auth_url = graph_email.get_auth_url()
-        st.link_button("Connect Outlook", auth_url, type="primary")
+        st.link_button("Connect Outlook", auth_url)
         return
 
     user = graph_email.get_user_info() or {}
@@ -177,15 +197,28 @@ def _render_graph_path(subject, body, attachments, key_prefix, graph_email):
     created_key = f"{key_prefix}_graph_created"
     if st.session_state.get(created_key):
         link = st.session_state[created_key]
-        st.success("Draft created in your Outlook → Drafts folder. Open Outlook, review, click Send.")
+        st.success("Draft created in your Outlook → Drafts folder.")
+        st.markdown(
+            "**Next steps:**\n"
+            "1. Open Outlook (web at `outlook.office.com`, or desktop).\n"
+            "2. Click **Drafts** in the left sidebar.\n"
+            "3. Open the draft titled with this cycle's subject line.\n"
+            "4. Verify the attachment is there and the body is correct.\n"
+            "5. Click **Send** in Outlook — that's it."
+        )
         if link and link.startswith("http"):
-            st.link_button("Open the draft in Outlook (web)", link)
-        if st.button("Create another draft", key=f"{key_prefix}_graph_again"):
+            st.link_button("Or open the draft directly in Outlook web", link)
+        if st.button("Create another draft for this cycle", key=f"{key_prefix}_graph_again"):
             del st.session_state[created_key]
             st.rerun()
         return
 
-    if st.button("Create draft in my Outlook", key=f"{key_prefix}_graph_create", type="primary"):
+    st.markdown(
+        "**What happens next:** clicking the button below creates a draft in your "
+        "Outlook → Drafts folder with the body and attachments. The app does **not** "
+        "send the email — you open Outlook and click Send yourself."
+    )
+    if st.button("Create draft in my Outlook", key=f"{key_prefix}_graph_create"):
         with st.spinner("Creating draft via Microsoft Graph…"):
             ok, info = graph_email.create_draft(subject, body, TO, attachments)
         if ok:
@@ -246,6 +279,10 @@ def _render_eml_path(subject, body, attachments, key_prefix):
     editable draft in the user's Drafts folder."""
     eml_bytes = _build_eml_bytes(subject, body, TO, attachments)
     safe_subj = "".join(c if c.isalnum() or c in "-_" else "_" for c in subject)[:60]
+    st.markdown(
+        "**Outlook integration isn't set up yet.** While that's pending, here's the "
+        "manual workaround:"
+    )
     st.download_button(
         "Download email draft (.eml)",
         eml_bytes,
@@ -253,15 +290,35 @@ def _render_eml_path(subject, body, attachments, key_prefix):
         mime="message/rfc822",
         key=f"{key_prefix}_eml",
     )
-    st.caption(
-        "Double-click the downloaded `.eml` to open it. Classic Outlook opens it as "
-        "an editable draft (From auto-fills from your account). **New Outlook / OWA open "
-        "it as a read-only viewer** — for those, configure Microsoft Graph "
-        "(`docs/AZURE_AD_SETUP.md`) to get a real draft in your Drafts folder."
-    )
-    with st.expander("Or open mailto (no attachment)"):
+    with st.expander("**How to use the downloaded `.eml` file** (read this if it's your first time)", expanded=False):
+        st.markdown(
+            "1. Click **Download email draft (.eml)** above. Your browser saves it to your "
+            "downloads folder.\n"
+            "2. Open Windows File Explorer, go to **Downloads**, find the `.eml` file you "
+            "just downloaded.\n"
+            "3. **Double-click** it. What happens next depends on which Outlook you have:\n"
+            "   - **Classic Outlook (desktop):** opens an editable compose window with To, "
+            "Subject, body, and attachments pre-filled — just review and click **Send**.\n"
+            "   - **New Outlook / Outlook on the web:** opens as a *read-only message viewer* "
+            "(this is a Microsoft limitation). To work around it:\n"
+            "     a. The download already happened — keep that file around.\n"
+            "     b. Open Outlook, click **New mail**.\n"
+            "     c. Set **To** = `accounting@oncurapartners.com`.\n"
+            "     d. Copy the **Subject** and **Body** from the preview below.\n"
+            "     e. Attach the file(s) by dragging from your downloads folder or clicking the "
+            "paperclip → Browse this computer.\n"
+            "     f. Click **Send**.\n\n"
+            "**The proper fix** (one-time setup by IT, ~15 min): configure Microsoft Graph — "
+            "see `docs/AZURE_AD_SETUP.md`. After that, every user gets a **Connect Outlook** "
+            "button here that creates real drafts in their Drafts folder automatically."
+        )
+    with st.expander("Last-resort: open a mailto link (no attachment)"):
         st.link_button("Open mailto link", mailto_link(subject, body))
-        st.caption("mailto: cannot carry attachments. Last resort only.")
+        st.caption(
+            "Opens a fresh email in your default mail client with To/Subject/Body filled in. "
+            "**Does not carry attachments** — you'd have to attach the file yourself. "
+            "Use only if the .eml download isn't working."
+        )
 
 
 # ── Workflow-specific builders (unchanged signatures) ─────────────────────────
