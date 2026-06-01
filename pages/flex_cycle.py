@@ -76,8 +76,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
     st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
              + (f"  ·  scan label: **{meta.get('scan_label')}**" if meta.get("scan_label") else ""))
 
-    split = "all_flex" if company == "GreatAmerica" else "by_cents"
-    if company != "GreatAmerica":
+    if company == "GreatAmerica":
+        split = "all_flex"
+    elif company == "OnePlace":
+        split = "by_contract_prefix_oneplace"
+        st.caption("OnePlace splits by contract prefix: `04…` = FLEX, otherwise scan package (per Cash SOP-9).")
+    else:
+        split = "by_cents"
         st.caption(f"{company} splits flex vs scan by cents: whole-dollar = scan, odd-cents = flex.")
 
     up = st.file_uploader("Remittance file (CSV/XLSX)", type=["csv", "xlsx", "xls"], key="remit_file")

@@ -75,6 +75,19 @@ def is_whole_dollar(amount) -> bool:
         return False
 
 
+def is_oneplace_flex_contract(contract) -> bool:
+    """Per Cash SOP-9: OnePlace flex contracts begin with '04' (5 digits) — anything else
+    on a OnePlace remittance is a scan package. The export sometimes pads with a leading
+    zero ('004...'), so accept either form."""
+    s = str(contract or "").strip()
+    # Strip a trailing '.0' float artifact ('40010172988.0' -> '40010172988')
+    if "." in s:
+        head, _, tail = s.partition(".")
+        if tail.strip("0") == "":
+            s = head
+    return s.startswith("04") or s.startswith("004")
+
+
 def translate_name(name, name_map: dict):
     """Finance/legal name -> QB payee. Returns (qb_name, found)."""
     m = (name_map or {}).get("map", name_map or {})
@@ -164,7 +177,12 @@ def process_remittance(
         kinds = ["flex"] * len(work)
     elif split == "all_scan":
         kinds = ["scan"] * len(work)
-    else:  # by_cents
+    elif split == "by_contract_prefix_oneplace":
+        # Per Cash SOP-9: OnePlace classifies by contract prefix, not by cents.
+        # by_cents misfires when a FLEX payment happens to be a whole-dollar amount.
+        contract_vals = list(work[id_col]) if id_col and id_col in work else [None] * len(work)
+        kinds = ["flex" if is_oneplace_flex_contract(c) else "scan" for c in contract_vals]
+    else:  # by_cents (NewLane, fallback)
         kinds = ["scan" if is_whole_dollar(a) else "flex" for a in amounts]
     work["_kind"] = kinds
     work["_amount"] = amounts.round(2)
