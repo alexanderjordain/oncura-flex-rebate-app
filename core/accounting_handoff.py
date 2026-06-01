@@ -360,8 +360,6 @@ def finance_payment_email(*, company: str, pay_date, summary: dict, has_scan: bo
         "  - Verify the deposit shows on the correct bank feed.",
         "",
         "Reply with any issues.",
-        "Thanks,",
-        "FLEX/Rebate Ledger",
     ]
     return subj, "\n".join(parts)
 
@@ -384,9 +382,6 @@ def credit_memos_email(*, year: int, month: int, count: int, total: float,
         "",
         "After upload, confirm the credit memos appear on each clinic's QBO account",
         "and that the totals reconcile against the finance-co payments imported earlier.",
-        "",
-        "Thanks,",
-        "FLEX/Rebate Ledger",
     ])
     return subj, body
 
@@ -422,9 +417,6 @@ def recapture_email(*, year: int, month: int,
         "re-apply payment→credit→payment→credit against the quarter's scan invoices.",
         "",
         "No refunds on FLEX overpayments (SOP-12) — overpayment stays as credit for future overages.",
-        "",
-        "Thanks,",
-        "FLEX/Rebate Ledger",
     ]
     return subj, "\n".join(parts)
 
@@ -447,8 +439,5 @@ def rebate_email(*, period_label: str, per_bucket_totals: dict,
         "Each clinic tab in the workbook lists the eligible consults, the applied rate, ",
         "and the remittance amount. Review the variance column for any deltas worth investigating ",
         "before sending checks.",
-        "",
-        "Thanks,",
-        "FLEX/Rebate Ledger",
     ]
     return subj, "\n".join(parts)

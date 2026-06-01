@@ -99,6 +99,19 @@ is to set up Microsoft Graph (scenario A). Ask IT to follow
 
 ---
 
+## Signatures
+
+The email body intentionally ends with the last action line — no "Thanks,
+FLEX/Rebate Ledger" closer. That way **your Outlook signature flows naturally
+at the bottom** without two competing sign-offs.
+
+If your signature is being inserted somewhere weird (top of the body, above
+the action items), check Outlook → File → Options → Mail → Signatures, and
+set the **New messages** default to your preferred signature. The `.eml`
+draft opens as a new compose, so it follows that setting.
+
+---
+
 ## Troubleshooting
 
 ### "I clicked Connect Outlook and got an error from Microsoft"
