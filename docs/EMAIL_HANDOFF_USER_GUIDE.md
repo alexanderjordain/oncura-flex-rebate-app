@@ -75,9 +75,29 @@ You'll see a **Download email draft (.eml)** button.
      Done.
 
    #### If you have new Outlook or Outlook on the web (OWA)
-   - The `.eml` opens as a **read-only message viewer** — you can read it but
-     can't send. This is a Microsoft limitation, not the app's fault.
-   - Workaround:
+   - By default, double-clicking the `.eml` opens it as a **read-only message
+     viewer** — you can read it but can't send. This is a Microsoft
+     limitation of the new Outlook, not the app's fault.
+   - **Best fix (one-time, ~30 seconds): change Windows' default app for
+     `.eml` files to classic Outlook.** After this, every `.eml` from the
+     app opens as an editable compose window even though new Outlook stays
+     your daily driver for everything else.
+
+     **How to change the default:**
+     1. Right-click the downloaded `.eml` file in File Explorer.
+     2. Choose **Open with → Choose another app**.
+     3. Pick **Outlook** (the classic one, not "Outlook (new)" — the icon
+        is the dark blue envelope, *not* the lighter blue redesigned one).
+        If you don't see classic Outlook in the list, click **More apps**
+        and scroll down, or browse to
+        `C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE`.
+     4. **Check the box "Always use this app to open .eml files"** before
+        clicking OK.
+     5. Done. Every future `.eml` download from the app will open in
+        classic Outlook in compose mode, ready to send.
+
+   - **Fallback if you can't change the default** (e.g., classic Outlook
+     isn't installed on your machine):
      1. The `.eml` is already downloaded. Keep that file around.
      2. In Outlook, click **New mail** (top-left).
      3. In the new compose window:
@@ -90,10 +110,16 @@ You'll see a **Download email draft (.eml)** button.
         window, or click the paperclip icon → **Browse this computer**.
      5. Click **Send**.
 
-### Why the workaround?
+### Why does this work?
 
-Microsoft removed editable-draft support for `.eml` files in OWA / new
-Outlook a few years ago — `.eml` always opens in viewer mode there. The fix
+Microsoft removed editable-draft support for `.eml` files in *new* Outlook
+and OWA a few years ago, but **classic Outlook still honors the
+`X-Unsent: 1` header** the app sets — it opens the file in compose mode.
+By making classic Outlook the default `.eml` handler, you route just that
+one file type to the app that supports compose, while keeping new Outlook
+as your normal mail client.
+
+If classic Outlook isn't available on a given machine, the longer-term fix
 is to set up Microsoft Graph (scenario A). Ask IT to follow
 `docs/AZURE_AD_SETUP.md` (about 15 minutes of work in entra.microsoft.com).
 
