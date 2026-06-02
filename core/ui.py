@@ -160,6 +160,32 @@ section[data-testid="stSidebar"] .stMarkdown { font-family:var(--sans); }
 a, a:visited { color:var(--blue-deep); text-decoration-color:var(--amber); }
 [data-testid="stExpander"] { border:1px solid var(--line); border-radius:6px; background:var(--surface); }
 
+/* sidebar nav: expanders styled as flat section headers (no border, no fill).
+   Used by the hand-rolled nav in app.py so the section groups render as
+   plain labels above their page links. */
+section[data-testid="stSidebar"] [data-testid="stExpander"] {
+  border: none !important;
+  background: transparent !important;
+  margin: .1rem 0 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] details {
+  background: transparent !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
+  padding: .35rem .25rem !important;
+  font-family: var(--sans) !important;
+  font-weight: 500 !important;
+  color: var(--ink) !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary p {
+  font-weight: 500 !important;
+  color: var(--ink) !important;
+  margin: 0 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+  padding-left: .5rem !important;
+}
+
 /* top header bar -> white with a hairline (echoes the dashboard's white header) */
 [data-testid="stHeader"] { background: var(--surface) !important; border-bottom:1px solid var(--line); }
 

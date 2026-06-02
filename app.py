@@ -28,6 +28,10 @@ if _qp.get("code") and graph_email.is_configured():
     else:
         st.error(f"Outlook connection failed: {info}")
 
+# Register all pages with st.navigation but suppress its auto-rendered sidebar nav
+# (position="hidden"). We render the sidebar manually below using st.expander so the
+# section groups (Rebates / FLEX / Admin) default-collapse reliably — fighting
+# Streamlit's auto-nav re-renders with JS was unreliable.
 pages = {
     "": [st.Page("pages/home.py", title="Home", default=True)],
     "Rebates": [
@@ -42,38 +46,17 @@ pages = {
         st.Page("pages/settings.py", title="Settings"),
     ],
 }
-st.navigation(pages).run()
+nav = st.navigation(pages, position="hidden")
 
-# Default-collapse the sidebar nav sections (Rebates / FLEX / Admin). Streamlit's nav
-# section toggles can render as either <details> or <button aria-expanded>; handle both,
-# and keep retrying through the React hydration window so a late-rendered "open" state
-# gets closed back down.
-import streamlit.components.v1 as components
-components.html(
-    """
-    <script>
-      const doc = window.parent.document;
-      const closeAll = () => {
-        const sb = doc.querySelector('section[data-testid="stSidebar"]');
-        if (!sb) return 0;
-        let n = 0;
-        sb.querySelectorAll('details[open]').forEach(d => { d.open = false; n++; });
-        sb.querySelectorAll('button[aria-expanded="true"]').forEach(b => {
-          const txt = (b.textContent || '').trim();
-          // Section headers are short labels like "Rebates" / "FLEX" / "Admin".
-          // Skip anything long (page titles, action buttons) so we don't click the wrong thing.
-          if (txt && txt.length < 30) { b.click(); n++; }
-        });
-        return n;
-      };
-      // Retry on a 150ms interval for ~3s. Streamlit re-renders the nav after this script
-      // runs, so a single close isn't enough — we need to re-close until hydration settles.
-      let tries = 0;
-      const intv = setInterval(() => {
-        closeAll();
-        if (++tries >= 20) clearInterval(intv);
-      }, 150);
-    </script>
-    """,
-    height=0,
-)
+with st.sidebar:
+    st.page_link("pages/home.py", label="Home")
+    with st.expander("Rebates", expanded=False):
+        st.page_link("pages/rebate_cycle.py", label="Rebate Cycle")
+        st.page_link("pages/rebate_master.py", label="Rebate Program Controls")
+    with st.expander("FLEX", expanded=False):
+        st.page_link("pages/flex_cycle.py", label="FLEX Cycle")
+        st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
+    with st.expander("Admin", expanded=False):
+        st.page_link("pages/settings.py", label="Settings")
+
+nav.run()
