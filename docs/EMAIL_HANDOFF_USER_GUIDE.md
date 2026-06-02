@@ -78,12 +78,15 @@ You'll see a **Download email draft (.eml)** button.
    - By default, double-clicking the `.eml` opens it as a **read-only message
      viewer** — you can read it but can't send. This is a Microsoft
      limitation of the new Outlook, not the app's fault.
-   - **Best fix (one-time, ~30 seconds): change Windows' default app for
-     `.eml` files to classic Outlook.** After this, every `.eml` from the
-     app opens as an editable compose window even though new Outlook stays
-     your daily driver for everything else.
+   - You have two options. Pick whichever you prefer:
 
-     **How to change the default:**
+     ##### Option 1 — Route `.eml` files to classic Outlook *(recommended; one-time setup)*
+
+     Change Windows' default app for `.eml` files so they always open in
+     classic Outlook as an editable compose window. New Outlook stays your
+     daily driver for everything else — only this one file type is
+     re-routed.
+
      1. Right-click the downloaded `.eml` file in File Explorer.
      2. Choose **Open with → Choose another app**.
      3. Pick **Outlook** (the classic one, not "Outlook (new)" — the icon
@@ -93,21 +96,28 @@ You'll see a **Download email draft (.eml)** button.
         `C:\Program Files\Microsoft Office\root\Office16\OUTLOOK.EXE`.
      4. **Check the box "Always use this app to open .eml files"** before
         clicking OK.
-     5. Done. Every future `.eml` download from the app will open in
-        classic Outlook in compose mode, ready to send.
+     5. Done. Every future `.eml` download from the app opens in classic
+        Outlook in compose mode, ready to review and send.
 
-   - **Fallback if you can't change the default** (e.g., classic Outlook
-     isn't installed on your machine):
-     1. The `.eml` is already downloaded. Keep that file around.
+     ##### Option 2 — Compose manually in new Outlook *(no setup; do it each time)*
+
+     If you'd rather not change file associations, or classic Outlook isn't
+     installed on this machine, you can build the email yourself in new
+     Outlook each time. The app's handoff card has a "Preview / copy the
+     full email body" expander right below the download button — that's
+     where you grab the subject and body.
+
+     1. The `.eml` is already downloaded. Keep that file around — you'll
+        attach it (or its contents).
      2. In Outlook, click **New mail** (top-left).
      3. In the new compose window:
         - **To:** `accounting@oncurapartners.com`
-        - **Subject:** copy from the preview at the bottom of the app's
-          handoff card
-        - **Body:** copy from the preview at the bottom of the app's handoff
-          card
-     4. Attach the file(s): drag from your Downloads folder *into* the compose
-        window, or click the paperclip icon → **Browse this computer**.
+        - **Subject:** copy from the "Preview / copy the full email body"
+          expander on the app's handoff card.
+        - **Body:** copy from the same expander.
+     4. Attach the SaaSAnt file(s): drag from your Downloads folder *into*
+        the compose window, or click the paperclip icon → **Browse this
+        computer**.
      5. Click **Send**.
 
 ### Why does this work?
