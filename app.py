@@ -44,30 +44,35 @@ pages = {
 }
 st.navigation(pages).run()
 
-# Default-collapse the sidebar nav sections (Rebates / FLEX / Admin). Streamlit renders
-# them as <details> elements; this script flips them closed on render. Lives at the end
-# so the DOM is built by the time it runs.
+# Default-collapse the sidebar nav sections (Rebates / FLEX / Admin). Streamlit's nav
+# section toggles can render as either <details> or <button aria-expanded>; handle both,
+# and keep retrying through the React hydration window so a late-rendered "open" state
+# gets closed back down.
 import streamlit.components.v1 as components
 components.html(
     """
     <script>
-      const closeNavSections = () => {
-        const doc = window.parent.document;
-        const sb  = doc.querySelector('section[data-testid="stSidebar"]');
-        if (!sb) return false;
-        const details = sb.querySelectorAll('details');
-        if (!details.length) return false;
-        details.forEach(d => d.open = false);
-        return true;
+      const doc = window.parent.document;
+      const closeAll = () => {
+        const sb = doc.querySelector('section[data-testid="stSidebar"]');
+        if (!sb) return 0;
+        let n = 0;
+        sb.querySelectorAll('details[open]').forEach(d => { d.open = false; n++; });
+        sb.querySelectorAll('button[aria-expanded="true"]').forEach(b => {
+          const txt = (b.textContent || '').trim();
+          // Section headers are short labels like "Rebates" / "FLEX" / "Admin".
+          // Skip anything long (page titles, action buttons) so we don't click the wrong thing.
+          if (txt && txt.length < 30) { b.click(); n++; }
+        });
+        return n;
       };
-      // Try a few times — Streamlit hydrates the sidebar asynchronously
-      if (!closeNavSections()) {
-        let tries = 0;
-        const t = setInterval(() => {
-          tries++;
-          if (closeNavSections() || tries > 20) clearInterval(t);
-        }, 100);
-      }
+      // Retry on a 150ms interval for ~3s. Streamlit re-renders the nav after this script
+      // runs, so a single close isn't enough — we need to re-close until hydration settles.
+      let tries = 0;
+      const intv = setInterval(() => {
+        closeAll();
+        if (++tries >= 20) clearInterval(intv);
+      }, 150);
     </script>
     """,
     height=0,
