@@ -61,8 +61,15 @@ with tab_clinics:
             num_rows="dynamic",
             column_config={
                 "program_type": st.column_config.SelectboxColumn(options=["self_funded", "finance"]),
-                "rate_ultrasound": st.column_config.NumberColumn(format="%.4f"),
-                "rate_rads": st.column_config.NumberColumn(format="%.4f"),
+                "rate_ultrasound": st.column_config.NumberColumn(
+                    "Rate — ultrasound",
+                    format="percent", min_value=0.0, max_value=1.0, step=0.01,
+                    help="Stored as a decimal (0.10 = 10%). Edit as a percent and Streamlit handles the conversion.",
+                ),
+                "rate_rads": st.column_config.NumberColumn(
+                    "Rate — rads",
+                    format="percent", min_value=0.0, max_value=1.0, step=0.01,
+                ),
                 "active": st.column_config.CheckboxColumn(),
                 "rads_rate_confirmed": st.column_config.CheckboxColumn(),
             },
