@@ -602,7 +602,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         with st.expander(f"⚠ Skipped {len(skipped)} payment(s) — no flex_master match"):
             st.caption(
                 "These payments are in the ledger but don't map to any active flex_master clinic. "
-                "Could be name drift (fix in Rebate Clinic Roster) or a non-FLEX clinic mis-classified in Stage 1."
+                "Could be name drift (fix in Rebate Program Controls) or a non-FLEX clinic mis-classified in Stage 1."
             )
             import pandas as _pd
             st.dataframe(_pd.DataFrame(skipped), use_container_width=True)

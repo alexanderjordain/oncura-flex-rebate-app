@@ -35,7 +35,7 @@ with col_flex:
 with col_rebate:
     st.subheader("Rebate program")
     st.markdown(
-        "- **Rebate Clinic Roster** — view/edit the clinic list + rates\n"
+        "- **Rebate Program Controls** — view/edit the clinic roster, rebate rates, and service price list\n"
         "- **Rebate Cycle** — pick one or more months, upload OPD detail, download a multi-tab "
         "report (one tab per finance bucket)\n\n"
         "Ultrasound 10% finance / 5% self-funded; rads 4% finance / 2% self-funded."
