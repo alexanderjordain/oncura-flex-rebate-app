@@ -34,10 +34,17 @@ with tab_clinics:
     df = pd.DataFrame(clinics)
 
     rates = master.get("rate_defaults", {})
+
+    def _pct(v):
+        try:
+            return f"{float(v):.0%}"
+        except (TypeError, ValueError):
+            return "—"
+
     st.write(
-        f"Defaults — ultrasound: finance **{rates.get('ultrasound_finance')}** / "
-        f"self-funded **{rates.get('ultrasound_self_funded')}**  ·  rads: finance "
-        f"**{rates.get('rads_finance')}** / self-funded **{rates.get('rads_self_funded')}**"
+        f"Defaults — ultrasound: finance **{_pct(rates.get('ultrasound_finance'))}** / "
+        f"self-funded **{_pct(rates.get('ultrasound_self_funded'))}**  ·  rads: finance "
+        f"**{_pct(rates.get('rads_finance'))}** / self-funded **{_pct(rates.get('rads_self_funded'))}**"
     )
 
     edit_cols = [
@@ -46,7 +53,7 @@ with tab_clinics:
     ]
     edit_cols = [c for c in edit_cols if c in df.columns]
 
-    st.subheader("Clinics")
+    st.subheader("Rebate Clinic Roster")
     if editable:
         edited = st.data_editor(
             df[edit_cols],
@@ -61,12 +68,11 @@ with tab_clinics:
             },
             key="rebate_editor",
         )
-        msg = st.text_input("Commit message", value="Update rebate clinic roster", key="roster_commit_msg")
         if st.button("Save roster", key="save_roster_btn"):
             new_clinics = edited.to_dict(orient="records")
             payload = dict(master)
             payload["clinics"] = new_clinics
-            ok, info = store.save_json("rebate_master.json", payload, msg)
+            ok, info = store.save_json("rebate_master.json", payload, "Update rebate clinic roster")
             loaders.clear_caches()
             (st.success if ok else st.warning)(info)
     else:
@@ -167,9 +173,6 @@ buckets on the next cycle run.
                 "string doesn't already list a STAT line. Rarely changes."
             )
 
-        msg_p = st.text_input(
-            "Commit message", value="Update service price list", key="prices_commit_msg"
-        )
         if st.button("Save price list", key="save_prices_btn"):
             # Rebuild the services dict from the editor. Skip blank-service rows
             # so accidental empty rows don't poison the file.
@@ -199,7 +202,7 @@ buckets on the next cycle run.
                 payload = dict(prices_doc)
                 payload["services"] = new_services
                 payload["stat_fee"] = float(new_stat_fee)
-                ok, info = store.save_json("service_prices.json", payload, msg_p)
+                ok, info = store.save_json("service_prices.json", payload, "Update service price list")
                 loaders.clear_caches()
                 if ok:
                     extras = []
