@@ -40,11 +40,171 @@ ui.header("FLEX Cycle",
 flex = loaders.flex_master()
 flex_clinics = flex.get("clinics", [])
 
-tab_remit, tab_credits, tab_recap = st.tabs([
+tab_overview, tab_remit, tab_credits, tab_recap = st.tabs([
+    "Overview",
     "1. Finance Payment Imports",
     "2. Monthly Credit Memos",
     "3. Unused / Overage",
 ])
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OVERVIEW — when to use each stage + user responsibilities during the close
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_overview, safe_stage("Overview"):
+    st.markdown(
+        """
+### What this wizard does
+
+Walks you through the **FLEX accounting close** end-to-end. Each stage produces
+one or more SaaSAnt import files for QBO and emails accounting@oncurapartners.com
+with the numbers + attachments. **The app generates files; you and accounting
+review and approve. No direct QBO writes.**
+
+The three stages run on **different cadences**. Don't assume you do all three at
+once — most months you only touch Stages 1 and 2.
+
+---
+
+### When to use each stage
+
+#### Stage 1 — Finance Payment Imports &nbsp;·&nbsp; *run each time a finance company sends a remittance (≈ monthly per company)*
+
+- **Trigger:** OnePlace, NewLane, or GreatAmerica emails (or posts to their portal)
+  a monthly remittance file listing what they paid to Oncura on behalf of the
+  clinics. Typically arrives **1–2 weeks into the following month** (e.g., May's
+  payments arrive ~mid-June).
+- **Frequency:** Once per finance company per month. So if all three companies
+  pay in a given month, Stage 1 runs three times that month — once for each
+  remittance.
+- **Don't wait** — process each one as it arrives. The ledger dedups by file
+  hash, so re-uploading the same file is safe (and blocked).
+
+#### Stage 2 — Monthly Credit Memos &nbsp;·&nbsp; *run once a month, AFTER all of that month's Stage 1 imports are in*
+
+- **Trigger:** End-of-month routine. Per Accounting SOP-10, every FLEX payment in
+  Stage 1 needs a matching credit memo on the clinic's QBO account ("one Flex
+  payment in, one credit out"). This stage builds that credit-memo SaaSAnt file.
+- **Frequency:** **Once per month**, typically on or near the last business day
+  of the month, or the first business day of the following month — after all
+  finance companies for that month have remitted.
+- If a finance company is late paying for the month, you can still run Stage 2,
+  and re-run it after they remit (ledger dedup prevents double-issuing the same
+  credit).
+
+#### Stage 3 — Unused / Overage &nbsp;·&nbsp; *run once a quarter, AFTER the quarter's Stage 2 has been posted*
+
+- **Trigger:** Quarter close per Accounting SOP-11 and SOP-12. After Q1, Q2, Q3,
+  Q4 wrap up, this stage compares each clinic's quarterly entitlement (payments
+  + credits) against actual scan usage and produces:
+  - **Recapture invoices** for clinics that used *less* than their entitlement
+    (the `Unused-Flex-Credits` item — internal accounting only, not mailed to
+    the clinic).
+  - **Overage list** for clinics that used *more* — routed to finance partners
+    that handle overages (SOP-12), or direct-billed via SOP-6.
+- **Frequency:** **Once per quarter** — early April, early July, early October,
+  early January. Not every month.
+
+---
+
+### Your responsibilities during the month close
+
+Read top-to-bottom. The flow is **Stage 1 (each remittance) → Stage 2 (once
+near month-end) → Stage 3 (only at quarter-end)**.
+
+1. **Watch for finance-company remittances** throughout the month. When one
+   arrives:
+   - Download the remittance file (CSV / XLSX).
+   - Open the **1. Finance Payment Imports** tab.
+   - Pick the company and payment date. Upload the file.
+   - If the app prompts you to resolve unknown clinic names (legal name →
+     QuickBooks payee), do so — your mappings persist to `name_map.json`
+     automatically. Take your time and pick carefully; bad mappings post to
+     the wrong customer in QBO.
+   - Review the SaaSAnt outputs. Sanity-check the total against the remittance
+     file total.
+   - Download the SaaSAnt file(s).
+   - Use the **Hand off to accounting** card at the bottom — download the
+     `.eml` (or send via SMTP / Graph if configured) and email accounting with
+     the SaaSAnt file(s) attached.
+   - Upload to SaaSAnt → QBO (accounting does this; you may help).
+
+2. **Near month-end** (last business day, or first business day of the next
+   month), once all of that month's finance-company remittances have been
+   loaded in Stage 1:
+   - Open the **2. Monthly Credit Memos** tab.
+   - Pick the month you're closing.
+   - Review the credit-memo total. It should reflect one credit per ledger
+     payment row from Stage 1 for that month.
+   - Download the SaaSAnt file.
+   - Hand off to accounting (same card).
+   - Confirm with accounting that they uploaded both the Stage 1 payments
+     **and** the Stage 2 credit memos for the month before considering the
+     month closed.
+
+3. **At quarter-end** (early Apr / Jul / Oct / Jan), AFTER all three months'
+   Stage 1 + Stage 2 have been posted to QBO:
+   - Open the **3. Unused / Overage** tab.
+   - Pick the quarter.
+   - Review the recapture totals per clinic. These convert unused credit
+     balances into recognized revenue — internal entries only, not mailed to
+     clinics.
+   - Review the overage list. For each clinic over its threshold, decide:
+     **submit to the finance partner** (if their config flag says they
+     handle overages — most do) or **direct-bill the clinic** (SOP-6 —
+     remember to void the direct-bill invoice in QBO after sending).
+   - Download both files (recapture invoice + overage list).
+   - Hand off to accounting.
+   - Per Accounting SOP-11, the Accounting Manager (Jennifer) then manually
+     un-applies and re-applies the quarter's auto-matched payments against
+     scan invoices in QBO. This is a manual step in QBO — the app does not
+     do it.
+
+---
+
+### What "done" looks like at each stage
+
+| Stage | Done when… |
+|---|---|
+| 1 | Accounting confirms the SaaSAnt file uploaded cleanly, deposit reconciles on the correct bank feed. |
+| 2 | Accounting confirms credit-memo SaaSAnt uploaded, every payment in Stage 1 for the month has a matching credit memo on the clinic's QBO account. |
+| 3 | Recapture invoices and overage entries are posted in QBO; partner-submission overages have been emailed to the finance partners; direct-bill overage invoices have been mailed AND voided in QBO. |
+
+---
+
+### Common pitfalls
+
+- **Re-running Stage 2 after a late remittance.** Safe — the ledger dedups by
+  payment fingerprint, so credits already issued won't reissue. Just confirm
+  the new total reflects the additional credits.
+- **Picking the wrong month in Stage 2.** Always pick the month the payments
+  arrived for, not the month they were *received in*. (Easy mix-up at month
+  boundaries.)
+- **Forgetting Stage 3.** It only runs four times a year, so it slips off the
+  radar easily. Put quarter-close on the calendar.
+- **Skipping the email handoff.** Accounting needs the email — that's their
+  paper trail for the audit log. Don't just hand them files in person.
+- **Manual QBO un-apply / re-apply at quarter-end.** The app surfaces what to
+  do but doesn't do it — Jennifer has to manually un-apply the auto-matched
+  payments and re-apply per SOP-11.
+
+---
+
+### Where to read more
+
+- `docs/FLEX_PROGRAM_EXPLAINED.md` — the FLEX accounting model in depth
+  (payment + credit memo per month, quarter-end reconciliation, why ratios
+  aren't exactly 2:1).
+- `docs/ACCOUNTING_HANDOFF.md` — manual steps that happen in QBO *after* the
+  app generates files.
+- `docs/EMAIL_HANDOFF_USER_GUIDE.md` — using the email-draft card at the
+  bottom of each stage.
+- `docs/RECOVERY.md` — what to do if something breaks (broken Cloud deploy,
+  import errors, etc.). Designed so anyone can recover, not just Alex.
+
+If you get stuck, the traceback inside any failed stage (each tab catches its
+own errors) is the fastest thing to share for help.
+        """
+    )
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 1 — Finance Company Payment Imports
