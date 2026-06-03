@@ -438,3 +438,66 @@ if _app_pw:
     if lc2.button("Lock Settings", key="settings_lock", use_container_width=True):
         st.session_state.pop(SETTINGS_UNLOCK_KEY, None)
         st.rerun()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DANGER ZONE — destructive ledger reset gated behind re-typed password
+# ──────────────────────────────────────────────────────────────────────────────
+st.divider()
+st.markdown("### :red[Danger zone]")
+st.error(
+    ":material/dangerous: **Clear the processed-payments ledger.** "
+    "This removes the full dedup history — every file hash and every per-payment "
+    "fingerprint we've recorded. After clearing, re-uploads of remittances will "
+    "**not** be caught and could be double-posted to QBO. Use only when migrating to "
+    "a fresh environment or recovering from corruption you intentionally want to wipe.",
+    icon=":material/warning:",
+)
+if _app_pw:
+    cl_pw = st.text_input(
+        "Re-enter the app password to confirm",
+        type="password",
+        key="clear_ledger_pw",
+        help="Required even though Settings is already unlocked — destructive action.",
+    )
+    cl1, cl2 = st.columns([3, 1])
+    cl1.caption(
+        "Ledger lives at `data/processed_payments.json`. The clear writes an empty "
+        "ledger and logs the action in the audit manifest."
+    )
+    if cl2.button(":red[Clear ledger]", key="clear_ledger_btn", use_container_width=True):
+        if not cl_pw:
+            st.warning("Type the app password above first.")
+        elif cl_pw != _app_pw:
+            st.error("Password didn't match. Ledger NOT cleared.")
+        else:
+            # Snapshot the current ledger size for the audit record before wiping.
+            cur_data, cur_sha = ledger.load()
+            prior_payments = len(cur_data.get("payments", []))
+            prior_files = len(cur_data.get("files", []))
+            ok, info = store.save_json(
+                ledger.LEDGER_PATH, ledger._empty(),
+                "Clear processed-payments ledger via Settings danger zone",
+                sha=cur_sha,
+            )
+            audit.record_cycle(
+                cycle_type="settings_clear_ledger",
+                approver=auth.current_role(),
+                params={"prior_payments": prior_payments, "prior_files": prior_files},
+                source_file=None,
+                outputs=[],
+                note=(f"Wiped {prior_payments} payment fingerprint(s) and "
+                      f"{prior_files} file hash(es) from processed_payments.json."),
+            )
+            if ok:
+                st.success(
+                    f"Ledger cleared. {prior_payments} payment fingerprint(s) "
+                    f"and {prior_files} file hash(es) removed. Action logged in "
+                    f"the audit manifest."
+                )
+            else:
+                st.warning(
+                    f"Cleared locally but GitHub commit failed: {info}. "
+                    "Set GITHUB_TOKEN in secrets for persistent clears on Cloud."
+                )
+else:
+    st.caption(":gray[Password not configured — clear-ledger action is unavailable.]")
