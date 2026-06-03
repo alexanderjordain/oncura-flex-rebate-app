@@ -213,8 +213,12 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         )
     )
 
-    # Persistent setup keys — set defaults once so step 2 can read them even
-    # when the step 1 widgets aren't rendered.
+    # PERSISTENT keys (no _w suffix) — survive across step transitions because
+    # they're not tied to a widget. The widgets in step 1 use _w-suffixed keys;
+    # we mirror their values into the persistent keys on each render so step 2
+    # can read them after the step 1 widgets unmount. Streamlit clears widget-keyed
+    # SS values when the widget isn't rendered — that was making step 2 fall back
+    # to the NewLane default regardless of what step 1 selected.
     SS.setdefault("remit_company", "NewLane")
     SS.setdefault("remit_pay_date", dt.date.today())
     SS.setdefault("remit_start_inv", 50000)
@@ -229,19 +233,38 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             "appears on the next step once these are set."
         )
         mc1, mc2 = st.columns([1, 2])
-        company = mc1.selectbox("Finance company", ["NewLane", "OnePlace", "GreatAmerica"], key="remit_company")
-        pay_date = mc2.date_input("Payment date", key="remit_pay_date")
+        company_options = ["NewLane", "OnePlace", "GreatAmerica"]
+        company = mc1.selectbox(
+            "Finance company", company_options,
+            index=company_options.index(SS["remit_company"]) if SS["remit_company"] in company_options else 0,
+            key="remit_company_w",
+        )
+        pay_date = mc2.date_input(
+            "Payment date",
+            value=SS["remit_pay_date"],
+            key="remit_pay_date_w",
+        )
 
         if company == "GreatAmerica":
             # GA is all-flex (Maintenance only) -> no scan invoices, so the starting
             # scan Invoice No is unused. Hide it to declutter the form.
             st.caption("GreatAmerica is all-flex — no starting scan invoice number needed.")
+            start_inv = 50000
         else:
             # Invoice date for scan packages is always the same as the payment date in
             # the live workflow, so we mirror payment date into invoice date instead of
             # asking twice. Only the starting scan invoice number needs its own input.
-            st.number_input("Starting scan Invoice No (QBO max + 1)",
-                            step=1, key="remit_start_inv")
+            start_inv = int(st.number_input(
+                "Starting scan Invoice No (QBO max + 1)",
+                value=int(SS["remit_start_inv"]),
+                step=1,
+                key="remit_start_inv_w",
+            ))
+
+        # MIRROR widget -> persistent so step 2 sees the right values.
+        SS["remit_company"] = company
+        SS["remit_pay_date"] = pay_date
+        SS["remit_start_inv"] = start_inv
 
         meta = flex_finance.COMPANY_META.get(company, {})
         st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
@@ -256,6 +279,10 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
 
         st.divider()
         if st.button("Next ▶  Upload remittance", type="primary", key="remit_setup_next"):
+            # Belt-and-suspenders re-mirror right before the transition.
+            SS["remit_company"] = company
+            SS["remit_pay_date"] = pay_date
+            SS["remit_start_inv"] = start_inv
             SS["remit_step"] = 1
             st.rerun()
 
@@ -703,14 +730,22 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             "and the import button appear on the next step."
         )
         cc1, cc2, cc3 = st.columns(3)
-        cc1.number_input("Year", step=1, key="cred_year")
-        cc2.selectbox(
+        # Use _w-suffixed widget keys; mirror to persistent keys after render so
+        # step 2 (where these widgets aren't shown) can still read them.
+        year_w = int(cc1.number_input(
+            "Year", value=int(SS["cred_year"]), step=1, key="cred_year_w"))
+        month_w = int(cc2.selectbox(
             "Month", list(range(1, 13)),
+            index=int(SS["cred_month"]) - 1,
             format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
-            key="cred_month",
-        )
-        cc3.number_input("Starting Credit Memo No (from QBO max + 1)",
-                         step=1, key="cred_start_ref")
+            key="cred_month_w",
+        ))
+        start_ref_w = int(cc3.number_input(
+            "Starting Credit Memo No (from QBO max + 1)",
+            value=int(SS["cred_start_ref"]), step=1, key="cred_start_ref_w"))
+        SS["cred_year"] = year_w
+        SS["cred_month"] = month_w
+        SS["cred_start_ref"] = start_ref_w
         st.info(
             "Generates one credit memo per FLEX payment received that month (SaasAnt format: "
             "item Flex-credits, class 03-Telemedicine). Multi-payment months produce multi-credit "
@@ -719,6 +754,9 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         )
         st.divider()
         if st.button("Next ▶  Review credit memos", type="primary", key="cred_setup_next"):
+            SS["cred_year"] = year_w
+            SS["cred_month"] = month_w
+            SS["cred_start_ref"] = start_ref_w
             SS["cred_step"] = 1
             st.rerun()
 
