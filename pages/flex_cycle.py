@@ -379,7 +379,11 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 )
 
         # ── Intra-file total check: raw file rows/amounts vs. what the app is importing
-        raw_amounts = raw[amount_col].map(opd_adapter.coerce_amount)
+        # Exclude rows where the contract/ID column is blank — those are summary/total/footnote
+        # rows in the source file (e.g., OnePlace's "Pass-Thru received: $X" line at the
+        # bottom). Real payment rows always have a contract #.
+        raw_payment_mask = raw[id_col].astype(str).str.strip().replace({'nan': '', 'None': ''}).ne('')
+        raw_amounts = raw.loc[raw_payment_mask, amount_col].map(opd_adapter.coerce_amount)
         raw_total = round(float(raw_amounts.sum()), 2)
         raw_nonzero = int((raw_amounts != 0).sum())
         imported_total_before_dedup = raw_total  # informational only; before dedup filter
