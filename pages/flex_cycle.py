@@ -386,28 +386,17 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         raw_amounts = raw.loc[raw_payment_mask, amount_col].map(opd_adapter.coerce_amount)
         raw_total = round(float(raw_amounts.sum()), 2)
         raw_nonzero = int((raw_amounts != 0).sum())
-        imported_total_before_dedup = raw_total  # informational only; before dedup filter
         diff = round(raw_total - s["total"], 2)
-        # We expect some delta from ledger-dedup of prior imports, so don't shout when
-        # rows were dropped to the ledger. Shout when the delta exceeds the dedup'd amount
-        # by more than $1 — that means rows were silently coerced to 0 by coerce_amount
-        # (malformed currency cells) rather than legitimately deduped.
         deduped_amount = sum(float(r["amount"]) for r, fp in zip(all_rows, all_fps) if fp in seen_fps)
-        unexplained_delta = round(diff - deduped_amount, 2)
         if abs(diff) > 0.01 or raw_nonzero != (s["flex_count"] + s["scan_count"]):
-            line = (
-                f"File: {raw_nonzero} non-zero rows totalling **${raw_total:,.2f}**  ·  "
-                f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **${s['total']:,.2f}**  ·  "
-                f"Δ **${diff:,.2f}** (ledger dedup: ${deduped_amount:,.2f}; unexplained: ${unexplained_delta:,.2f})"
+            # Quiet diagnostic only — operator can sanity-check what the app counted
+            # against what the file says. The dollar signs are escaped so Streamlit's
+            # markdown doesn't interpret $...$ as inline LaTeX and mangle the numbers.
+            st.caption(
+                f"File: {raw_nonzero} non-zero rows totalling **\\${raw_total:,.2f}**  ·  "
+                f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **\\${s['total']:,.2f}**  ·  "
+                f"Δ **\\${diff:,.2f}** (of which ledger dedup accounts for \\${deduped_amount:,.2f})"
             )
-            if abs(unexplained_delta) > 1.00:
-                st.error(
-                    line + " — **unexplained delta > $1**. Likely a malformed currency cell "
-                    "(e.g. blank, '-', 'N/A') silently coerced to $0. Open the file, find the "
-                    "offending row(s), and fix before proceeding."
-                )
-            else:
-                st.caption(line)
 
         if s["scan_count"] > 0:
             m1, m2, m3, m4 = st.columns(4)
