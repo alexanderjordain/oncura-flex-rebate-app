@@ -4,7 +4,7 @@ import streamlit as st
 
 from core import audit, ledger, loaders, store, ui
 
-ui.header("FLEX + Rebate Accounting",
+ui.header("FLEX, Pass-Through & Rebate Accounting",
           "Receive OPD activity and finance-company remittances, calculate, and produce audit-ready imports.",
           kicker="Oncura · Operations Ledger")
 
@@ -65,7 +65,7 @@ col_flex, col_rebate = st.columns(2)
 with col_flex:
     st.subheader("FLEX & Pass-Through")
     st.markdown(
-        "Single **Payment Cycle** page handles BOTH FLEX (telemedicine financing) and "
+        "Single **Payment Cycle** page handles **BOTH** FLEX (telemedicine financing) and "
         "scan-package (pass-through) payments together, end-to-end:\n"
         "1. Finance company remittance → SaasAnt flex/scan imports\n"
         "2. Monthly credit memos\n"

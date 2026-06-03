@@ -10,7 +10,7 @@ import streamlit as st
 
 from core import auth, ui, graph_email
 
-st.set_page_config(page_title="Oncura FLEX + Rebate", page_icon="*", layout="wide")
+st.set_page_config(page_title="Oncura FLEX, Pass-Through & Rebate", page_icon="*", layout="wide")
 
 # Auth + theme: gate is enforced first; theme CSS injected once per page run
 auth.require_login()
