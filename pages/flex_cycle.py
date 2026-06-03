@@ -37,8 +37,8 @@ def safe_stage(label: str):
             st.code(_tb.format_exc(), language="text")
 
 ui.header("Payment Cycle",
-          "Handles FLEX and scan-package (pass-through) payments together — "
-          "remittances → credits → unused / overage.",
+          "Handles FLEX and scan-package (pass-through) payments together. "
+          "Generates SaasAnt files for QBO import — humans approve every QBO posting.",
           kicker="FLEX & Pass-Through · Cycle")
 
 flex = loaders.flex_master()
@@ -83,11 +83,6 @@ with tab_overview, safe_stage("Overview"):
         </style>
         """,
         unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        "Handles **FLEX** and **scan-package (pass-through)** payments together. "
-        "Generates SaasAnt files for QBO import — humans approve every QBO posting."
     )
 
     c1, c2, c3 = st.columns(3, gap="medium")
