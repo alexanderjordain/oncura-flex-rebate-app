@@ -60,8 +60,10 @@ one or more SaasAnt import files for QBO and emails accounting@oncurapartners.co
 with the numbers + attachments. **The app generates files; you and accounting
 review and approve. No direct QBO writes.**
 
-The three stages run on **different cadences**. Don't assume you do all three at
-once — most months you only touch Stages 1 and 2.
+The three stages run on **different cadences**. Stages 1 and 2 are monthly for
+every clinic; **Stage 3 is also monthly**, but only for whichever **clinic group**
+hits its quarter-end that month — FLEX runs three staggered quarter cycles, not a
+single calendar quarter, so every month is quarter-end for one of the three groups.
 
 ---
 
@@ -91,25 +93,40 @@ once — most months you only touch Stages 1 and 2.
   and re-run it after they remit (ledger dedup prevents double-issuing the same
   credit).
 
-#### Stage 3 — Unused / Overage &nbsp;·&nbsp; *run once a quarter, AFTER the quarter's Stage 2 has been posted*
+#### Stage 3 — Unused / Overage &nbsp;·&nbsp; *run EVERY month, for whichever clinic group's quarter ended that month*
 
-- **Trigger:** Quarter close per Accounting SOP-11 and SOP-12. After Q1, Q2, Q3,
-  Q4 wrap up, this stage compares each clinic's quarterly entitlement (payments
-  + credits) against actual scan usage and produces:
-  - **Recapture invoices** for clinics that used *less* than their entitlement
-    (the `Unused-Flex-Credits` item — internal accounting only, not mailed to
-    the clinic).
+- **Trigger:** A clinic group's quarter just closed. FLEX runs three staggered
+  quarter cycles in parallel — each clinic is assigned to one of them via its
+  `calendar_spread` field in the master roster. The current breakdown:
+
+  | Clinic group (`calendar_spread`) | Clinics | Quarter-ends in months… |
+  |---|---|---|
+  | **Calendar** | 22 | Mar, Jun, Sep, Dec |
+  | **March-April-May** | 39 | Feb, May, Aug, Nov |
+  | **May-June-July** | 20 | Jan, Apr, Jul, Oct |
+
+  Because the three groups are staggered, **every month is a quarter-end for one of
+  the three groups**. The wizard automatically filters to just the clinics whose
+  group is closing — you don't need to pick the group manually, just run it.
+
+- **What it produces:**
+  - **Recapture invoices** for clinics in the closing group that used *less*
+    than their entitlement (the `Unused-Flex-Credits` item — internal accounting
+    only, not mailed to the clinic).
   - **Overage list** for clinics that used *more* — routed to finance partners
     that handle overages (SOP-12), or direct-billed via SOP-6.
-- **Frequency:** **Once per quarter** — early April, early July, early October,
-  early January. Not every month.
+
+- **Frequency:** **Once a month, after Stages 1 and 2 are done.** Each run only
+  touches the group whose quarter is ending — so each clinic only sees Stage 3
+  four times a year, but YOU run it twelve.
 
 ---
 
 ### Your responsibilities during the month close
 
-Read top-to-bottom. The flow is **Stage 1 (each remittance) → Stage 2 (once
-near month-end) → Stage 3 (only at quarter-end)**.
+Read top-to-bottom. The flow each month is **Stage 1 (each remittance) → Stage 2
+(once near month-end) → Stage 3 (for whichever clinic group's quarter just
+closed; the wizard tells you which)**.
 
 1. **Watch for finance-company remittances** throughout the month. When one
    arrives:
@@ -141,10 +158,14 @@ near month-end) → Stage 3 (only at quarter-end)**.
      **and** the Stage 2 credit memos for the month before considering the
      month closed.
 
-3. **At quarter-end** (early Apr / Jul / Oct / Jan), AFTER all three months'
-   Stage 1 + Stage 2 have been posted to QBO:
+3. **Every month, after Stage 2 is done**, check whether any clinic group has
+   its quarter ending this month — and if so, run Stage 3 for that group:
    - Open the **3. Unused / Overage** tab.
-   - Pick the quarter.
+   - Pick the year and the month you just closed. The wizard automatically
+     filters to clinics in the calendar group whose quarter just ended (Calendar
+     in Mar/Jun/Sep/Dec; March-April-May in Feb/May/Aug/Nov; May-June-July in
+     Jan/Apr/Jul/Oct). If no group is closing that month, the wizard shows zero
+     eligible clinics — that's the signal you can skip Stage 3 for the month.
    - Review the recapture totals per clinic. These convert unused credit
      balances into recognized revenue — internal entries only, not mailed to
      clinics.
@@ -179,8 +200,11 @@ near month-end) → Stage 3 (only at quarter-end)**.
 - **Picking the wrong month in Stage 2.** Always pick the month the payments
   arrived for, not the month they were *received in*. (Easy mix-up at month
   boundaries.)
-- **Forgetting Stage 3.** It only runs four times a year, so it slips off the
-  radar easily. Put quarter-close on the calendar.
+- **Forgetting Stage 3.** It runs **every month** for whichever clinic group's
+  quarter is ending — not just at calendar-quarter-end. Each individual clinic
+  is recapped four times a year, but YOU run Stage 3 twelve times a year (one
+  group per month). Make it part of your end-of-month routine right after
+  Stage 2.
 - **Skipping the email handoff.** Accounting needs the email — that's their
   paper trail for the audit log. Don't just hand them files in person.
 - **Manual QBO un-apply / re-apply at quarter-end.** The app surfaces what to
