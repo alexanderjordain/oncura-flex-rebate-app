@@ -172,9 +172,9 @@
       "parent_clinic_id": null
     },
     {
-      "clinic_name": "Baseline Animal Hospital",
-      "qb_name": "Baseline Animal Hospital",
-      "clinic_id": "BAH91701",
+      "clinic_name": "Rancho Pet Cure",
+      "qb_name": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "clinic_id": "RPC91701",
       "finance_company": "OnePlace",
       "monthly_credit": 989.31,
       "monthly_finance_payment": 910.69,

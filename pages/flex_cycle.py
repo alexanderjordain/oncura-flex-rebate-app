@@ -1074,6 +1074,17 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             st.caption(
                 "Upload the OPD consult-grid export (or the OPD Invoices export) covering the quarter window."
             )
+            with st.expander(":material/help: **How to pull the OPD export**", expanded=False):
+                st.markdown(
+                    """
+1. Go to **[telehealth.oncurapartners.com](https://telehealth.oncurapartners.com)**.
+2. Open **Consults → Completed**.
+3. Filter **Department**: select **Cardiology**, **Ultrasound**, **General Radiology**, **Point of Care (GlobalFAST)**, and **Internal Medicine**.
+4. Adjust the date range to match the chosen month.
+5. Click **Search**, then **Export to Excel**.
+6. Upload the exported file below.
+                    """
+                )
             rec_up = st.file_uploader(
                 "OPD activity export",
                 type=["csv", "xlsx", "xls"],
