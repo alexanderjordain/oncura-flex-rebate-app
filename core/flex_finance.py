@@ -89,12 +89,24 @@ def is_oneplace_flex_contract(contract) -> bool:
 
 
 def translate_name(name, name_map: dict):
-    """Finance/legal name -> QB payee. Returns (qb_name, found)."""
+    """Finance/legal name -> QB payee. Returns (qb_name, found).
+
+    Match is case-insensitive AND whitespace-collapsed so a stored mapping for
+    'ABC Animal Hospital, LLC' still hits when the remittance prints it as
+    'Abc Animal Hospital,  LLC' (extra space) or all-caps. Other lookups in
+    the app (flex_credits._clinic_lookup, flex_unused.match_activity) already
+    normalize this way — translate_name is the historical odd one out.
+    """
     m = (name_map or {}).get("map", name_map or {})
-    key = str(name).strip()
-    if key in m:
-        return m[key], True
-    return key, False
+    raw = str(name).strip()
+    if raw in m:
+        return m[raw], True
+    # Build a case-folded / whitespace-collapsed index on the fly.
+    norm = " ".join(raw.casefold().split())
+    for k, v in m.items():
+        if " ".join(str(k).casefold().split()) == norm:
+            return v, True
+    return raw, False
 
 
 def normalize_contract(c) -> str:

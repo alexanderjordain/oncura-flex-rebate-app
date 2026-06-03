@@ -415,7 +415,10 @@ def flex_activity_from_invoices(df: pd.DataFrame, start=None, end=None, flex_onl
         if start is not None:
             mask &= dates >= pd.Timestamp(start)
         if end is not None:
-            mask &= dates <= pd.Timestamp(end)
+            # Inclusive end-of-day on the upper bound: pd.Timestamp(date(y,m,d)) is
+            # midnight, so a 2pm timestamp on the last day of the window would fail
+            # `<= midnight`. Normalize dates to date-only before the comparison.
+            mask &= dates.dt.normalize() <= pd.Timestamp(end)
     if flex_only and f["isflex"] in df:
         mask &= df[f["isflex"]].map(_parse_bool)
 
@@ -439,7 +442,9 @@ def flex_activity_from_case_grid(df: pd.DataFrame, price_table: dict, start=None
         if start is not None:
             mask &= dates >= pd.Timestamp(start)
         if end is not None:
-            mask &= dates <= pd.Timestamp(end)
+            # See flex_activity_from_invoices: normalize to date-only so a 2pm
+            # timestamp on the last day of the window doesn't fail `<= midnight`.
+            mask &= dates.dt.normalize() <= pd.Timestamp(end)
     sub = norm[mask]
     sub = sub.assign(clinic_lower=sub["clinic"].str.lower())
     return sub.groupby("clinic_lower")["amount"].sum().round(2).to_dict()

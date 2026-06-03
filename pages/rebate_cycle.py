@@ -215,6 +215,9 @@ elif step_key == "review":
                 per_bucket.setdefault(bucket, {}).setdefault(legal, {lbl: 0.0 for lbl in month_labels})
 
             unmatched_total = set()
+            fuzzy_matches = []   # (month_label, clinic_name, matched_master_name, rebate_amt)
+            variance_rows = []   # (month_label, clinic_name, rate_total, feed_total, variance)
+            rads_pending = []    # (month_label, clinic_name) for self-funded clinics w/ unconfirmed rate
             for m, label in zip(months, month_labels):
                 start = pd.Timestamp(m)
                 next_y, next_m = (m.year + 1, 1) if m.month == 12 else (m.year, m.month + 1)
@@ -232,7 +235,21 @@ elif step_key == "review":
                     legal = clinic_to_legal.get(clinic_name, r.get("legal_name") or clinic_name)
                     amt = float(r.get("total_rebate", 0))
                     per_bucket.setdefault(bucket, {}).setdefault(legal, {lbl: 0.0 for lbl in month_labels})
-                    per_bucket[bucket][legal][label] = amt
+                    # `+=` not `=`: if two normalized clinic-name variants in OPD both
+                    # match the same master record, their amounts must sum, not overwrite.
+                    per_bucket[bucket][legal][label] = per_bucket[bucket][legal].get(label, 0.0) + amt
+                    # Flag rows that need human review before sign-off.
+                    if r.get("match") == "fuzzy":
+                        fuzzy_matches.append((label, str(r.get("opd_clinic", "")),
+                                              clinic_name, round(amt, 2)))
+                    var = float(r.get("variance", 0.0) or 0.0)
+                    if abs(var) >= 1.00:  # ignore sub-dollar floating-point noise
+                        variance_rows.append((label, clinic_name,
+                                              float(r.get("rate_total", 0.0)),
+                                              float(r.get("feed_total", 0.0)),
+                                              round(var, 2)))
+                    if r.get("rads_pending_confirmation"):
+                        rads_pending.append((label, clinic_name))
 
             grand = sum(sum(d.values()) for clinics in per_bucket.values() for d in clinics.values())
             SS["cycle_results"] = {
@@ -241,6 +258,10 @@ elif step_key == "review":
                 "profile": profile,
                 "row_count": len(raw),
                 "month_labels": month_labels,
+                "unmatched_total": sorted(unmatched_total),
+                "fuzzy_matches": fuzzy_matches,
+                "variance_rows": variance_rows,
+                "rads_pending": rads_pending,
             }
 
         results = SS["cycle_results"]
@@ -267,6 +288,83 @@ elif step_key == "review":
             bsum = sum(sum(d.values()) for d in per_bucket[bucket].values())
             nz = sum(1 for d in per_bucket[bucket].values() if any(v > 0 for v in d.values()))
             st.write(f"- **{bucket}** — {len(per_bucket[bucket])} clinics ({nz} with activity), **${bsum:,.2f}**")
+
+        # ── Pre-export review surfaces: things the calc flagged that the operator
+        #    needs to look at before signing off. Previously these were computed
+        #    and discarded silently. A checkbox at the bottom gates the Next button.
+        fuzzy_matches = results.get("fuzzy_matches", [])
+        variance_rows = results.get("variance_rows", [])
+        rads_pending = results.get("rads_pending", [])
+        unmatched_total = results.get("unmatched_total", [])
+
+        if variance_rows:
+            with st.expander(
+                f":material/warning: **Rate vs feed variance** — {len(variance_rows)} row(s) over $1.00 difference",
+                expanded=False,
+            ):
+                st.caption(
+                    "Rebate computed from rate × OPD revenue disagrees with the OPD feed's "
+                    "pre-calculated `RadCash` / `UltraCash` total by more than $1. Usually a "
+                    "rate-override drift or a service-categorization issue. Review before exporting."
+                )
+                vdf = pd.DataFrame(
+                    variance_rows,
+                    columns=["Month", "Clinic", "Rate-based ($)", "Feed-based ($)", "Variance ($)"],
+                )
+                st.dataframe(vdf, use_container_width=True, hide_index=True)
+
+        if fuzzy_matches:
+            with st.expander(
+                f":material/info: **Fuzzy clinic matches** — {len(fuzzy_matches)} row(s) matched non-exactly",
+                expanded=False,
+            ):
+                st.caption(
+                    "These OPD clinic names matched the master roster via fuzzy match "
+                    "(token similarity ≥ 88%), not exact. Confirm each one is the right clinic — "
+                    "a wrong match silently routes revenue to the wrong finance bucket."
+                )
+                fdf = pd.DataFrame(
+                    fuzzy_matches,
+                    columns=["Month", "OPD name", "Matched master", "Rebate amount ($)"],
+                )
+                st.dataframe(fdf, use_container_width=True, hide_index=True)
+
+        if rads_pending:
+            with st.expander(
+                f":material/info: **Self-funded rads rate not confirmed** — {len(rads_pending)} clinic-month(s)",
+                expanded=False,
+            ):
+                st.caption(
+                    "These self-funded clinics had their rads rebate computed at the 2% default, "
+                    "but the `rads_rate_confirmed` flag is false. If you want a different rate, "
+                    "set it per clinic in Rebate Program Controls and tick the confirmed flag."
+                )
+                pdf = pd.DataFrame(rads_pending, columns=["Month", "Clinic"]).drop_duplicates()
+                st.dataframe(pdf, use_container_width=True, hide_index=True)
+
+        if unmatched_total:
+            with st.expander(
+                f":material/error: **Unmatched OPD clinics** — {len(unmatched_total)} not in roster",
+                expanded=False,
+            ):
+                st.caption(
+                    "OPD lists these clinic names but they don't match any clinic in the Rebate "
+                    "Program Controls roster (even via fuzzy match). Their revenue is excluded "
+                    "from the rebate calculation. Add them to the roster if they should be in."
+                )
+                st.write("\n".join(f"- `{n}`" for n in unmatched_total[:50]))
+                if len(unmatched_total) > 50:
+                    st.caption(f"…and {len(unmatched_total) - 50} more.")
+
+        # Sign-off gate: operator must tick this before the Next button enables.
+        if variance_rows or fuzzy_matches or rads_pending or unmatched_total:
+            SS["cycle_review_acked"] = st.checkbox(
+                "I've reviewed the flagged rows above and they're acceptable.",
+                value=SS.get("cycle_review_acked", False),
+                key="cycle_review_ack_widget",
+            )
+        else:
+            SS["cycle_review_acked"] = True  # nothing to flag, auto-pass
 
         with st.expander("Preview a bucket"):
             if per_bucket:
@@ -329,6 +427,9 @@ if step_key == "setup" and not SS["selected_months"]:
 elif step_key == "upload" and not SS.get("cycle_uploaded_bytes"):
     can_next = False
     next_blocked_reason = "Upload an OPD detail file to continue."
+elif step_key == "review" and not SS.get("cycle_review_acked", False):
+    can_next = False
+    next_blocked_reason = "Tick the review acknowledgement checkbox above to continue."
 
 st.divider()
 nav_b, nav_msg, nav_n = st.columns([1, 4, 1])

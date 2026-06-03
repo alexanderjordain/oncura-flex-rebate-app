@@ -89,11 +89,16 @@ def _load_local(rel_path: str, default):
     return default
 
 
-def save_json(rel_path: str, data, message: str, sha: str | None = None):
+def save_json(rel_path: str, data, message: str, sha: str | None = None, retries: int = 3):
     """Commit data to GitHub data/<rel_path>. Always writes the local copy too.
 
-    Returns (ok, message). ok=False with an explanatory message when no token is
-    configured (changes are then session/local only).
+    On a 409/412/422 (concurrent edit since we fetched sha), refetch the current
+    remote content + sha, structurally merge the user's payload onto it
+    (`_merge_smart` — user wins on field conflicts, other users' adds are
+    preserved), and retry. Up to `retries` attempts.
+
+    Returns (ok, message). ok=False when no token is configured, or when
+    retries are exhausted, or on a non-conflict error.
     """
     _save_local(rel_path, data)
 
@@ -105,27 +110,100 @@ def save_json(rel_path: str, data, message: str, sha: str | None = None):
 
     api_url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/data/{rel_path}"
     headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-    if sha is None:
+
+    merge_count = 0
+    for attempt in range(retries):
+        # Fetch current sha (and content, if we're about to merge) when we don't have one
+        if sha is None:
+            try:
+                r_get = requests.get(api_url, headers=headers, params={"ref": GITHUB_BRANCH}, timeout=10)
+                if r_get.status_code == 200:
+                    sha = r_get.json().get("sha")
+                    if attempt > 0:
+                        # Concurrent edit — merge our payload onto current remote
+                        remote_content = json.loads(base64.b64decode(r_get.json()["content"]).decode("utf-8"))
+                        merged = _merge_smart(remote_content, data)
+                        if merged is None:
+                            return False, "Concurrent edit could not be auto-merged — reload the page and re-apply your change."
+                        data = merged
+                        merge_count += 1
+            except Exception:
+                sha = None
+
+        body = json.dumps(data, indent=2, ensure_ascii=False)
+        payload = {
+            "message": message,
+            "content": base64.b64encode(body.encode("utf-8")).decode(),
+            "branch": GITHUB_BRANCH,
+        }
+        if sha:
+            payload["sha"] = sha
         try:
-            r = requests.get(api_url, headers=headers, params={"ref": GITHUB_BRANCH}, timeout=10)
-            sha = r.json().get("sha") if r.status_code == 200 else None
-        except Exception:
-            sha = None
-    body = json.dumps(data, indent=2, ensure_ascii=False)
-    payload = {
-        "message": message,
-        "content": base64.b64encode(body.encode("utf-8")).decode(),
-        "branch": GITHUB_BRANCH,
-    }
-    if sha:
-        payload["sha"] = sha
-    try:
-        r = requests.put(api_url, headers=headers, json=payload, timeout=15)
-        if r.status_code in (200, 201):
-            return True, "Committed to GitHub. Streamlit Cloud redeploys in ~1 minute."
-        return False, f"GitHub API error {r.status_code}: {r.text[:200]}"
-    except Exception as e:
-        return False, f"Request failed: {e}"
+            r = requests.put(api_url, headers=headers, json=payload, timeout=15)
+            if r.status_code in (200, 201):
+                suffix = f" (merged with {merge_count} concurrent edit{'s' if merge_count != 1 else ''})" if merge_count else ""
+                return True, f"Committed to GitHub{suffix}. Streamlit Cloud redeploys in ~1 minute."
+            if r.status_code in (409, 412, 422):
+                # Concurrent edit since we fetched sha — refetch + merge on next loop
+                sha = None
+                continue
+            return False, f"GitHub API error {r.status_code}: {r.text[:200]}"
+        except Exception as e:
+            return False, f"Request failed: {e}"
+
+    return False, "GitHub kept rejecting our save due to concurrent edits after several retries. Reload the page and try again."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Structural merge for concurrent saves. The caller has already loaded a copy,
+# made edits, and tried to save; the remote moved underneath them. Goal: keep
+# the user's edits AND any other user's additions/edits that don't overlap.
+#
+# Strategy: user wins on field conflicts. Other users' new keys / new list
+# items survive. Deletions can be lost in pathological cases — acceptable
+# tradeoff since this app marks `active: false` rather than removing records.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+_KEY_FIELDS = ("clinic_name", "id", "name", "key")
+
+
+def _merge_smart(remote, user):
+    """Best-effort recursive merge. Returns merged value, or None if unmergeable."""
+    if isinstance(remote, dict) and isinstance(user, dict):
+        out = dict(remote)
+        for k, v in user.items():
+            if k in out and isinstance(out[k], dict) and isinstance(v, dict):
+                out[k] = _merge_smart(out[k], v)
+            elif k in out and isinstance(out[k], list) and isinstance(v, list):
+                merged_list = _merge_list(out[k], v)
+                out[k] = merged_list if merged_list is not None else v
+            else:
+                out[k] = v
+        return out
+    # Top-level not a dict — caller's version wins
+    return user
+
+
+def _merge_list(remote, user):
+    """Merge two lists of records by a stable key field (clinic_name, id, etc.).
+    Returns merged list, or None if no stable key — caller falls back to user's list."""
+    if not user:
+        return user  # User explicitly emptied; respect that
+    if not isinstance(user[0], dict) or not isinstance(remote[0] if remote else {}, dict):
+        return None  # Non-record list — fall back to user's
+    key = next((k for k in _KEY_FIELDS if k in user[0]), None)
+    if key is None:
+        return None
+    remote_by_key = {r.get(key): r for r in remote if isinstance(r, dict) and r.get(key) is not None}
+    user_by_key = {u.get(key): u for u in user if isinstance(u, dict) and u.get(key) is not None}
+    # User wins on overlap; remote-only keys (new adds by other users) preserved
+    merged = {**remote_by_key, **user_by_key}
+    # Preserve user's relative order, then append remote-only adds at the end
+    user_keys_in_order = [u.get(key) for u in user if isinstance(u, dict)]
+    remote_only = [k for k in remote_by_key if k not in user_by_key]
+    ordered = [merged[k] for k in user_keys_in_order if k in merged] + [merged[k] for k in remote_only]
+    return ordered
 
 
 def _save_local(rel_path: str, data):

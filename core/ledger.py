@@ -46,10 +46,34 @@ def _date_iso(d) -> str:
     return str(d)[:10]
 
 
+def _normalize_contract(c) -> str:
+    """Make the contract identifier stable across re-uploads.
+
+    Pandas can re-parse the same source column as either string or Float64
+    depending on neighbors — a contract typed as `40010172988` in the sheet
+    might land in memory as `'40010172988'` once and `'40010172988.0'` next time.
+    Excel pasting also introduces non-breaking and zero-width spaces.
+    Without normalization, the same physical row produces different ledger
+    fingerprints across re-uploads and slips past dedup.
+    """
+    s = str(c).strip()
+    if s.endswith(".0"):
+        s = s[:-2]
+    s = s.replace(" ", "").replace("​", "")
+    return s
+
+
 def fingerprint(company: str, kind: str, contract, payment_date, amount) -> str:
     """Stable hash of a payment's identifying fields."""
     cents = int(round(float(amount) * 100))
-    key = f"{(company or '').strip().lower()}|{kind}|{str(contract).strip()}|{_date_iso(payment_date)}|{cents}"
+    key = f"{(company or '').strip().lower()}|{kind}|{_normalize_contract(contract)}|{_date_iso(payment_date)}|{cents}"
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def partial_fingerprint(company: str, kind: str, contract, amount) -> str:
+    """Fingerprint excluding payment_date — for detecting possible reissues."""
+    cents = int(round(float(amount) * 100))
+    key = f"{(company or '').strip().lower()}|{kind}|{_normalize_contract(contract)}|{cents}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
@@ -74,6 +98,35 @@ def check_payments_seen(fingerprints: Iterable[str]) -> set:
         return set()
     data, _ = load()
     return {p["fingerprint"] for p in data.get("payments", []) if p.get("fingerprint") in fps}
+
+
+def check_possible_reissues(company: str, payments: list[dict]) -> list[dict]:
+    """Find incoming payments that match an existing ledger row on
+    (company, kind, contract, amount) but with a DIFFERENT payment_date.
+
+    These look like reissues — same money, different date — and shouldn't be
+    silently posted as net-new. Stage 1 should surface them for confirm-and-proceed.
+
+    Returns a list of {incoming, existing[]} dicts. Empty if nothing matched.
+    """
+    data, _ = load()
+    by_partial = {}
+    for p in data.get("payments", []):
+        if (p.get("company") or "").strip().lower() != (company or "").strip().lower():
+            continue
+        key = partial_fingerprint(company, p.get("kind", ""),
+                                  p.get("contract", ""), p.get("amount", 0))
+        by_partial.setdefault(key, []).append(p)
+
+    out = []
+    for p in payments:
+        pk = partial_fingerprint(company, p["kind"], p.get("contract", ""), p["amount"])
+        matches = by_partial.get(pk, [])
+        incoming_iso = _date_iso(p["payment_date"])
+        date_diff = [m for m in matches if m.get("payment_date") != incoming_iso]
+        if date_diff:
+            out.append({"incoming": p, "existing": date_diff})
+    return out
 
 
 def record_batch(

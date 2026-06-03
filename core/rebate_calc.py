@@ -62,18 +62,26 @@ def calculate(norm_df: pd.DataFrame, master: dict, config: dict) -> dict:
     clinics = master.get("clinics", [])
     index = _build_index(clinics)
 
+    # Normalize the OPD clinic name BEFORE groupby so capitalization / whitespace
+    # variants ("ACE Animal Hospital" vs "Ace  Animal Hospital") aggregate into
+    # one bucket instead of two — the master index is already case-folded, so
+    # two un-folded groupby keys would both match the same master record and
+    # silently overwrite each other in the downstream per_bucket assignment.
+    work = norm_df.copy()
+    work["clinic"] = work["clinic"].astype(str).map(lambda s: " ".join(s.casefold().split()))
+
     # Aggregate OPD revenue per clinic-name x category
     agg = (
-        norm_df.groupby(["clinic", "category"], dropna=False)["amount"]
+        work.groupby(["clinic", "category"], dropna=False)["amount"]
         .sum()
         .unstack(fill_value=0.0)
     )
     # Sum the feed's pre-computed rebate columns per clinic (0 for generic exports)
-    feed_cols = [c for c in ["feed_us_finance", "feed_us_cash", "feed_rad_finance", "feed_rad_cash"] if c in norm_df.columns]
+    feed_cols = [c for c in ["feed_us_finance", "feed_us_cash", "feed_rad_finance", "feed_rad_cash"] if c in work.columns]
     feed_agg = (
-        norm_df.groupby("clinic")[feed_cols].sum() if feed_cols else None
+        work.groupby("clinic")[feed_cols].sum() if feed_cols else None
     )
-    has_feed = feed_cols and float(norm_df[feed_cols].abs().sum().sum()) > 0
+    has_feed = bool(feed_cols) and float(work[feed_cols].abs().sum().sum()) > 0
 
     rows = []
     unmatched = []
@@ -119,6 +127,7 @@ def calculate(norm_df: pd.DataFrame, master: dict, config: dict) -> dict:
                 "program_type": rec.get("program_type"),
                 "legal_name": rec.get("legal_name"),
                 "clinic_name": rec.get("clinic_name"),
+                "opd_clinic": str(opd_name),
                 "match": quality,
                 "ultrasound_revenue": round(ultrasound_rev, 2),
                 "ultrasound_rate": rate_us,
