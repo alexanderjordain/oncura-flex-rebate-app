@@ -1,6 +1,8 @@
+import datetime as dt
+
 import streamlit as st
 
-from core import ledger, loaders, store, ui
+from core import audit, ledger, loaders, store, ui
 
 ui.header("FLEX + Rebate Accounting",
           "Receive OPD activity and finance-company remittances, calculate, and produce audit-ready imports.",
@@ -11,6 +13,44 @@ flex = loaders.flex_master()
 rc = rebate.get("clinics", [])
 fc = flex.get("clinics", [])
 ledger_summary = ledger.summary()
+
+# ─── Unmarked-batch banner: ledger payments from the last 14 days that have
+#     no matching Stage 2 credit-memo run in the audit manifest. Catches the
+#     "I ran Stage 1 but forgot Stage 2" failure mode at-a-glance.
+def _ymd_from_iso(s):
+    try:
+        return dt.date.fromisoformat(str(s)[:10])
+    except Exception:
+        return None
+
+ledger_data, _ = ledger.load()
+recent_cutoff = dt.date.today() - dt.timedelta(days=14)
+recent_flex_months = set()
+for p in ledger_data.get("payments", []):
+    if p.get("kind") != "flex":
+        continue
+    pd_date = _ymd_from_iso(p.get("payment_date", ""))
+    if pd_date and pd_date >= recent_cutoff:
+        recent_flex_months.add((pd_date.year, pd_date.month))
+
+stage2_months = set()
+for entry in audit.list_entries(cycle_type="stage2_credit_memo"):
+    y = entry.get("year")
+    m = entry.get("month")
+    if y is not None and m is not None:
+        stage2_months.add((int(y), int(m)))
+
+missing = sorted(recent_flex_months - stage2_months)
+if missing:
+    months_str = ", ".join(
+        dt.date(y, m, 1).strftime("%B %Y") for y, m in missing
+    )
+    st.error(
+        f":material/warning: **Stage 2 not yet run for: {months_str}.** "
+        f"Recent flex payments are in the ledger but no monthly credit memos have been "
+        f"generated for these months. Open **FLEX Cycle → Monthly Credit Memos** and run "
+        f"Stage 2 for each month listed."
+    )
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Rebate clinics", len(rc))

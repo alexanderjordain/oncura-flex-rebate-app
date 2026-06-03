@@ -54,7 +54,10 @@ def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
     its monthly_credit each — the quarter-end true-up (SOP-11) absorbs the over-credit if any
     of those payments were for a future month.
 
-    Returns (DataFrame, next_ref, skipped). skipped = list of {reason, payment, clinic_name?}.
+    Returns (DataFrame, next_ref, skipped, source_payments) where source_payments[i] is
+    the ledger payment dict that produced df row i — used by Stage 2 to fingerprint each
+    emitted credit memo on the SOURCE payment (stable) instead of the mutable QB customer
+    name (renames silently broke dedup).
     """
     import pandas as pd
 
@@ -83,7 +86,8 @@ def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
 
     refs = saasant.sequential_refs(start_ref, len(matched))
     rows = []
-    for ref, (clinic, _payment, amt) in zip(refs, matched):
+    source_payments = []
+    for ref, (clinic, payment, amt) in zip(refs, matched):
         rows.append({
             "Credit Memo No": ref,
             "Customer": clinic.get("qb_name") or clinic.get("clinic_name"),
@@ -95,11 +99,12 @@ def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
             "Product/Service Amount": amt,
             "Product/Service Class": CLASS,
         })
+        source_payments.append(payment)
     df = pd.DataFrame(rows, columns=COLUMNS)
     if not df.empty:
         saasant.assert_unique_refs(df["Credit Memo No"])
     next_ref = (refs[-1] + 1) if refs else start_ref
-    return df, next_ref, skipped
+    return df, next_ref, skipped, source_payments
 
 
 def build_import(flex_clinics: list[dict], year: int, month: int, start_ref: int):

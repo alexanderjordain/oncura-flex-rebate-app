@@ -309,6 +309,41 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                    for r in all_rows]
         seen_fps = ledger.check_payments_seen(all_fps)
 
+        # ── Reissue check: rows that weren't exact-duplicates but match an existing
+        #    ledger row on (company, kind, contract, amount) with a DIFFERENT payment_date.
+        #    These look like reissues — same money, different date — and shouldn't be
+        #    silently treated as net-new. Surface for confirm-and-proceed.
+        novel_rows = [r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps]
+        possible_reissues = ledger.check_possible_reissues(company, novel_rows) if novel_rows else []
+        if possible_reissues:
+            st.warning(
+                f":material/warning: **{len(possible_reissues)} payment(s) look like possible reissues** — "
+                "same company / contract / amount as a prior ledger row but a different payment date. "
+                "Confirm these are intentional reissues, not accidental re-imports of the same money "
+                "with a re-typed date.",
+            )
+            with st.expander("Show possible reissues", expanded=False):
+                for r in possible_reissues:
+                    inc = r["incoming"]
+                    ex = r["existing"][0]
+                    st.markdown(
+                        f"- **{inc.get('qb_customer') or '(unmapped)'}** · "
+                        f"contract `{inc.get('contract')}` · "
+                        f"${float(inc['amount']):,.2f} · "
+                        f"prior payment date **`{ex['payment_date']}`** → "
+                        f"new payment date **`{ledger._date_iso(inc['payment_date'])}`**"
+                    )
+            SS["remit_reissue_ack"] = st.checkbox(
+                "I confirm these are intentional reissues — proceed.",
+                value=SS.get("remit_reissue_ack", False),
+                key="remit_reissue_ack_widget",
+            )
+            if not SS["remit_reissue_ack"]:
+                st.info("Tick the box above once you've verified the reissues to enable the downloads.")
+                st.stop()
+        else:
+            SS["remit_reissue_ack"] = True
+
         if seen_fps:
             skipped_flex = sum(1 for fp, r in zip(all_fps[:len(flex_rows)], flex_rows) if fp in seen_fps)
             skipped_scan = sum(1 for fp, r in zip(all_fps[len(flex_rows):], scan_rows) if fp in seen_fps)
@@ -337,18 +372,49 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         s = res["summary"]
         unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
 
+        # ── Flex/scan crossover sanity check: NewLane and OnePlace split by cents
+        #    (whole-dollar = scan, odd-cents = flex). A 100/0 or 0/100 ratio is
+        #    almost always a sign of bad data or wrong split rule. GreatAmerica is
+        #    intentionally all-flex (Maintenance only) — skip the check there.
+        if company in ("OnePlace", "NewLane") and s["total"] > 0:
+            flex_pct = s["flex_total"] / s["total"] if s["total"] else 0
+            scan_pct = s["scan_total"] / s["total"] if s["total"] else 0
+            if flex_pct >= 0.97 or scan_pct >= 0.97:
+                dominant = "flex" if flex_pct >= 0.97 else "scan"
+                st.warning(
+                    f":material/warning: **Unusual flex/scan split**: {flex_pct*100:.1f}% flex / "
+                    f"{scan_pct*100:.1f}% scan for this {company} remittance. "
+                    f"OnePlace and NewLane usually run a mix; an all-{dominant} file may mean "
+                    "the wrong split rule was applied or the file is mis-classified. "
+                    "Cross-check against the source remittance before proceeding."
+                )
+
         # ── Intra-file total check: raw file rows/amounts vs. what the app is importing
         raw_amounts = raw[amount_col].map(opd_adapter.coerce_amount)
         raw_total = round(float(raw_amounts.sum()), 2)
         raw_nonzero = int((raw_amounts != 0).sum())
         imported_total_before_dedup = raw_total  # informational only; before dedup filter
         diff = round(raw_total - s["total"], 2)
+        # We expect some delta from ledger-dedup of prior imports, so don't shout when
+        # rows were dropped to the ledger. Shout when the delta exceeds the dedup'd amount
+        # by more than $1 — that means rows were silently coerced to 0 by coerce_amount
+        # (malformed currency cells) rather than legitimately deduped.
+        deduped_amount = sum(float(r["amount"]) for r, fp in zip(all_rows, all_fps) if fp in seen_fps)
+        unexplained_delta = round(diff - deduped_amount, 2)
         if abs(diff) > 0.01 or raw_nonzero != (s["flex_count"] + s["scan_count"]):
-            st.caption(
+            line = (
                 f"File: {raw_nonzero} non-zero rows totalling **${raw_total:,.2f}**  ·  "
                 f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **${s['total']:,.2f}**  ·  "
-                f"Δ **${diff:,.2f}** (rows dropped: blank IDs, zero amounts, or already in the ledger)"
+                f"Δ **${diff:,.2f}** (ledger dedup: ${deduped_amount:,.2f}; unexplained: ${unexplained_delta:,.2f})"
             )
+            if abs(unexplained_delta) > 1.00:
+                st.error(
+                    line + " — **unexplained delta > $1**. Likely a malformed currency cell "
+                    "(e.g. blank, '-', 'N/A') silently coerced to $0. Open the file, find the "
+                    "offending row(s), and fix before proceeding."
+                )
+            else:
+                st.caption(line)
 
         if s["scan_count"] > 0:
             m1, m2, m3, m4 = st.columns(4)
@@ -548,7 +614,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
 
     # ── Pull ledger rows for the target month ──────────────────────────────────
     payments = ledger.flex_payments_for_month(year, month)
-    df, next_ref, skipped = flex_credits.build_import_from_payments(
+    df, next_ref, skipped, source_payments = flex_credits.build_import_from_payments(
         flex_clinics, payments, year, month, start_ref,
     )
 
@@ -640,16 +706,19 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             "the audit manifest and registers each emitted credit memo in the dedup ledger so "
             "re-running Stage 2 for this month won't double-post."
         )
-        emitted_payments_for_ledger = [
-            {
+        # Use the SOURCE payment's fingerprint (immutable in the ledger) as the
+        # contract-equivalent for credit-memo dedup. Previously we used the QB
+        # Customer name, which is mutable — a typo fix or rename silently broke
+        # dedup and let Stage 2 re-issue the same credit on the next run.
+        emitted_payments_for_ledger = []
+        for src, (_, row) in zip(source_payments, df.iterrows()):
+            emitted_payments_for_ledger.append({
                 "kind": "credit_memo",
-                "contract": row["Customer"],  # use customer as the contract-equiv for dedup
+                "contract": src.get("fingerprint") or row["Customer"],
                 "qb_customer": row["Customer"],
                 "payment_date": row["Credit Memo Date"],
                 "amount": float(row["Product/Service Amount"]),
-            }
-            for _, row in df.iterrows()
-        ]
+            })
         emitted_fps = [
             ledger.fingerprint(
                 "INTERNAL", "credit_memo", r["contract"], r["payment_date"], r["amount"]

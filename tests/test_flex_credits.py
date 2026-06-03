@@ -22,7 +22,7 @@ def _clinic(name, monthly_credit=1000.0, active=True, **extra):
 # ── build_import_from_payments — the new payment-driven path ─────────────────
 
 def test_empty_payments_produces_empty_df():
-    df, next_ref, skipped = flex_credits.build_import_from_payments(
+    df, next_ref, skipped, _src = flex_credits.build_import_from_payments(
         [_clinic("Alpha")], [], 2026, 5, 50000,
     )
     assert len(df) == 0
@@ -36,7 +36,7 @@ def test_one_payment_yields_one_credit_memo():
         {"qb_customer": "Alpha", "contract": "X1", "payment_date": "2026-05-15",
          "amount": 950.0, "kind": "flex"},
     ]
-    df, next_ref, skipped = flex_credits.build_import_from_payments(
+    df, next_ref, skipped, _src = flex_credits.build_import_from_payments(
         clinics, payments, 2026, 5, 50000,
     )
     assert len(df) == 1
@@ -54,7 +54,7 @@ def test_multi_payment_clinic_gets_multi_credit_memos():
         {"qb_customer": "Beta", "contract": "X", "payment_date": "2026-05-10", "amount": 1500.0, "kind": "flex"},
         {"qb_customer": "Beta", "contract": "X", "payment_date": "2026-05-20", "amount": 1500.0, "kind": "flex"},
     ]
-    df, _next, skipped = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
+    df, _next, skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
     assert len(df) == 3
     assert all(df["Customer"] == "Beta")
     assert all(df["Product/Service Amount"] == 1500.0)
@@ -67,7 +67,7 @@ def test_payment_with_no_matching_clinic_is_skipped():
         {"qb_customer": "Mystery Clinic", "contract": "UNKNOWN", "payment_date": "2026-05-01",
          "amount": 500.0, "kind": "flex"},
     ]
-    df, _next, skipped = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
+    df, _next, skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
     assert len(df) == 0
     assert len(skipped) == 1
     assert "no flex_master match" in skipped[0]["reason"]
@@ -80,7 +80,7 @@ def test_match_falls_back_to_contract_when_qb_customer_unmatched():
         {"qb_customer": "Some Legal Name LLC", "contract": "OPC555", "payment_date": "2026-05-01",
          "amount": 1000.0, "kind": "flex"},
     ]
-    df, _next, skipped = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
+    df, _next, skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
     assert len(df) == 1
     assert df.iloc[0]["Customer"] == "Delta"
 
@@ -91,7 +91,7 @@ def test_inactive_clinic_not_eligible_even_with_payment():
         {"qb_customer": "Epsilon", "contract": "X", "payment_date": "2026-05-01",
          "amount": 1000.0, "kind": "flex"},
     ]
-    df, _next, skipped = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
+    df, _next, skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
     assert len(df) == 0
     assert len(skipped) == 1  # falls into the "no flex_master match" bucket
 
@@ -103,7 +103,7 @@ def test_sequential_refs_no_collisions():
          "amount": 1000.0, "kind": "flex"}
         for i in range(5)
     ]
-    df, next_ref, _skipped = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
+    df, next_ref, _skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
     refs = list(df["Credit Memo No"])
     assert len(set(refs)) == 5
     assert refs == sorted(refs)
