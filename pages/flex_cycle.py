@@ -285,7 +285,18 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 f"**Start invoice #**<br>{start_inv if company != 'GreatAmerica' else '—'}",
                 unsafe_allow_html=True,
             )
-            if st.button("◀ Back to setup", key="remit_upload_back"):
+            b1, b2 = st.columns(2)
+            if b1.button("◀ Back to setup", key="remit_upload_back", use_container_width=True):
+                SS["remit_step"] = 0
+                st.rerun()
+            if b2.button("🔄 Set up new import", key="remit_upload_reset",
+                         use_container_width=True,
+                         help="Clear the uploaded file and start fresh — use this between back-to-back remittances."):
+                # Reset everything for a fresh import
+                for k in ("remit_file", "remit_file_override",
+                          "remit_cust_col", "remit_amt_col", "remit_id_col",
+                          "remit_reissue_ack"):
+                    SS.pop(k, None)
                 SS["remit_step"] = 0
                 st.rerun()
 
@@ -569,10 +580,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
 
             # ── Mark batch processed: write to ledger so future re-uploads are caught ────
             st.divider()
-            st.markdown("### Confirm this batch has been imported to QBO")
-            st.caption(
-                "Click **after** you've uploaded the files above to SaasAnt. This records the "
-                "payments in the dedup ledger so re-uploading this remittance later won't double-post."
+            st.error(
+                ":material/priority_high: **IMPORTANT — Confirm this batch has been imported to QBO.**  "
+                "Click the button below **only after** you've finished uploading the SaasAnt file(s) "
+                "above to QBO. This records the payments in the dedup ledger so re-uploading the same "
+                "remittance later can't double-post. Skipping this step means the next re-upload "
+                "won't be caught.",
+                icon=":material/warning:",
             )
             rows_to_record = [
                 r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
