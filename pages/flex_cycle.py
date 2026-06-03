@@ -119,20 +119,34 @@ with tab_overview, safe_stage("Overview"):
             unsafe_allow_html=True,
         )
 
-    # This-month callout — which Stage 3 group fires now.
-    GROUP_BY_MONTH = {
-        1: ("May-June-July", 20), 4: ("May-June-July", 20),
-        7: ("May-June-July", 20), 10: ("May-June-July", 20),
-        2: ("March-April-May", 39), 5: ("March-April-May", 39),
-        8: ("March-April-May", 39), 11: ("March-April-May", 39),
-        3: ("Calendar", 22), 6: ("Calendar", 22),
-        9: ("Calendar", 22), 12: ("Calendar", 22),
+    # This-month callout. Stage 3 runs the month AFTER the quarter-end, closing
+    # out the group whose quarter just ended. So map current month → the group
+    # whose quarter ended LAST month.
+    #
+    # Quarter-end months per group:
+    #   Calendar:         Mar / Jun / Sep / Dec  → Stage 3 in Apr, Jul, Oct, Jan
+    #   March-April-May:  Feb / May / Aug / Nov  → Stage 3 in Mar, Jun, Sep, Dec
+    #   May-June-July:    Jan / Apr / Jul / Oct  → Stage 3 in Feb, May, Aug, Nov
+    GROUP_BY_RUN_MONTH = {
+        1:  ("Calendar",         22, "December"),
+        2:  ("May-June-July",    20, "January"),
+        3:  ("March-April-May",  39, "February"),
+        4:  ("Calendar",         22, "March"),
+        5:  ("May-June-July",    20, "April"),
+        6:  ("March-April-May",  39, "May"),
+        7:  ("Calendar",         22, "June"),
+        8:  ("May-June-July",    20, "July"),
+        9:  ("March-April-May",  39, "August"),
+        10: ("Calendar",         22, "September"),
+        11: ("May-June-July",    20, "October"),
+        12: ("March-April-May",  39, "November"),
     }
     today = dt.date.today()
-    group, n = GROUP_BY_MONTH[today.month]
+    group, n, qend_month = GROUP_BY_RUN_MONTH[today.month]
     st.info(
-        f"**This month ({today.strftime('%B %Y')}):** Stage 3 closes the "
-        f"**{group}** group ({n} clinics).",
+        f"**This month ({today.strftime('%B %Y')}):** closing the **{group}** "
+        f"group ({n} clinics) — their quarter ended **{qend_month} {today.year if today.month > 1 else today.year - 1}**. "
+        f"In Stage 3, pick year + {qend_month} as the month you just closed.",
         icon=":material/event_available:",
     )
 
