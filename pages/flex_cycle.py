@@ -157,12 +157,12 @@ with tab_overview, safe_stage("Overview"):
 1. Download the remittance file from OnePlace / NewLane / GreatAmerica.
 2. Pick the company + payment date, upload the file.
 3. Resolve any unmapped clinic names (mappings persist automatically).
-4. Sanity-check the total, download the SaasAnt file(s), hand off to accounting.
+4. Sanity-check the total and download the SaasAnt file(s).
 
 **Stage 2 — Monthly Credit Memos** *(run once near month-end, after all Stage 1 runs)*
 1. Pick the year and month you're closing.
 2. Review the credit-memo total — one credit per ledger payment for that month.
-3. Download the SaasAnt file, hand off to accounting.
+3. Download the SaasAnt file.
 4. Late remittance? Re-run safely — ledger dedup prevents double-issuing.
 
 **Stage 3 — Unused / Overage** *(run every month for the closing group)*
@@ -170,8 +170,8 @@ with tab_overview, safe_stage("Overview"):
    group whose quarter is ending.
 2. Review recapture totals (internal entries; not mailed) and the overage list.
 3. For each overage: submit to finance partner or direct-bill per SOP-6.
-4. Hand off to accounting. The Accounting Manager then un-applies / re-applies
-   in QBO per SOP-11 — manual, not done by the app.
+4. The Accounting Manager then un-applies / re-applies in QBO per SOP-11 —
+   manual, not done by the app.
             """
         )
 
