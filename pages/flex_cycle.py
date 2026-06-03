@@ -104,7 +104,7 @@ with tab_overview, safe_stage("Overview"):
         st.markdown(
             """<div class="pc-stage-card s2">
             <p class="pc-title"><span class="pc-stage-num">2</span> Monthly Credit Memos</p>
-            <p class="pc-cadence">Once near month-end</p>
+            <p class="pc-cadence">Once all the month's remittances are in</p>
             <p>Build one credit memo per FLEX payment in the month. <i>One Flex payment in, one credit out.</i></p>
             </div>""",
             unsafe_allow_html=True,
@@ -159,7 +159,7 @@ with tab_overview, safe_stage("Overview"):
 3. Resolve any unmapped clinic names (mappings persist automatically).
 4. Sanity-check the total and download the SaasAnt file(s).
 
-**Stage 2 — Monthly Credit Memos** *(run once near month-end, after all Stage 1 runs)*
+**Stage 2 — Monthly Credit Memos** *(run after all of that month's Stage 1 remittances are in — typically the following month)*
 1. Pick the year and month you're closing.
 2. Review the credit-memo total — one credit per ledger payment for that month.
 3. Download the SaasAnt file.
