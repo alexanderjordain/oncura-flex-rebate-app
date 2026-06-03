@@ -115,7 +115,7 @@ You'll see a **Download email draft (.eml)** button.
         - **Subject:** copy from the "Preview / copy the full email body"
           expander on the app's handoff card.
         - **Body:** copy from the same expander.
-     4. Attach the SaaSAnt file(s): drag from your Downloads folder *into*
+     4. Attach the SaasAnt file(s): drag from your Downloads folder *into*
         the compose window, or click the paperclip icon → **Browse this
         computer**.
      5. Click **Send**.

@@ -3,7 +3,7 @@
 **Live:** https://oncura-programs.streamlit.app/  (password: see internal docs)
 
 Streamlit app that runs the accounting workflows for Oncura's **FLEX** (telemedicine financing)
-and **Rebate** programs. Produces SaaSAnt import files for QBO — humans review and upload.
+and **Rebate** programs. Produces SaasAnt import files for QBO — humans review and upload.
 Audit-friendly by design; no direct QBO writes.
 
 ## Pages
@@ -16,7 +16,7 @@ Audit-friendly by design; no direct QBO writes.
   1. **Finance Payment Imports** — upload a finance-co remittance (Great America / OnePlace /
      NewLane); produces flex receive-payments + scan invoices + scan payments. Includes an
      interactive resolver for unmatched legal-name → QB-payee mappings (saves persist).
-  2. **Monthly Credit Memos** — pick year + month, generate the SaaSAnt credit-memo import.
+  2. **Monthly Credit Memos** — pick year + month, generate the SaasAnt credit-memo import.
   3. **Unused / Overage** — pick year + month, upload OPD activity (Invoices or case-grid),
      compute per-clinic recapture/overage; routes each overage to **partner submission**
      (OnePlace if before cutoff) or **direct-bill QBO invoice** (GA, NewLane, missed cutoff);

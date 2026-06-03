@@ -183,9 +183,9 @@ recapture invoices; member-location activity rolls up into the anchor's totals.
 
 | SOP | Title | What it covers |
 |---|---|---|
-| **Cash SOP-9** | FLEX Finance Co Payment Import | Receiving the monthly remittance and entering it in QBO/SaaSAnt |
+| **Cash SOP-9** | FLEX Finance Co Payment Import | Receiving the monthly remittance and entering it in QBO/SaasAnt |
 | **Cash SOP-10** | NewLane Pass-Through | NewLane-specific file processing (FLEX + scan mixed in one file) |
-| **Accounting SOP-5** | FLEX Credit Memo Import | Generating the monthly credit memos via SaaSAnt |
+| **Accounting SOP-5** | FLEX Credit Memo Import | Generating the monthly credit memos via SaasAnt |
 | **Accounting SOP-10** | Flex Pass-Through Credit Memo Application | Manual catch-up for missing or multi-payment-month credits |
 | **Accounting SOP-11** | Flex Account Reconciliation | The quarter-end walkthrough per clinic |
 | **Accounting SOP-12** | Flex Overage Billing — Internal Process | Routing overages to finance partner vs. direct invoice |

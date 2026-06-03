@@ -1,6 +1,6 @@
 # Accounting Handoff — what the app doesn't do
 
-The Streamlit app generates SaaSAnt import files and routing decisions. It does **not**
+The Streamlit app generates SaasAnt import files and routing decisions. It does **not**
 write to QBO, OPD, or finance-partner portals — those steps stay with accounting. This
 doc catalogs everything that still has to happen by hand after a cycle runs, organized
 per workflow. The same content is embedded into the "Email accounting" buttons inside
@@ -29,7 +29,7 @@ Authoritative source for the underlying procedures: `Oncura_Accounting_Master_Re
 
 **Watch-outs:**
 - Flex payments are intentionally **unapplied** in QBO; they reconcile at quarter-end.
-- One SaaSAnt job at a time — wait for completion.
+- One SaasAnt job at a time — wait for completion.
 - New Lane bank feed shows "New Lane"; Great America shows "Accounting Services";
   OnePlace shows "Origin Bank Midwest".
 
@@ -37,7 +37,7 @@ Authoritative source for the underlying procedures: `Oncura_Accounting_Master_Re
 
 ## 2. FLEX — Monthly Credit Memos (Accounting SOP-5)
 
-**What the app produces:** one SaaSAnt credit-memo file per month, ~78–82 clinics.
+**What the app produces:** one SaasAnt credit-memo file per month, ~78–82 clinics.
 
 **Accounting steps:**
 1. **transactions.saasant.com → Bulk Upload → Credit Memo** → select the file → walk the wizard.
@@ -72,11 +72,11 @@ those produce ONE row per group on the anchor's QB customer.
 **Accounting steps:**
 
 ### A. Unused recapture
-1. **SaaSAnt → Bulk Upload → Invoice** → unused-flex file.
+1. **SaasAnt → Bulk Upload → Invoice** → unused-flex file.
 2. Verify QBO P&L: Flex Credits line **nets DOWN** by the recapture amount (e.g. from –$69k to –$30k).
 
 ### B. Direct-bill overages (SOP-6)
-1. **SaaSAnt → Bulk Upload → Invoice** → direct-bill file.
+1. **SaasAnt → Bulk Upload → Invoice** → direct-bill file.
 2. For each clinic invoice:
    - Send an **Authorize.net payment link** to the clinic (preferred), or email the QBO invoice PDF.
    - **VOID the QBO invoice immediately after sending.** Revenue was already captured by the OPD

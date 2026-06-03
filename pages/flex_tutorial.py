@@ -128,5 +128,5 @@ with st.expander("Related material"):
         "- **`docs/RECOVERY.md`** — what to do when the app breaks (Cloud entry-file reset, "
         "AttributeError mid-deploy, etc.).\n"
         "- **`docs/ACCOUNTING_HANDOFF.md`** — manual steps each cycle hands off to accounting "
-        "(SaaSAnt uploads, QBO matching, OPD credit-box updates)."
+        "(SaasAnt uploads, QBO matching, OPD credit-box updates)."
     )

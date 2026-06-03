@@ -56,7 +56,7 @@ with tab_overview, safe_stage("Overview"):
 ### What this wizard does
 
 Walks you through the **FLEX accounting close** end-to-end. Each stage produces
-one or more SaaSAnt import files for QBO and emails accounting@oncurapartners.com
+one or more SaasAnt import files for QBO and emails accounting@oncurapartners.com
 with the numbers + attachments. **The app generates files; you and accounting
 review and approve. No direct QBO writes.**
 
@@ -83,7 +83,7 @@ once — most months you only touch Stages 1 and 2.
 
 - **Trigger:** End-of-month routine. Per Accounting SOP-10, every FLEX payment in
   Stage 1 needs a matching credit memo on the clinic's QBO account ("one Flex
-  payment in, one credit out"). This stage builds that credit-memo SaaSAnt file.
+  payment in, one credit out"). This stage builds that credit-memo SaasAnt file.
 - **Frequency:** **Once per month**, typically on or near the last business day
   of the month, or the first business day of the following month — after all
   finance companies for that month have remitted.
@@ -120,13 +120,13 @@ near month-end) → Stage 3 (only at quarter-end)**.
      QuickBooks payee), do so — your mappings persist to `name_map.json`
      automatically. Take your time and pick carefully; bad mappings post to
      the wrong customer in QBO.
-   - Review the SaaSAnt outputs. Sanity-check the total against the remittance
+   - Review the SaasAnt outputs. Sanity-check the total against the remittance
      file total.
-   - Download the SaaSAnt file(s).
+   - Download the SaasAnt file(s).
    - Use the **Hand off to accounting** card at the bottom — download the
      `.eml` (or send via SMTP / Graph if configured) and email accounting with
-     the SaaSAnt file(s) attached.
-   - Upload to SaaSAnt → QBO (accounting does this; you may help).
+     the SaasAnt file(s) attached.
+   - Upload to SaasAnt → QBO (accounting does this; you may help).
 
 2. **Near month-end** (last business day, or first business day of the next
    month), once all of that month's finance-company remittances have been
@@ -135,7 +135,7 @@ near month-end) → Stage 3 (only at quarter-end)**.
    - Pick the month you're closing.
    - Review the credit-memo total. It should reflect one credit per ledger
      payment row from Stage 1 for that month.
-   - Download the SaaSAnt file.
+   - Download the SaasAnt file.
    - Hand off to accounting (same card).
    - Confirm with accounting that they uploaded both the Stage 1 payments
      **and** the Stage 2 credit memos for the month before considering the
@@ -165,8 +165,8 @@ near month-end) → Stage 3 (only at quarter-end)**.
 
 | Stage | Done when… |
 |---|---|
-| 1 | Accounting confirms the SaaSAnt file uploaded cleanly, deposit reconciles on the correct bank feed. |
-| 2 | Accounting confirms credit-memo SaaSAnt uploaded, every payment in Stage 1 for the month has a matching credit memo on the clinic's QBO account. |
+| 1 | Accounting confirms the SaasAnt file uploaded cleanly, deposit reconciles on the correct bank feed. |
+| 2 | Accounting confirms credit-memo SaasAnt uploaded, every payment in Stage 1 for the month has a matching credit memo on the clinic's QBO account. |
 | 3 | Recapture invoices and overage entries are posted in QBO; partner-submission overages have been emailed to the finance partners; direct-bill overage invoices have been mailed AND voided in QBO. |
 
 ---
@@ -487,18 +487,18 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                                key="remit_dl_scan")
         st.markdown(
             """
-**Uploading to SaaSAnt**
+**Uploading to SaasAnt**
 1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
 2. Click **Bulk Upload**.
 3. Pick the right import type for each file you downloaded above:
    - Scan-package **invoices** → select **Invoice**
    - Flex receive payments → select **Received Payments**
    - Scan receive payments → select **Received Payments**
-4. Walk through the SaaSAnt wizard for each file.
+4. Walk through the SaasAnt wizard for each file.
 
 **Order matters:** upload **scan invoices first**, then flex payments, then scan payments.
 The scan payments reference the scan invoices by Invoice No, so the invoices must exist
-in QBO first. Run **one SaaSAnt job at a time** — wait for each to complete before starting
+in QBO first. Run **one SaasAnt job at a time** — wait for each to complete before starting
 the next. After all uploads, the combined total should match the bank-feed deposit.
 """
         )
@@ -507,7 +507,7 @@ the next. After all uploads, the combined total should match the bank-feed depos
         st.divider()
         st.markdown("### Confirm this batch has been imported to QBO")
         st.caption(
-            "Click **after** you've uploaded the files above to SaaSAnt. This records the "
+            "Click **after** you've uploaded the files above to SaasAnt. This records the "
             "payments in the dedup ledger so re-uploading this remittance later won't double-post."
         )
         rows_to_record = [
@@ -702,7 +702,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
     if not df.empty:
         st.markdown("#### Confirm this batch has been uploaded to QBO")
         st.caption(
-            "Click **after** you've uploaded the credit memos to SaaSAnt. Records the batch in "
+            "Click **after** you've uploaded the credit memos to SaasAnt. Records the batch in "
             "the audit manifest and registers each emitted credit memo in the dedup ledger so "
             "re-running Stage 2 for this month won't double-post."
         )
@@ -796,7 +796,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
 
     st.markdown(
         """
-**Upload to SaaSAnt:** [transactions.saasant.com](https://transactions.saasant.com) →
+**Upload to SaasAnt:** [transactions.saasant.com](https://transactions.saasant.com) →
 **Bulk Upload** → **Credit Memo** → select the file → walk through the wizard.
 """
     )
@@ -1054,7 +1054,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             )
             st.caption(f"Next available invoice number: {next_ref}")
             st.markdown(
-                "**Upload to SaaSAnt:** "
+                "**Upload to SaasAnt:** "
                 "[transactions.saasant.com](https://transactions.saasant.com) → "
                 "**Bulk Upload → Invoice** → select the file."
             )
@@ -1188,7 +1188,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     st.caption(f"Next available invoice number: {direct_next}")
                     with st.expander("Send & void steps (SOP-6)"):
                         st.markdown(
-                            "1. **Upload to SaaSAnt** → "
+                            "1. **Upload to SaasAnt** → "
                             "[transactions.saasant.com](https://transactions.saasant.com) → "
                             "**Bulk Upload → Invoice** → select the file.\n"
                             "2. **Send each clinic** an Authorize.net payment link (or QBO invoice PDF).\n"
@@ -1342,7 +1342,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             st.markdown("### Hand off to accounting")
             st.caption(
                 "Email accounting with this cycle's results + next steps. The body is pre-filled with "
-                "all the numbers, escalations, and the SaaSAnt + QBO action items."
+                "all the numbers, escalations, and the SaasAnt + QBO action items."
             )
             unused_total = float(udf["Product/Service Amount"].sum()) if not udf.empty else 0.0
             direct_total = sum(float(r["net_overage"]) for r in annotated

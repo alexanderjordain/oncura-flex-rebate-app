@@ -126,7 +126,7 @@ def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, 
     if company == "OnePlace":
         c = normalize_contract(contract)
         # flex contracts are padded with a leading zero in the export -> strip for flex;
-        # scan contracts' leading zeros are significant -> keep (matches the SaaSAnt templates)
+        # scan contracts' leading zeros are significant -> keep (matches the SaasAnt templates)
         if kind == "flex":
             c = c.lstrip("0") or c
         return f"OPC{c}"

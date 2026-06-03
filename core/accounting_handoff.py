@@ -343,7 +343,7 @@ def finance_payment_email(*, company: str, pay_date, summary: dict, has_scan: bo
     parts += [
         f"  - Total:                ${summary['total']:,.2f}",
         "",
-        "Files attached for SaaSAnt upload:",
+        "Files attached for SaasAnt upload:",
     ]
     if has_scan:
         parts += [
@@ -356,7 +356,7 @@ def finance_payment_email(*, company: str, pay_date, summary: dict, has_scan: bo
     parts += [
         "",
         "After upload:",
-        "  - Confirm no failed rows in SaaSAnt.",
+        "  - Confirm no failed rows in SaasAnt.",
         "  - Verify the deposit shows on the correct bank feed.",
         "",
         "Reply with any issues.",
@@ -378,7 +378,7 @@ def credit_memos_email(*, year: int, month: int, count: int, total: float,
         f"  - Total: ${total:,.2f}",
         f"  - Credit Memo No range: {start_ref}–{next_ref - 1}",
         "",
-        "File attached for SaaSAnt upload (Credit Memo import).",
+        "File attached for SaasAnt upload (Credit Memo import).",
         "",
         "After upload, confirm the credit memos appear on each clinic's QBO account",
         "and that the totals reconcile against the finance-co payments imported earlier.",
@@ -410,8 +410,8 @@ def recapture_email(*, year: int, month: int,
     parts += [
         "",
         "Work order (SOP-11 / SOP-12):",
-        "  1. Upload unused-credit invoices to SaaSAnt — these are INTERNAL only (do NOT mail).",
-        "  2. Upload direct-bill overage invoices to SaaSAnt → send pay links → VOID after sending (SOP-6).",
+        "  1. Upload unused-credit invoices to SaasAnt — these are INTERNAL only (do NOT mail).",
+        "  2. Upload direct-bill overage invoices to SaasAnt → send pay links → VOID after sending (SOP-6).",
         f"  3. Submit OnePlace overage list before {cutoff_date:%B %d, %Y}.",
         "  4. After all three are in QBO, run reconciliation: un-apply auto-matches, "
         "re-apply payment→credit→payment→credit against the quarter's scan invoices.",

@@ -7,7 +7,7 @@ Per-overage routing:
   - "direct"             -> partner has opted out (Great America, New Lane) or no partner
                             (Self-Financed) -> bill clinic directly
 
-Direct-bill path produces a SaaSAnt INVOICE import; per SOP-6 those invoices MUST be voided
+Direct-bill path produces a SaasAnt INVOICE import; per SOP-6 those invoices MUST be voided
 in QBO immediately after sending (revenue was already captured by the OPD invoices). The page
 surfaces that step as coaching text.
 
@@ -95,7 +95,7 @@ def annotate_overages(overage_rows: list[dict], recap_year: int, recap_month: in
 
 def build_direct_invoice_import(annotated_rows: list[dict], recap_year: int, recap_month: int,
                                  start_ref: int, sales_class: str, cfg: dict):
-    """SaaSAnt invoice import for direct-bill overages (and missed-cutoff). Each row a QBO
+    """SaasAnt invoice import for direct-bill overages (and missed-cutoff). Each row a QBO
     invoice to be VOIDED immediately after sending (SOP-6). Returns (DataFrame, next_ref)."""
     over = _overage_cfg(cfg)
     item = over.get("direct_invoice_item", "Telemedicine Overage")

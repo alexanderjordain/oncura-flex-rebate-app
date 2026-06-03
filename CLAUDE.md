@@ -3,7 +3,7 @@
 ## What this app is
 
 A Streamlit app that runs the accounting workflows for Oncura's **FLEX** (telemedicine
-financing) and **Rebate** programs. Generates SaaSAnt import files for QBO — no direct QBO
+financing) and **Rebate** programs. Generates SaasAnt import files for QBO — no direct QBO
 writes. The app's design driver is **audit-friendliness** (Marty's stated requirement) and
 **works without the original author** (single-point-of-failure mitigation).
 
@@ -23,8 +23,8 @@ core/
   flex_credits.py             # payment-driven credit-memo import + legacy active-list fallback (SOP-5)
   flex_unused.py              # quarter-end recapture (SOP-5) + overage detection
   flex_overage.py             # overage routing + direct-bill + partner submission (SOP-6, SOP-12)
-  flex_finance.py             # finance-co remittance -> SaaSAnt imports (SOP-9, SOP-10)
-  saasant.py                  # shared SaaSAnt helpers (unique refs, last-day, xlsx bytes)
+  flex_finance.py             # finance-co remittance -> SaasAnt imports (SOP-9, SOP-10)
+  saasant.py                  # shared SaasAnt helpers (unique refs, last-day, xlsx bytes)
   accounting_handoff.py       # per-workflow email-draft builders + render helpers
 data/
   rebate_master.json          # 87 rebate-program clinics + rates
@@ -86,9 +86,9 @@ Source: `OneDrive\...\Oncura_Accounting_Master_Reference-5-28-26.docx` (CFO Mart
 - **Self-funded rads rebate = 2%** (matches OPD feed `RadCash = RadFin/2`). Decided 2026-05-26 by Alex. Per-clinic editable in Rebate Master.
 - **STAT priority adds an implicit $125** when no STAT service is in the case row. No admin fees.
 - **OPD prices are flat across all clinics** (no per-clinic discounts modeled). From comp-app's `STD_PRICES`.
-- **OnePlace flex contracts strip the leading zero** in the Ref No / OPDAdd, but scan contracts keep all leading zeros — matches the SaaSAnt templates.
+- **OnePlace flex contracts strip the leading zero** in the Ref No / OPDAdd, but scan contracts keep all leading zeros — matches the SaasAnt templates.
 - **NewLane + OnePlace remittances split by cents** (whole-dollar = scan, non-round = flex). GA = all flex.
-- **Unique `Ref No (Receive Payment No)` per row is mandatory** — duplicate refs collapse all rows onto the first customer in SaaSAnt (the GA bug). Every builder enforces this via `saasant.assert_unique_refs`.
+- **Unique `Ref No (Receive Payment No)` per row is mandatory** — duplicate refs collapse all rows onto the first customer in SaasAnt (the GA bug). Every builder enforces this via `saasant.assert_unique_refs`.
 - **Direct-bill overage invoices get VOIDED after sending** (SOP-6). The app generates the invoice; voiding is a manual QBO step. The page surfaces this as coaching.
 - **No refunds on FLEX overpayments** (SOP-12, Marty policy). Apply to future overages.
 - **The app generates files; humans approve and upload.** Third-party isolation. No direct QBO writes.
@@ -156,7 +156,7 @@ Full explainer in `docs/FLEX_PROGRAM_EXPLAINED.md`.
 3. **OPD live API:** today is file upload only. Xavier Vera's warehouse system (`oncura-partners-warehouse-system`) ingests OPD via OQL exports — when his Mendix sync stabilizes, swap `opd_adapter` to fetch from that warehouse API instead of CSV upload. Adapter is designed so this is a small change.
 4. **`*Discounted*` service variants** in OPD case-grid fall to `$0/other` — should either be added to `service_prices.json` or have a derivation rule (base × discount %).
 5. **Rancho Pet Cure conflict** in `name_map.json`: currently mapped to "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital" (user's live resolver entry), but the earlier flex template mapped it to "Baseline Animal Hospital". Confirm.
-6. **Extend ledger dedup to Stages 2 & 3 (task #21):** Stage 1 dedups payment imports already. Stages 2 (credit memos) and 3 (recapture invoices) don't record what they emit, so re-running them could double-post to QBO via different SaaSAnt ref numbers. Same fingerprint pattern, applied to two more emission points.
+6. **Extend ledger dedup to Stages 2 & 3 (task #21):** Stage 1 dedups payment imports already. Stages 2 (credit memos) and 3 (recapture invoices) don't record what they emit, so re-running them could double-post to QBO via different SaasAnt ref numbers. Same fingerprint pattern, applied to two more emission points.
 
 ## Running + pre-push checks
 
