@@ -285,7 +285,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             if b1.button("◀ Back to setup", key="remit_upload_back", use_container_width=True):
                 SS["remit_step"] = 0
                 st.rerun()
-            if b2.button("🔄 Set up new import", key="remit_upload_reset",
+            if b2.button("Set up new import", key="remit_upload_reset",
                          use_container_width=True,
                          help="Clear the uploaded file and start fresh — use this between back-to-back remittances."):
                 # Reset everything for a fresh import
@@ -642,10 +642,23 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                         "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
                     )
 
+            # Bottom-of-page "Set up new import" — same handler as the top-card button,
+            # for operators who've scrolled all the way down and don't want to scroll back.
+            st.divider()
+            if st.button("Set up new import", key="remit_upload_reset_bottom",
+                         use_container_width=True,
+                         help="Clear the uploaded file and start fresh — use this between back-to-back remittances."):
+                for k in ("remit_file", "remit_file_override",
+                          "remit_cust_col", "remit_amt_col", "remit_id_col",
+                          "remit_reissue_ack"):
+                    SS.pop(k, None)
+                SS["remit_step"] = 0
+                st.rerun()
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # STAGE 2 — Monthly Credit Memos
-    # ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 2 — Monthly Credit Memos
+# ═══════════════════════════════════════════════════════════════════════════════
 with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
     SS = st.session_state
 
@@ -714,7 +727,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             if b1.button("◀ Back to setup", key="cred_review_back", use_container_width=True):
                 SS["cred_step"] = 0
                 st.rerun()
-            if b2.button("🔄 Set up new month", key="cred_review_reset",
+            if b2.button("Set up new month", key="cred_review_reset",
                          use_container_width=True,
                          help="Reset year/month/start-ref and start fresh — use this when moving on to the next month."):
                 for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
@@ -915,6 +928,17 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
     **Bulk Upload** → **Credit Memo** → select the file → walk through the wizard.
     """
         )
+
+        # Bottom-of-page "Set up new month" — mirror of the top-card button so an
+        # operator who's scrolled down doesn't have to scroll back up.
+        st.divider()
+        if st.button("Set up new month", key="cred_review_reset_bottom",
+                     use_container_width=True,
+                     help="Reset year/month/start-ref and start fresh — use this when moving on to the next month."):
+            for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
+                SS.pop(k, None)
+            SS["cred_step"] = 0
+            st.rerun()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
@@ -1187,6 +1211,14 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         f"{len(already)} recapture invoice(s) already recorded for this quarter. "
                         "Re-uploading those rows to QBO would duplicate them."
                     )
+                st.divider()
+                st.error(
+                    ":material/priority_high: **IMPORTANT — Confirm these recapture invoices have been imported to QBO.**  "
+                    "Click the button below **only after** you've finished uploading the recapture invoice "
+                    "file to QBO via SaasAnt. This records them in the dedup ledger so re-running Stage 3 "
+                    "for this quarter can't double-post.",
+                    icon=":material/warning:",
+                )
                 if st.button(
                     f"Mark {len(udf)} recapture invoice(s) as imported",
                     key="w_recap_mark_unused", type="primary",
@@ -1323,6 +1355,15 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                                 f"**{len(already_direct)} direct-bill invoice(s) already recorded for this period.** "
                                 f"Re-uploading them to QBO will double-bill — review the download before importing."
                             )
+                    if not didf.empty:
+                        st.divider()
+                        st.error(
+                            ":material/priority_high: **IMPORTANT — Confirm these direct-bill invoices have been imported to QBO.**  "
+                            "Click the button below **only after** you've finished uploading the direct-bill "
+                            "invoice file to QBO via SaasAnt **AND** voided each invoice in QBO per SOP-6. "
+                            "This records them in the dedup ledger.",
+                            icon=":material/warning:",
+                        )
                     if not didf.empty and st.button(
                         f"Mark {len(didf)} direct-bill invoice(s) as imported",
                         key="w_recap_mark_direct", type="primary",
@@ -1407,6 +1448,15 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                                 f"**{len(already_partner)} partner submission(s) already recorded for this period.** "
                                 f"Re-submitting will create a duplicate at OnePlace — review before sending."
                             )
+                    if not pdf.empty:
+                        st.divider()
+                        st.error(
+                            ":material/priority_high: **IMPORTANT — Confirm this submission has been sent to OnePlace.**  "
+                            "Click the button below **only after** you've emailed the partner-submission "
+                            "file to OnePlace (before the cutoff date). This records the submission in the "
+                            "dedup ledger.",
+                            icon=":material/warning:",
+                        )
                     if not pdf.empty and st.button(
                         f"Mark {len(pdf)} partner-submission row(s) as submitted",
                         key="w_recap_mark_partner", type="primary",
@@ -1466,3 +1516,16 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             st.rerun()
     else:
         nav_n.markdown("**Done ✓**")
+
+    # Bottom-of-page "Set up new cycle" — clears the file, credit offsets, and
+    # returns to the first wizard step. Use this between back-to-back monthly runs.
+    st.divider()
+    if st.button("Set up new cycle", key="w_recap_reset_bottom",
+                 use_container_width=True,
+                 help="Clear the uploaded file + credit offsets and start fresh — use this between monthly Stage 3 runs."):
+        for k in ("recap_uploaded_bytes", "recap_uploaded_name", "recap_credit_offsets",
+                  "recap_pipe_error", "recap_pipe_traceback",
+                  "w_recap_file", "w_recap_offsets_editor"):
+            SS.pop(k, None)
+        SS.recap_step = 0
+        st.rerun()
