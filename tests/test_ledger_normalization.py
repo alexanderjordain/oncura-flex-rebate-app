@@ -48,6 +48,23 @@ def test_partial_fingerprint_distinguishes_amount():
     assert a != b
 
 
+def test_fingerprint_tolerates_none_amount():
+    """A bad amount (None / NaN / unparseable string) must NOT crash — fingerprint with
+    cents=0 and let downstream zero-filtering handle the row. Patch-review SEV-2 fix."""
+    # All of these used to raise TypeError or ValueError; now they return a stable hash.
+    ledger.fingerprint("OnePlace", "flex", "X", dt.date(2026, 5, 1), None)
+    ledger.fingerprint("OnePlace", "flex", "X", dt.date(2026, 5, 1), float("nan"))
+    ledger.fingerprint("OnePlace", "flex", "X", dt.date(2026, 5, 1), "")
+    ledger.fingerprint("OnePlace", "flex", "X", dt.date(2026, 5, 1), "garbage")
+
+
+def test_partial_fingerprint_tolerates_none_amount():
+    ledger.partial_fingerprint("OnePlace", "flex", "X", None)
+    ledger.partial_fingerprint("OnePlace", "flex", "X", float("nan"))
+    ledger.partial_fingerprint("OnePlace", "flex", "X", "")
+    ledger.partial_fingerprint("OnePlace", "flex", "X", "garbage")
+
+
 def test_check_possible_reissues_empty_when_ledger_empty(monkeypatch):
     monkeypatch.setattr(ledger, "load", lambda: ({"files": [], "payments": []}, None))
     incoming = [{"kind": "flex", "contract": "4001017",

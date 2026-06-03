@@ -165,7 +165,7 @@ def save_json(rel_path: str, data, message: str, sha: str | None = None, retries
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-_KEY_FIELDS = ("clinic_name", "id", "name", "key")
+_KEY_FIELDS = ("clinic_name", "id", "name", "key", "fingerprint", "sha256")
 
 
 def _merge_smart(remote, user):

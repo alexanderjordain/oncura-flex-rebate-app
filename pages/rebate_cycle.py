@@ -127,6 +127,18 @@ if step_key == "setup":
         # Mirror widget state into the persistent key (handles ✕ removals)
         SS["selected_months"] = widget_value
 
+        # If the user changed the month selection, the cached results + review ack
+        # belong to a different cycle. Invalidate both so Step 3 recomputes and the
+        # review gate fires again. Without this, a Step 3 ack from a prior month set
+        # could survive a subsequent reduce-to-different-months and let the user
+        # skip the review on a new computation.
+        prev_months = SS.get("_prev_selected_months")
+        cur_months = tuple(SS["selected_months"])
+        if prev_months is not None and prev_months != cur_months:
+            SS["cycle_results"] = None
+            SS["cycle_review_acked"] = False
+        SS["_prev_selected_months"] = cur_months
+
         if not SS["selected_months"]:
             st.info("Add at least one month above to continue.")
 
@@ -152,6 +164,7 @@ elif step_key == "upload":
             SS["cycle_uploaded_name"]  = up.name
             # Invalidate any prior computed results — they were for a different file
             SS["cycle_results"] = None
+            SS["cycle_review_acked"] = False
 
         if SS.get("cycle_uploaded_name"):
             st.success(f"Uploaded: **{SS['cycle_uploaded_name']}** "

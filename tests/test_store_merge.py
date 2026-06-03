@@ -81,6 +81,48 @@ def test_top_level_dict_with_clinic_list_nested():
     assert out["rate_defaults"]["ultrasound_finance"] == 0.11
 
 
+def test_ledger_payment_list_merge_by_fingerprint():
+    """Two operators run Stage 1 for different remittances concurrently. Both batches
+    append payments with unique `fingerprint` keys. The merge must preserve BOTH —
+    NOT silently drop the loser's batch. Patch-review agent SEV-1 finding."""
+    remote = [
+        {"fingerprint": "alex_payment_1", "company": "OnePlace",
+         "kind": "flex", "contract": "4001017", "amount": 100.0},
+    ]
+    user = [
+        {"fingerprint": "tanya_payment_1", "company": "NewLane",
+         "kind": "flex", "contract": "5001234", "amount": 200.0},
+    ]
+    merged = _merge_list(remote, user)
+    # Critical: alex_payment_1 must survive even though it's not in the user's list.
+    fps = {p["fingerprint"] for p in merged}
+    assert fps == {"alex_payment_1", "tanya_payment_1"}
+
+
+def test_ledger_files_list_merge_by_sha256():
+    """Same as fingerprint test but for the `files` sub-list which uses sha256 as key."""
+    remote = [{"sha256": "fileA_sha", "filename": "remit_a.csv", "company": "OnePlace"}]
+    user = [{"sha256": "fileB_sha", "filename": "remit_b.csv", "company": "NewLane"}]
+    merged = _merge_list(remote, user)
+    shas = {f["sha256"] for f in merged}
+    assert shas == {"fileA_sha", "fileB_sha"}
+
+
+def test_top_level_ledger_merge_preserves_both_operators_batches():
+    """End-to-end: a full processed_payments.json shape under concurrent Stage 1 runs."""
+    remote = {
+        "files": [{"sha256": "alex_file", "filename": "alex.csv", "company": "OnePlace"}],
+        "payments": [{"fingerprint": "alex_fp1", "company": "OnePlace", "amount": 100.0}],
+    }
+    user = {
+        "files": [{"sha256": "tanya_file", "filename": "tanya.csv", "company": "NewLane"}],
+        "payments": [{"fingerprint": "tanya_fp1", "company": "NewLane", "amount": 200.0}],
+    }
+    out = _merge_smart(remote, user)
+    assert {f["sha256"] for f in out["files"]} == {"alex_file", "tanya_file"}
+    assert {p["fingerprint"] for p in out["payments"]} == {"alex_fp1", "tanya_fp1"}
+
+
 def test_service_prices_dict_merge():
     # Two users adding different services to service_prices.json
     remote = {

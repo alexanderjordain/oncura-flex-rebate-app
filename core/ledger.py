@@ -63,16 +63,30 @@ def _normalize_contract(c) -> str:
     return s
 
 
+def _safe_cents(amount) -> int:
+    """Round dollar-amount to cents, tolerating None / NaN / formatted strings.
+    Bad inputs become 0 (the downstream code already filters $0 rows) — never raises."""
+    if amount is None:
+        return 0
+    try:
+        v = float(amount)
+        if v != v:  # NaN check without importing math
+            return 0
+        return int(round(v * 100))
+    except (TypeError, ValueError):
+        return 0
+
+
 def fingerprint(company: str, kind: str, contract, payment_date, amount) -> str:
     """Stable hash of a payment's identifying fields."""
-    cents = int(round(float(amount) * 100))
+    cents = _safe_cents(amount)
     key = f"{(company or '').strip().lower()}|{kind}|{_normalize_contract(contract)}|{_date_iso(payment_date)}|{cents}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
 def partial_fingerprint(company: str, kind: str, contract, amount) -> str:
     """Fingerprint excluding payment_date — for detecting possible reissues."""
-    cents = int(round(float(amount) * 100))
+    cents = _safe_cents(amount)
     key = f"{(company or '').strip().lower()}|{kind}|{_normalize_contract(contract)}|{cents}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
