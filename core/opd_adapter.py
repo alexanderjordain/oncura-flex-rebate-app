@@ -107,12 +107,25 @@ def _coerce_date(v):
 
 
 def coerce_amount(v):
-    """Best-effort dollar parser: handles None, numeric, '$1,234.56', '(123)' negatives, ''."""
+    """Best-effort dollar parser: handles None, numeric, '$1,234.56', '(123)' negatives, ''.
+
+    Also strips invisible unicode noise that can ride in from email copy-paste —
+    NBSP (\\xa0) and zero-width space (\\u200b) — otherwise a single ZWSP at the
+    end of an otherwise valid '$412.37​' would silently parse to 0 and the
+    row would be dropped.
+    """
     if v is None or (isinstance(v, float) and pd.isna(v)):
         return 0.0
     if isinstance(v, (int, float)):
         return float(v)
-    s = str(v).strip().replace("$", "").replace(",", "")
+    s = (str(v)
+         .replace("\xa0", "")   # non-breaking space
+         .replace("​", "") # zero-width space
+         .replace("‌", "") # zero-width non-joiner
+         .replace("‍", "") # zero-width joiner
+         .replace("﻿", "") # BOM if it rode in on the first cell
+         .strip()
+         .replace("$", "").replace(",", ""))
     neg = s.startswith("(") and s.endswith(")")
     s = s.strip("()")
     try:
