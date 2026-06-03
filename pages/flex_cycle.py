@@ -170,8 +170,6 @@ with tab_overview, safe_stage("Overview"):
    group whose quarter is ending.
 2. Review recapture totals (internal entries; not mailed) and the overage list.
 3. For each overage: submit to finance partner or direct-bill per SOP-6.
-4. The Accounting Manager then un-applies / re-applies in QBO per SOP-11 —
-   manual, not done by the app.
             """
         )
 
@@ -186,11 +184,6 @@ with tab_overview, safe_stage("Overview"):
             "**Wrong month in Stage 2.** Pick the month payments arrived FOR, "
             "not the month they were *received in*.",
             icon=":material/calendar_month:",
-        )
-        st.error(
-            "**Manual QBO un-apply / re-apply at quarter-end** (SOP-11). The "
-            "app generates files; the Accounting Manager does this step in QBO.",
-            icon=":material/build:",
         )
 
     st.caption(
