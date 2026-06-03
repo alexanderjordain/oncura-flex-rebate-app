@@ -199,361 +199,420 @@ with tab_overview, safe_stage("Overview"):
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
     SS = st.session_state
-    st.caption("Upload a finance-company remittance — produces the SaasAnt receive-payments "
-               "(and scan invoices + scan payments for OnePlace / NewLane).")
+
+    # Two-step wizard: setup metadata first (company, dates, invoice no) so it's
+    # mandatory and intentional, then upload the file. Prevents the failure
+    # mode where an operator uploads first and then realizes they had the wrong
+    # company/date selected.
+    REMIT_STEPS = [("setup", "Cycle setup"), ("upload", "Upload & process")]
+    SS.setdefault("remit_step", 0)
+    SS["remit_step"] = max(0, min(SS["remit_step"], len(REMIT_STEPS) - 1))
+    step_key, step_label = REMIT_STEPS[SS["remit_step"]]
+
+    st.markdown(f"**Step {SS['remit_step'] + 1} of {len(REMIT_STEPS)} — {step_label}**")
+    st.progress((SS['remit_step'] + 1) / len(REMIT_STEPS))
+    st.caption(
+        "  ·  ".join(
+            (f"**{lbl}**" if i == SS["remit_step"] else f":gray[{lbl}]")
+            for i, (_, lbl) in enumerate(REMIT_STEPS)
+        )
+    )
+
+    # Persistent setup keys — set defaults once so step 2 can read them even
+    # when the step 1 widgets aren't rendered.
+    SS.setdefault("remit_company", "NewLane")
+    SS.setdefault("remit_pay_date", dt.date.today())
+    SS.setdefault("remit_inv_date", dt.date.today())
+    SS.setdefault("remit_start_inv", 50000)
 
     nm_base = loaders.name_map()
     session_adds = st.session_state.setdefault("name_map_additions", {})
     nm = {**nm_base, "map": {**nm_base.get("map", {}), **session_adds}}
 
-    mc1, mc2 = st.columns([1, 2])
-    company = mc1.selectbox("Finance company", ["NewLane", "OnePlace", "GreatAmerica"], key="remit_company")
-    pay_date = mc2.date_input("Payment date", value=dt.date.today(), key="remit_pay_date")
-
-    if company == "GreatAmerica":
-        # GA is all-flex (Maintenance only) -> no scan invoices, so Invoice Date and the
-        # scan Invoice-No starting ref are unused. Hide them to declutter the form.
-        inv_date = pay_date
-        start_inv = 50000
-    else:
-        c1, c2 = st.columns(2)
-        inv_date = c1.date_input("Invoice date (scan packages)", value=dt.date.today(), key="remit_inv_date")
-        start_inv = int(c2.number_input("Starting scan Invoice No (QBO max + 1)",
-                                        value=50000, step=1, key="remit_start_inv"))
-
-    meta = flex_finance.COMPANY_META.get(company, {})
-    st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
-             + (f"  ·  scan label: **{meta.get('scan_label')}**" if meta.get("scan_label") else ""))
-
-    if company == "GreatAmerica":
-        split = "all_flex"
-    else:
-        # OnePlace + NewLane: whole-dollar = scan, odd-cents = flex
-        # (Confirmed against May OPC pass-through file: Easthaven $595.00 + Innovative
-        # Animal Care $295.00 both have "04..." contracts but are scan packages —
-        # SOP-9's "04 = FLEX" prefix rule has exceptions, cents is the reliable signal.)
-        split = "by_cents"
-        st.caption(f"{company} splits flex vs scan by cents: whole-dollar = scan, odd-cents = flex.")
-
-    up = st.file_uploader("Remittance file (CSV/XLSX)", type=["csv", "xlsx", "xls"], key="remit_file")
-    if up is None:
-        st.info("Upload the finance company's remittance.")
-    else:
-        file_bytes = up.getvalue()
-        prior_file = ledger.check_file_seen(file_bytes)
-        if prior_file:
-            st.error(
-                f"**This exact file was already processed on "
-                f"{prior_file.get('uploaded_at', '?')[:10]}** "
-                f"({prior_file.get('row_count', '?')} rows, company "
-                f"{prior_file.get('company', '?')}, filename "
-                f"`{prior_file.get('filename', '?')}`). Re-uploading would risk "
-                f"double-posting payments to QBO. Row-level dedup will still skip already-imported "
-                f"payments below — but verify before downloading."
-            )
-            if not st.checkbox(
-                "I've verified this is intentional (e.g., recovering from a partial earlier import). "
-                "Proceed with row-level dedup.",
-                key="remit_file_override",
-            ):
-                st.stop()
-
-        raw = opd_adapter.read_remittance(up)
-        cols = list(raw.columns)
-        st.write(f"{len(raw):,} rows.")
-        g = flex_finance.guess_columns(company, cols)
-        mc1, mc2, mc3 = st.columns(3)
-        customer_col = mc1.selectbox("Customer name column", cols, index=cols.index(g["customer"]), key="remit_cust_col")
-        amount_col = mc2.selectbox("Amount column", cols, index=cols.index(g["amount"]), key="remit_amt_col")
-        id_label = "Payment Invoice Number" if company == "GreatAmerica" else "Contract # / ID"
-        id_col = mc3.selectbox(f"{id_label} column", cols, index=cols.index(g["id"]), key="remit_id_col")
-
-        res = flex_finance.process_remittance(
-            raw, company,
-            customer_col=customer_col, amount_col=amount_col, id_col=id_col,
-            payment_date=pay_date, invoice_date=inv_date, start_invoice_no=start_inv,
-            name_map=nm, split=split,
-        )
-
-        # ── Row-level dedup against the processed-payments ledger ──────────────
-        def _row_payment_dicts(df, kind):
-            if df is None or df.empty or id_col not in df.columns:
-                return []
-            out = []
-            for i in range(len(df)):
-                amt_val = df["Amount"].iloc[i] if "Amount" in df.columns else df[amount_col].iloc[i]
-                out.append({
-                    "kind": kind,
-                    "contract": df[id_col].iloc[i],
-                    "qb_customer": df["Customer"].iloc[i] if "Customer" in df.columns else "",
-                    "payment_date": pay_date,
-                    "amount": amt_val,
-                })
-            return out
-
-        flex_rows = _row_payment_dicts(res["flex_payments"], "flex")
-        scan_rows = _row_payment_dicts(res["scan_payments"], "scan")
-        all_rows = flex_rows + scan_rows
-        all_fps = [ledger.fingerprint(company, r["kind"], r["contract"], r["payment_date"], r["amount"])
-                   for r in all_rows]
-        seen_fps = ledger.check_payments_seen(all_fps)
-
-        # ── Reissue check: rows that weren't exact-duplicates but match an existing
-        #    ledger row on (company, kind, contract, amount) with a DIFFERENT payment_date.
-        #    These look like reissues — same money, different date — and shouldn't be
-        #    silently treated as net-new. Surface for confirm-and-proceed.
-        novel_rows = [r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps]
-        possible_reissues = ledger.check_possible_reissues(company, novel_rows) if novel_rows else []
-        if possible_reissues:
-            st.warning(
-                f":material/warning: **{len(possible_reissues)} payment(s) look like possible reissues** — "
-                "same company / contract / amount as a prior ledger row but a different payment date. "
-                "Confirm these are intentional reissues, not accidental re-imports of the same money "
-                "with a re-typed date.",
-            )
-            with st.expander("Show possible reissues", expanded=False):
-                for r in possible_reissues:
-                    inc = r["incoming"]
-                    ex = r["existing"][0]
-                    st.markdown(
-                        f"- **{inc.get('qb_customer') or '(unmapped)'}** · "
-                        f"contract `{inc.get('contract')}` · "
-                        f"${float(inc['amount']):,.2f} · "
-                        f"prior payment date **`{ex['payment_date']}`** → "
-                        f"new payment date **`{ledger._date_iso(inc['payment_date'])}`**"
-                    )
-            SS["remit_reissue_ack"] = st.checkbox(
-                "I confirm these are intentional reissues — proceed.",
-                value=SS.get("remit_reissue_ack", False),
-                key="remit_reissue_ack_widget",
-            )
-            if not SS["remit_reissue_ack"]:
-                st.info("Tick the box above once you've verified the reissues to enable the downloads.")
-                st.stop()
-        else:
-            SS["remit_reissue_ack"] = True
-
-        if seen_fps:
-            skipped_flex = sum(1 for fp, r in zip(all_fps[:len(flex_rows)], flex_rows) if fp in seen_fps)
-            skipped_scan = sum(1 for fp, r in zip(all_fps[len(flex_rows):], scan_rows) if fp in seen_fps)
-            st.warning(
-                f"**Ledger already contains {len(seen_fps)} of these payments** "
-                f"(flex: {skipped_flex}, scan: {skipped_scan}). They've been removed from the "
-                f"downloads below so you don't double-post."
-            )
-            # Filter the output dataframes in-place
-            keep_flex = [i for i, fp in enumerate(all_fps[:len(flex_rows)]) if fp not in seen_fps]
-            keep_scan = [i for i, fp in enumerate(all_fps[len(flex_rows):]) if fp not in seen_fps]
-            if not res["flex_payments"].empty:
-                res["flex_payments"] = res["flex_payments"].iloc[keep_flex].reset_index(drop=True)
-            if not res["scan_payments"].empty:
-                res["scan_payments"] = res["scan_payments"].iloc[keep_scan].reset_index(drop=True)
-                # Scan invoices are 1:1 with scan payments by position — filter together
-                if not res["scan_invoices"].empty:
-                    res["scan_invoices"] = res["scan_invoices"].iloc[keep_scan].reset_index(drop=True)
-            # Rebuild summary metrics from the filtered frames
-            res["summary"]["flex_count"] = len(res["flex_payments"])
-            res["summary"]["scan_count"] = len(res["scan_payments"])
-            res["summary"]["flex_total"] = round(float(res["flex_payments"]["Amount"].sum()), 2) if not res["flex_payments"].empty else 0.0
-            res["summary"]["scan_total"] = round(float(res["scan_payments"]["Amount"].sum()), 2) if not res["scan_payments"].empty else 0.0
-            res["summary"]["total"] = round(res["summary"]["flex_total"] + res["summary"]["scan_total"], 2)
-
-        s = res["summary"]
-        unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
-
-        # ── Flex/scan crossover sanity check: NewLane and OnePlace split by cents
-        #    (whole-dollar = scan, odd-cents = flex). A 100/0 or 0/100 ratio is
-        #    almost always a sign of bad data or wrong split rule. GreatAmerica is
-        #    intentionally all-flex (Maintenance only) — skip the check there.
-        if company in ("OnePlace", "NewLane") and s["total"] > 0:
-            flex_pct = s["flex_total"] / s["total"] if s["total"] else 0
-            scan_pct = s["scan_total"] / s["total"] if s["total"] else 0
-            if flex_pct >= 0.97 or scan_pct >= 0.97:
-                dominant = "flex" if flex_pct >= 0.97 else "scan"
-                st.warning(
-                    f":material/warning: **Unusual flex/scan split**: {flex_pct*100:.1f}% flex / "
-                    f"{scan_pct*100:.1f}% scan for this {company} remittance. "
-                    f"OnePlace and NewLane usually run a mix; an all-{dominant} file may mean "
-                    "the wrong split rule was applied or the file is mis-classified. "
-                    "Cross-check against the source remittance before proceeding."
-                )
-
-        # ── Intra-file total check: raw file rows/amounts vs. what the app is importing
-        # Exclude rows where the contract/ID column is blank — those are summary/total/footnote
-        # rows in the source file (e.g., OnePlace's "Pass-Thru received: $X" line at the
-        # bottom). Real payment rows always have a contract #.
-        raw_payment_mask = raw[id_col].astype(str).str.strip().replace({'nan': '', 'None': ''}).ne('')
-        raw_amounts = raw.loc[raw_payment_mask, amount_col].map(opd_adapter.coerce_amount)
-        raw_total = round(float(raw_amounts.sum()), 2)
-        raw_nonzero = int((raw_amounts != 0).sum())
-        diff = round(raw_total - s["total"], 2)
-        deduped_amount = sum(float(r["amount"]) for r, fp in zip(all_rows, all_fps) if fp in seen_fps)
-        if abs(diff) > 0.01 or raw_nonzero != (s["flex_count"] + s["scan_count"]):
-            # Quiet diagnostic only — operator can sanity-check what the app counted
-            # against what the file says. The dollar signs are escaped so Streamlit's
-            # markdown doesn't interpret $...$ as inline LaTeX and mangle the numbers.
-            st.caption(
-                f"File: {raw_nonzero} non-zero rows totalling **\\${raw_total:,.2f}**  ·  "
-                f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **\\${s['total']:,.2f}**  ·  "
-                f"Δ **\\${diff:,.2f}** (of which ledger dedup accounts for \\${deduped_amount:,.2f})"
-            )
-
-        if s["scan_count"] > 0:
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
-            m2.metric("Scan", f"{s['scan_count']}  (${s['scan_total']:,.2f})")
-            m3.metric("Total", f"${s['total']:,.2f}")
-            m4.metric("Next invoice", s["next_invoice_no"])
-        else:
-            m1, m2 = st.columns(2)
-            m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
-            m2.metric("Total", f"${s['total']:,.2f}")
-
-        if unmapped:
-            st.divider()
-            st.subheader(f"Resolve {len(unmapped)} unmatched customer name(s)")
-            st.caption("Copy the legal name (click the copy icon) → paste into QuickBooks → "
-                       "copy the Display Name → paste it on the right. Saved mappings persist.")
-            qb_inputs = {}
-            hc1, hc2 = st.columns(2)
-            hc1.markdown("**Legal name** (hover → click copy)")
-            hc2.markdown("**QuickBooks display name**")
-            for i, legal in enumerate(unmapped):
-                cc1, cc2 = st.columns(2)
-                with cc1:
-                    st.code(legal, language=None)
-                with cc2:
-                    qb_inputs[legal] = st.text_input(
-                        "qb", key=f"qbfix_{i}", label_visibility="collapsed",
-                        placeholder="paste QuickBooks display name",
-                    )
-            if st.button("Save mappings", type="primary", key="remit_save_map"):
-                new_pairs = {legal.strip(): str(qb).strip() for legal, qb in qb_inputs.items() if str(qb).strip()}
-                if new_pairs:
-                    st.session_state["name_map_additions"] = {**session_adds, **new_pairs}
-                    persist = {**nm_base, "map": {**nm_base.get("map", {}), **st.session_state["name_map_additions"]}}
-                    ok, _ = store.save_json("name_map.json", persist, f"Add {len(new_pairs)} QB name mapping(s)")
-                    loaders.name_map.clear()
-                    st.success(
-                        f"Saved {len(new_pairs)} mapping(s) " +
-                        ("— committed to the repo for everyone." if ok else "— applied now and stored locally. Set GITHUB_TOKEN on Cloud to share.")
-                    )
-                    st.rerun()
-                else:
-                    st.warning("Enter at least one QuickBooks display name first.")
-            st.warning("Resolve the names above before uploading these imports.")
-
-        st.divider()
-        st.subheader("Flex receive payments")
-        if not res["flex_payments"].empty:
-            st.dataframe(res["flex_payments"], use_container_width=True, height=240)
-            st.download_button("Download flex payments (xlsx)",
-                               saasant.to_xlsx_bytes(res["flex_payments"], "FlexPayments"),
-                               file_name=f"{company}_FlexPayments_{pay_date}.xlsx",
-                               key="remit_dl_flex")
-        else:
-            st.caption("No flex rows.")
-
-        if not res["scan_invoices"].empty:
-            st.subheader("Scan-package invoices (upload BEFORE scan payments)")
-            st.dataframe(res["scan_invoices"], use_container_width=True, height=220)
-            st.download_button("Download scan invoices (xlsx)",
-                               saasant.to_xlsx_bytes(res["scan_invoices"], "ScanInvoices"),
-                               file_name=f"{company}_ScanInvoices_{inv_date}.xlsx",
-                               key="remit_dl_inv")
-            st.subheader("Scan-package receive payments")
-            st.dataframe(res["scan_payments"], use_container_width=True, height=220)
-            st.download_button("Download scan payments (xlsx)",
-                               saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments"),
-                               file_name=f"{company}_ScanPayments_{pay_date}.xlsx",
-                               key="remit_dl_scan")
-        st.markdown(
-            """
-**Uploading to SaasAnt**
-1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
-2. Click **Bulk Upload**.
-3. Pick the right import type for each file you downloaded above:
-   - Scan-package **invoices** → select **Invoice**
-   - Flex receive payments → select **Received Payments**
-   - Scan receive payments → select **Received Payments**
-4. Walk through the SaasAnt wizard for each file.
-
-**Order matters:** upload **scan invoices first**, then flex payments, then scan payments.
-The scan payments reference the scan invoices by Invoice No, so the invoices must exist
-in QBO first. Run **one SaasAnt job at a time** — wait for each to complete before starting
-the next. After all uploads, the combined total should match the bank-feed deposit.
-"""
-        )
-
-        # ── Mark batch processed: write to ledger so future re-uploads are caught ────
-        st.divider()
-        st.markdown("### Confirm this batch has been imported to QBO")
+    if step_key == "setup":
         st.caption(
-            "Click **after** you've uploaded the files above to SaasAnt. This records the "
-            "payments in the dedup ledger so re-uploading this remittance later won't double-post."
+            "Lock in the company and dates for this batch. The file uploader "
+            "appears on the next step once these are set."
         )
-        rows_to_record = [
-            r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
-        ]
-        ack_disabled = len(rows_to_record) == 0
-        if ack_disabled:
-            st.info("Nothing new to record (all rows were already in the ledger).")
-        elif st.button(
-            f"Mark {len(rows_to_record)} payment(s) as imported",
-            key="remit_mark_processed", type="primary",
-        ):
-            ok, added, msg = ledger.record_batch(
-                file_content=file_bytes,
-                filename=up.name,
-                company=company,
-                payments=rows_to_record,
-                note=f"Stage 1 / {company} / pay_date={pay_date}",
+        mc1, mc2 = st.columns([1, 2])
+        company = mc1.selectbox("Finance company", ["NewLane", "OnePlace", "GreatAmerica"], key="remit_company")
+        pay_date = mc2.date_input("Payment date", key="remit_pay_date")
+
+        if company == "GreatAmerica":
+            # GA is all-flex (Maintenance only) -> no scan invoices, so Invoice Date and the
+            # scan Invoice-No starting ref are unused. Hide them to declutter the form.
+            st.caption("GreatAmerica is all-flex — no scan invoice date or starting invoice number needed.")
+        else:
+            c1, c2 = st.columns(2)
+            c1.date_input("Invoice date (scan packages)", key="remit_inv_date")
+            c2.number_input("Starting scan Invoice No (QBO max + 1)",
+                            step=1, key="remit_start_inv")
+
+        meta = flex_finance.COMPANY_META.get(company, {})
+        st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
+                 + (f"  ·  scan label: **{meta.get('scan_label')}**" if meta.get("scan_label") else ""))
+
+        if company != "GreatAmerica":
+            # OnePlace + NewLane: whole-dollar = scan, odd-cents = flex
+            # (Confirmed against May OPC pass-through file: Easthaven $595.00 + Innovative
+            # Animal Care $295.00 both have "04..." contracts but are scan packages —
+            # SOP-9's "04 = FLEX" prefix rule has exceptions, cents is the reliable signal.)
+            st.caption(f"{company} splits flex vs scan by cents: whole-dollar = scan, odd-cents = flex.")
+
+        st.divider()
+        if st.button("Next ▶  Upload remittance", type="primary", key="remit_setup_next"):
+            SS["remit_step"] = 1
+            st.rerun()
+
+    elif step_key == "upload":
+        # Read setup values from session_state (set in step 1).
+        company = SS["remit_company"]
+        pay_date = SS["remit_pay_date"]
+        if company == "GreatAmerica":
+            inv_date = pay_date
+            start_inv = 50000
+            split = "all_flex"
+        else:
+            inv_date = SS["remit_inv_date"]
+            start_inv = int(SS["remit_start_inv"])
+            split = "by_cents"
+
+        # Setup recap
+        with st.container(border=True):
+            r1, r2, r3, r4 = st.columns(4)
+            r1.markdown(f"**Company**<br>{company}", unsafe_allow_html=True)
+            r2.markdown(f"**Payment date**<br>{pay_date}", unsafe_allow_html=True)
+            r3.markdown(
+                f"**Invoice date**<br>{inv_date if company != 'GreatAmerica' else '—'}",
+                unsafe_allow_html=True,
             )
-            # Append to immutable audit manifest alongside the ledger record
-            audit_outputs = []
-            for label, df_out in (
-                ("flex_payments", res["flex_payments"]),
-                ("scan_invoices", res["scan_invoices"]),
-                ("scan_payments", res["scan_payments"]),
-            ):
-                if df_out is not None and not df_out.empty:
-                    audit_outputs.append({
-                        "name": label,
-                        "sha256": audit.output_hash_df(df_out),
-                        "row_count": len(df_out),
-                        "total": round(float(df_out["Amount"].sum()), 2) if "Amount" in df_out.columns else None,
+            r4.markdown(
+                f"**Start invoice #**<br>{start_inv if company != 'GreatAmerica' else '—'}",
+                unsafe_allow_html=True,
+            )
+            if st.button("◀ Back to setup", key="remit_upload_back"):
+                SS["remit_step"] = 0
+                st.rerun()
+
+        up = st.file_uploader("Remittance file (CSV/XLSX)", type=["csv", "xlsx", "xls"], key="remit_file")
+        if up is None:
+            st.info("Upload the finance company's remittance.")
+        else:
+            file_bytes = up.getvalue()
+            prior_file = ledger.check_file_seen(file_bytes)
+            if prior_file:
+                st.error(
+                    f"**This exact file was already processed on "
+                    f"{prior_file.get('uploaded_at', '?')[:10]}** "
+                    f"({prior_file.get('row_count', '?')} rows, company "
+                    f"{prior_file.get('company', '?')}, filename "
+                    f"`{prior_file.get('filename', '?')}`). Re-uploading would risk "
+                    f"double-posting payments to QBO. Row-level dedup will still skip already-imported "
+                    f"payments below — but verify before downloading."
+                )
+                if not st.checkbox(
+                    "I've verified this is intentional (e.g., recovering from a partial earlier import). "
+                    "Proceed with row-level dedup.",
+                    key="remit_file_override",
+                ):
+                    st.stop()
+
+            raw = opd_adapter.read_remittance(up)
+            cols = list(raw.columns)
+            st.write(f"{len(raw):,} rows.")
+            g = flex_finance.guess_columns(company, cols)
+            mc1, mc2, mc3 = st.columns(3)
+            customer_col = mc1.selectbox("Customer name column", cols, index=cols.index(g["customer"]), key="remit_cust_col")
+            amount_col = mc2.selectbox("Amount column", cols, index=cols.index(g["amount"]), key="remit_amt_col")
+            id_label = "Payment Invoice Number" if company == "GreatAmerica" else "Contract # / ID"
+            id_col = mc3.selectbox(f"{id_label} column", cols, index=cols.index(g["id"]), key="remit_id_col")
+
+            res = flex_finance.process_remittance(
+                raw, company,
+                customer_col=customer_col, amount_col=amount_col, id_col=id_col,
+                payment_date=pay_date, invoice_date=inv_date, start_invoice_no=start_inv,
+                name_map=nm, split=split,
+            )
+
+            # ── Row-level dedup against the processed-payments ledger ──────────────
+            def _row_payment_dicts(df, kind):
+                if df is None or df.empty or id_col not in df.columns:
+                    return []
+                out = []
+                for i in range(len(df)):
+                    amt_val = df["Amount"].iloc[i] if "Amount" in df.columns else df[amount_col].iloc[i]
+                    out.append({
+                        "kind": kind,
+                        "contract": df[id_col].iloc[i],
+                        "qb_customer": df["Customer"].iloc[i] if "Customer" in df.columns else "",
+                        "payment_date": pay_date,
+                        "amount": amt_val,
                     })
-            audit.record_cycle(
-                cycle_type="stage1_finance_payment",
-                approver=auth.current_role(),
-                year=pay_date.year, month=pay_date.month,
-                params={
-                    "company": company,
-                    "payment_date": pay_date.isoformat(),
-                    "invoice_date": inv_date.isoformat(),
-                    "start_invoice_no": start_inv,
-                    "skipped_already_seen": len(seen_fps),
-                },
-                source_file={
-                    "name": up.name,
-                    "sha256": ledger.file_hash(file_bytes),
-                    "size_bytes": len(file_bytes),
-                },
-                outputs=audit_outputs,
-                note=f"{added} new payment(s) recorded; {len(seen_fps)} already in ledger",
-            )
-            if ok:
-                st.success(f"Recorded {added} payment(s) in the ledger + audit manifest. {msg}")
-            else:
+                return out
+
+            flex_rows = _row_payment_dicts(res["flex_payments"], "flex")
+            scan_rows = _row_payment_dicts(res["scan_payments"], "scan")
+            all_rows = flex_rows + scan_rows
+            all_fps = [ledger.fingerprint(company, r["kind"], r["contract"], r["payment_date"], r["amount"])
+                       for r in all_rows]
+            seen_fps = ledger.check_payments_seen(all_fps)
+
+            # ── Reissue check: rows that weren't exact-duplicates but match an existing
+            #    ledger row on (company, kind, contract, amount) with a DIFFERENT payment_date.
+            #    These look like reissues — same money, different date — and shouldn't be
+            #    silently treated as net-new. Surface for confirm-and-proceed.
+            novel_rows = [r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps]
+            possible_reissues = ledger.check_possible_reissues(company, novel_rows) if novel_rows else []
+            if possible_reissues:
                 st.warning(
-                    f"Recorded {added} locally (no GitHub commit). On Cloud, this means "
-                    "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
+                    f":material/warning: **{len(possible_reissues)} payment(s) look like possible reissues** — "
+                    "same company / contract / amount as a prior ledger row but a different payment date. "
+                    "Confirm these are intentional reissues, not accidental re-imports of the same money "
+                    "with a re-typed date.",
+                )
+                with st.expander("Show possible reissues", expanded=False):
+                    for r in possible_reissues:
+                        inc = r["incoming"]
+                        ex = r["existing"][0]
+                        st.markdown(
+                            f"- **{inc.get('qb_customer') or '(unmapped)'}** · "
+                            f"contract `{inc.get('contract')}` · "
+                            f"${float(inc['amount']):,.2f} · "
+                            f"prior payment date **`{ex['payment_date']}`** → "
+                            f"new payment date **`{ledger._date_iso(inc['payment_date'])}`**"
+                        )
+                SS["remit_reissue_ack"] = st.checkbox(
+                    "I confirm these are intentional reissues — proceed.",
+                    value=SS.get("remit_reissue_ack", False),
+                    key="remit_reissue_ack_widget",
+                )
+                if not SS["remit_reissue_ack"]:
+                    st.info("Tick the box above once you've verified the reissues to enable the downloads.")
+                    st.stop()
+            else:
+                SS["remit_reissue_ack"] = True
+
+            if seen_fps:
+                skipped_flex = sum(1 for fp, r in zip(all_fps[:len(flex_rows)], flex_rows) if fp in seen_fps)
+                skipped_scan = sum(1 for fp, r in zip(all_fps[len(flex_rows):], scan_rows) if fp in seen_fps)
+                st.warning(
+                    f"**Ledger already contains {len(seen_fps)} of these payments** "
+                    f"(flex: {skipped_flex}, scan: {skipped_scan}). They've been removed from the "
+                    f"downloads below so you don't double-post."
+                )
+                # Filter the output dataframes in-place
+                keep_flex = [i for i, fp in enumerate(all_fps[:len(flex_rows)]) if fp not in seen_fps]
+                keep_scan = [i for i, fp in enumerate(all_fps[len(flex_rows):]) if fp not in seen_fps]
+                if not res["flex_payments"].empty:
+                    res["flex_payments"] = res["flex_payments"].iloc[keep_flex].reset_index(drop=True)
+                if not res["scan_payments"].empty:
+                    res["scan_payments"] = res["scan_payments"].iloc[keep_scan].reset_index(drop=True)
+                    # Scan invoices are 1:1 with scan payments by position — filter together
+                    if not res["scan_invoices"].empty:
+                        res["scan_invoices"] = res["scan_invoices"].iloc[keep_scan].reset_index(drop=True)
+                # Rebuild summary metrics from the filtered frames
+                res["summary"]["flex_count"] = len(res["flex_payments"])
+                res["summary"]["scan_count"] = len(res["scan_payments"])
+                res["summary"]["flex_total"] = round(float(res["flex_payments"]["Amount"].sum()), 2) if not res["flex_payments"].empty else 0.0
+                res["summary"]["scan_total"] = round(float(res["scan_payments"]["Amount"].sum()), 2) if not res["scan_payments"].empty else 0.0
+                res["summary"]["total"] = round(res["summary"]["flex_total"] + res["summary"]["scan_total"], 2)
+
+            s = res["summary"]
+            unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
+
+            # ── Flex/scan crossover sanity check: NewLane and OnePlace split by cents
+            #    (whole-dollar = scan, odd-cents = flex). A 100/0 or 0/100 ratio is
+            #    almost always a sign of bad data or wrong split rule. GreatAmerica is
+            #    intentionally all-flex (Maintenance only) — skip the check there.
+            if company in ("OnePlace", "NewLane") and s["total"] > 0:
+                flex_pct = s["flex_total"] / s["total"] if s["total"] else 0
+                scan_pct = s["scan_total"] / s["total"] if s["total"] else 0
+                if flex_pct >= 0.97 or scan_pct >= 0.97:
+                    dominant = "flex" if flex_pct >= 0.97 else "scan"
+                    st.warning(
+                        f":material/warning: **Unusual flex/scan split**: {flex_pct*100:.1f}% flex / "
+                        f"{scan_pct*100:.1f}% scan for this {company} remittance. "
+                        f"OnePlace and NewLane usually run a mix; an all-{dominant} file may mean "
+                        "the wrong split rule was applied or the file is mis-classified. "
+                        "Cross-check against the source remittance before proceeding."
+                    )
+
+            # ── Intra-file total check: raw file rows/amounts vs. what the app is importing
+            # Exclude rows where the contract/ID column is blank — those are summary/total/footnote
+            # rows in the source file (e.g., OnePlace's "Pass-Thru received: $X" line at the
+            # bottom). Real payment rows always have a contract #.
+            raw_payment_mask = raw[id_col].astype(str).str.strip().replace({'nan': '', 'None': ''}).ne('')
+            raw_amounts = raw.loc[raw_payment_mask, amount_col].map(opd_adapter.coerce_amount)
+            raw_total = round(float(raw_amounts.sum()), 2)
+            raw_nonzero = int((raw_amounts != 0).sum())
+            diff = round(raw_total - s["total"], 2)
+            deduped_amount = sum(float(r["amount"]) for r, fp in zip(all_rows, all_fps) if fp in seen_fps)
+            if abs(diff) > 0.01 or raw_nonzero != (s["flex_count"] + s["scan_count"]):
+                # Quiet diagnostic only — operator can sanity-check what the app counted
+                # against what the file says. The dollar signs are escaped so Streamlit's
+                # markdown doesn't interpret $...$ as inline LaTeX and mangle the numbers.
+                st.caption(
+                    f"File: {raw_nonzero} non-zero rows totalling **\\${raw_total:,.2f}**  ·  "
+                    f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **\\${s['total']:,.2f}**  ·  "
+                    f"Δ **\\${diff:,.2f}** (of which ledger dedup accounts for \\${deduped_amount:,.2f})"
                 )
 
+            if s["scan_count"] > 0:
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
+                m2.metric("Scan", f"{s['scan_count']}  (${s['scan_total']:,.2f})")
+                m3.metric("Total", f"${s['total']:,.2f}")
+                m4.metric("Next invoice", s["next_invoice_no"])
+            else:
+                m1, m2 = st.columns(2)
+                m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
+                m2.metric("Total", f"${s['total']:,.2f}")
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# STAGE 2 — Monthly Credit Memos
-# ═══════════════════════════════════════════════════════════════════════════════
+            if unmapped:
+                st.divider()
+                st.subheader(f"Resolve {len(unmapped)} unmatched customer name(s)")
+                st.caption("Copy the legal name (click the copy icon) → paste into QuickBooks → "
+                           "copy the Display Name → paste it on the right. Saved mappings persist.")
+                qb_inputs = {}
+                hc1, hc2 = st.columns(2)
+                hc1.markdown("**Legal name** (hover → click copy)")
+                hc2.markdown("**QuickBooks display name**")
+                for i, legal in enumerate(unmapped):
+                    cc1, cc2 = st.columns(2)
+                    with cc1:
+                        st.code(legal, language=None)
+                    with cc2:
+                        qb_inputs[legal] = st.text_input(
+                            "qb", key=f"qbfix_{i}", label_visibility="collapsed",
+                            placeholder="paste QuickBooks display name",
+                        )
+                if st.button("Save mappings", type="primary", key="remit_save_map"):
+                    new_pairs = {legal.strip(): str(qb).strip() for legal, qb in qb_inputs.items() if str(qb).strip()}
+                    if new_pairs:
+                        st.session_state["name_map_additions"] = {**session_adds, **new_pairs}
+                        persist = {**nm_base, "map": {**nm_base.get("map", {}), **st.session_state["name_map_additions"]}}
+                        ok, _ = store.save_json("name_map.json", persist, f"Add {len(new_pairs)} QB name mapping(s)")
+                        loaders.name_map.clear()
+                        st.success(
+                            f"Saved {len(new_pairs)} mapping(s) " +
+                            ("— committed to the repo for everyone." if ok else "— applied now and stored locally. Set GITHUB_TOKEN on Cloud to share.")
+                        )
+                        st.rerun()
+                    else:
+                        st.warning("Enter at least one QuickBooks display name first.")
+                st.warning("Resolve the names above before uploading these imports.")
+
+            st.divider()
+            st.subheader("Flex receive payments")
+            if not res["flex_payments"].empty:
+                st.dataframe(res["flex_payments"], use_container_width=True, height=240)
+                st.download_button("Download flex payments (xlsx)",
+                                   saasant.to_xlsx_bytes(res["flex_payments"], "FlexPayments"),
+                                   file_name=f"{company}_FlexPayments_{pay_date}.xlsx",
+                                   key="remit_dl_flex")
+            else:
+                st.caption("No flex rows.")
+
+            if not res["scan_invoices"].empty:
+                st.subheader("Scan-package invoices (upload BEFORE scan payments)")
+                st.dataframe(res["scan_invoices"], use_container_width=True, height=220)
+                st.download_button("Download scan invoices (xlsx)",
+                                   saasant.to_xlsx_bytes(res["scan_invoices"], "ScanInvoices"),
+                                   file_name=f"{company}_ScanInvoices_{inv_date}.xlsx",
+                                   key="remit_dl_inv")
+                st.subheader("Scan-package receive payments")
+                st.dataframe(res["scan_payments"], use_container_width=True, height=220)
+                st.download_button("Download scan payments (xlsx)",
+                                   saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments"),
+                                   file_name=f"{company}_ScanPayments_{pay_date}.xlsx",
+                                   key="remit_dl_scan")
+            st.markdown(
+                """
+    **Uploading to SaasAnt**
+    1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
+    2. Click **Bulk Upload**.
+    3. Pick the right import type for each file you downloaded above:
+       - Scan-package **invoices** → select **Invoice**
+       - Flex receive payments → select **Received Payments**
+       - Scan receive payments → select **Received Payments**
+    4. Walk through the SaasAnt wizard for each file.
+
+    **Order matters:** upload **scan invoices first**, then flex payments, then scan payments.
+    The scan payments reference the scan invoices by Invoice No, so the invoices must exist
+    in QBO first. Run **one SaasAnt job at a time** — wait for each to complete before starting
+    the next. After all uploads, the combined total should match the bank-feed deposit.
+    """
+            )
+
+            # ── Mark batch processed: write to ledger so future re-uploads are caught ────
+            st.divider()
+            st.markdown("### Confirm this batch has been imported to QBO")
+            st.caption(
+                "Click **after** you've uploaded the files above to SaasAnt. This records the "
+                "payments in the dedup ledger so re-uploading this remittance later won't double-post."
+            )
+            rows_to_record = [
+                r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
+            ]
+            ack_disabled = len(rows_to_record) == 0
+            if ack_disabled:
+                st.info("Nothing new to record (all rows were already in the ledger).")
+            elif st.button(
+                f"Mark {len(rows_to_record)} payment(s) as imported",
+                key="remit_mark_processed", type="primary",
+            ):
+                ok, added, msg = ledger.record_batch(
+                    file_content=file_bytes,
+                    filename=up.name,
+                    company=company,
+                    payments=rows_to_record,
+                    note=f"Stage 1 / {company} / pay_date={pay_date}",
+                )
+                # Append to immutable audit manifest alongside the ledger record
+                audit_outputs = []
+                for label, df_out in (
+                    ("flex_payments", res["flex_payments"]),
+                    ("scan_invoices", res["scan_invoices"]),
+                    ("scan_payments", res["scan_payments"]),
+                ):
+                    if df_out is not None and not df_out.empty:
+                        audit_outputs.append({
+                            "name": label,
+                            "sha256": audit.output_hash_df(df_out),
+                            "row_count": len(df_out),
+                            "total": round(float(df_out["Amount"].sum()), 2) if "Amount" in df_out.columns else None,
+                        })
+                audit.record_cycle(
+                    cycle_type="stage1_finance_payment",
+                    approver=auth.current_role(),
+                    year=pay_date.year, month=pay_date.month,
+                    params={
+                        "company": company,
+                        "payment_date": pay_date.isoformat(),
+                        "invoice_date": inv_date.isoformat(),
+                        "start_invoice_no": start_inv,
+                        "skipped_already_seen": len(seen_fps),
+                    },
+                    source_file={
+                        "name": up.name,
+                        "sha256": ledger.file_hash(file_bytes),
+                        "size_bytes": len(file_bytes),
+                    },
+                    outputs=audit_outputs,
+                    note=f"{added} new payment(s) recorded; {len(seen_fps)} already in ledger",
+                )
+                if ok:
+                    st.success(f"Recorded {added} payment(s) in the ledger + audit manifest. {msg}")
+                else:
+                    st.warning(
+                        f"Recorded {added} locally (no GitHub commit). On Cloud, this means "
+                        "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
+                    )
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # STAGE 2 — Monthly Credit Memos
+    # ═══════════════════════════════════════════════════════════════════════════════
 with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
     st.caption(
         "Generates one credit memo per FLEX payment received last month (SaasAnt format: item Flex-credits, "
