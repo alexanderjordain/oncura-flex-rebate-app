@@ -421,7 +421,7 @@ if audit_summary["entry_count"]:
         with st.expander("Show full JSON for the most recent entry"):
             st.json(entries[0])
 else:
-    st.info("No audit entries yet. They start appearing once you 'Mark batch as imported' in FLEX Cycle stages.")
+    st.info("No audit entries yet. They start appearing once you 'Mark batch as imported' in Payment Cycle stages.")
 
 st.divider()
 

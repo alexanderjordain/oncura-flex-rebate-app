@@ -1,8 +1,11 @@
-"""FLEX Cycle — one page that walks through the monthly process.
+"""Payment Cycle — one page that walks through the monthly process for BOTH
+FLEX and scan-package (pass-through) payments together. Surfaced in the
+sidebar under the "FLEX & Pass-Through" section.
 
 Stage 1: Finance Company Payment Import (remittance -> SaasAnt flex/scan files)
 Stage 2: Monthly Credit Memos (credit-memo SaasAnt file)
-Stage 3: Unused / Overage (quarter-end recapture invoice + overage list)
+Stage 3: Unused / Overage (quarter-end recapture + overage; runs every month
+         for whichever clinic group's staggered quarter is closing)
 """
 import datetime as dt
 from contextlib import contextmanager
@@ -33,9 +36,10 @@ def safe_stage(label: str):
         with st.expander("Show full traceback"):
             st.code(_tb.format_exc(), language="text")
 
-ui.header("FLEX Cycle",
-          "Walks the monthly process end-to-end: remittances → credits → unused / overage.",
-          kicker="FLEX · Cycle")
+ui.header("Payment Cycle",
+          "Handles FLEX and scan-package (pass-through) payments together — "
+          "remittances → credits → unused / overage.",
+          kicker="FLEX & Pass-Through · Cycle")
 
 flex = loaders.flex_master()
 flex_clinics = flex.get("clinics", [])

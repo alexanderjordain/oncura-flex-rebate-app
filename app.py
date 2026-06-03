@@ -37,8 +37,8 @@ pages = {
         st.Page("pages/rebate_cycle.py", title="Rebate Cycle"),
         st.Page("pages/rebate_master.py", title="Rebate Program Controls"),
     ],
-    "FLEX": [
-        st.Page("pages/flex_cycle.py", title="FLEX Cycle"),
+    "FLEX & Pass-Through": [
+        st.Page("pages/flex_cycle.py", title="Payment Cycle"),
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
@@ -56,8 +56,8 @@ with st.sidebar:
     with st.expander("Rebates", expanded=False):
         st.page_link("pages/rebate_cycle.py", label="Rebate Cycle")
         st.page_link("pages/rebate_master.py", label="Rebate Program Controls")
-    with st.expander("FLEX", expanded=False):
-        st.page_link("pages/flex_cycle.py", label="FLEX Cycle")
+    with st.expander("FLEX & Pass-Through", expanded=False):
+        st.page_link("pages/flex_cycle.py", label="Payment Cycle")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
         st.page_link("pages/settings.py", label="Settings")

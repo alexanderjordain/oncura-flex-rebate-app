@@ -48,7 +48,7 @@ if missing:
     st.error(
         f":material/warning: **Stage 2 not yet run for: {months_str}.** "
         f"Recent flex payments are in the ledger but no monthly credit memos have been "
-        f"generated for these months. Open **FLEX Cycle → Monthly Credit Memos** and run "
+        f"generated for these months. Open **FLEX & Pass-Through → Payment Cycle → Monthly Credit Memos** and run "
         f"Stage 2 for each month listed."
     )
 
@@ -63,13 +63,14 @@ st.divider()
 
 col_flex, col_rebate = st.columns(2)
 with col_flex:
-    st.subheader("FLEX program")
+    st.subheader("FLEX & Pass-Through")
     st.markdown(
-        "Single **FLEX Cycle** page walks the monthly process end-to-end:\n"
+        "Single **Payment Cycle** page handles BOTH FLEX (telemedicine financing) and "
+        "scan-package (pass-through) payments together, end-to-end:\n"
         "1. Finance company remittance → SaasAnt flex/scan imports\n"
         "2. Monthly credit memos\n"
-        "3. Quarter-end unused recapture + overage list\n\n"
-        "Program is CLOSED to new entrants; the active list only shrinks."
+        "3. Unused recapture + overage list (one staggered group per month)\n\n"
+        "FLEX program is CLOSED to new entrants; the active list only shrinks."
     )
 
 with col_rebate:
