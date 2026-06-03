@@ -103,6 +103,48 @@
       "outputs": [],
       "note": "[unknown cycle_type 'settings_clear_ledger'] Wiped 59 payment fingerprint(s) and 1 file hash(es) from processed_payments.json.",
       "entry_hash": "746cf7d89bb8c4dc9cdff2cc44b95f0db590f2434519cb80513da1d024490193"
+    },
+    {
+      "id": "10b813d3-2ca6-427e-a29e-de517f951846",
+      "timestamp": "2026-06-03T19:41:23",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "admin",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-06-03",
+        "invoice_date": "2026-06-03",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "May 2026 Oncura Pass Thru Billing (1).xlsx",
+        "sha256": "771b6201c469d2cdfe8f418bc63fdff431f6faf0a2e7dd4ba2eb596ea6d9c71b",
+        "size_bytes": 33195
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "413d6d291cfacd73681045e059f0d4b51a70e48fd95ab390ae56f7f796a4581a",
+          "row_count": 31,
+          "total": 28290.68
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "6b5c66ddbaba741d434c6f17ce25e4bfd5e29a8659b085b8aa185323646ff701",
+          "row_count": 29,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "a6146c6fcdc29adee7931894491226fceb0ace1955e29f05e3ae2a29bb79c8e1",
+          "row_count": 29,
+          "total": 9835.0
+        }
+      ],
+      "note": "59 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "e77057a320e3719f311ca047c6e8677afb3d3f37eb4c870bce5909e8ccba5a9a"
     }
   ]
 }
