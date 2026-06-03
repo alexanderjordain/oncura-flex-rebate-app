@@ -87,7 +87,7 @@ with tab_overview, safe_stage("Overview"):
 
     st.markdown(
         "Handles **FLEX** and **scan-package (pass-through)** payments together. "
-        "Generates SaasAnt files and emails accounting — humans approve every QBO posting."
+        "Generates SaasAnt files for QBO import — humans approve every QBO posting."
     )
 
     c1, c2, c3 = st.columns(3, gap="medium")
