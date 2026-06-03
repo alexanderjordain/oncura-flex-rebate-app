@@ -71,26 +71,40 @@ def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
         contract = str(p.get("contract") or "").strip()
         clinic = by_qb.get(qbn) or by_contract.get(contract)
         if clinic is None:
+            # Fallback: emit a credit memo against the ledger's qb_customer using the
+            # payment amount itself. Keeps SOP-10's 'one Flex payment in, one credit
+            # out' invariant even when flex_master is out of date. Still tracked in
+            # `skipped` for audit purposes — just not dropped from the export.
             skipped.append({
                 "reason": "no flex_master match (qb_customer / contract)",
                 "qb_customer": p.get("qb_customer"),
                 "contract": contract,
                 "amount": p.get("amount"),
             })
+            matched.append((None, p, round(float(p.get("amount") or 0), 2)))
             continue
         amt = round(float(clinic["monthly_credit"]), 2)
         matched.append((clinic, p, amt))
 
-    # Sort for stable output
-    matched.sort(key=lambda t: ((t[0].get("qb_name") or "").lower(), t[1].get("payment_date", "")))
+    # Sort for stable output. Unmatched rows (clinic=None) sort by their payment's
+    # qb_customer so they group consistently with adjacent batches.
+    def _sort_key(t):
+        clinic, payment, _ = t
+        name = (clinic.get("qb_name") if clinic else payment.get("qb_customer")) or ""
+        return (name.lower(), payment.get("payment_date", ""))
+    matched.sort(key=_sort_key)
 
     refs = saasant.sequential_refs(start_ref, len(matched))
     rows = []
     source_payments = []
     for ref, (clinic, payment, amt) in zip(refs, matched):
+        if clinic is not None:
+            customer = clinic.get("qb_name") or clinic.get("clinic_name")
+        else:
+            customer = payment.get("qb_customer") or "(unmatched)"
         rows.append({
             "Credit Memo No": ref,
-            "Customer": clinic.get("qb_name") or clinic.get("clinic_name"),
+            "Customer": customer,
             "Credit Memo Date": date.strftime("%m/%d/%Y"),
             "Product/Service": ITEM,
             "Product/Service Description": desc,

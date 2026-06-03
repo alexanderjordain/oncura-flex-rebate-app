@@ -61,14 +61,21 @@ def test_multi_payment_clinic_gets_multi_credit_memos():
     assert skipped == []
 
 
-def test_payment_with_no_matching_clinic_is_skipped():
+def test_payment_with_no_matching_clinic_falls_back_to_payment_amount():
+    """When a payment doesn't match any flex_master clinic, emit a credit memo
+    against the ledger's qb_customer using the payment amount (SOP-10's
+    'one Flex payment in, one credit out' invariant). Still tracked in `skipped`
+    for audit visibility, just no longer dropped from the export."""
     clinics = [_clinic("Gamma")]
     payments = [
         {"qb_customer": "Mystery Clinic", "contract": "UNKNOWN", "payment_date": "2026-05-01",
          "amount": 500.0, "kind": "flex"},
     ]
     df, _next, skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
-    assert len(df) == 0
+    assert len(df) == 1
+    assert df.iloc[0]["Customer"] == "Mystery Clinic"
+    assert df.iloc[0]["Product/Service Amount"] == 500.0
+    # Still surfaces in `skipped` for audit recording even though the row IS emitted.
     assert len(skipped) == 1
     assert "no flex_master match" in skipped[0]["reason"]
 
@@ -85,15 +92,19 @@ def test_match_falls_back_to_contract_when_qb_customer_unmatched():
     assert df.iloc[0]["Customer"] == "Delta"
 
 
-def test_inactive_clinic_not_eligible_even_with_payment():
+def test_inactive_clinic_falls_back_to_payment_amount():
+    """Inactive clinics aren't in the lookup index, so a payment for one falls into
+    the no-flex_master-match bucket and uses the payment amount as the credit."""
     clinics = [_clinic("Epsilon", active=False)]
     payments = [
         {"qb_customer": "Epsilon", "contract": "X", "payment_date": "2026-05-01",
          "amount": 1000.0, "kind": "flex"},
     ]
     df, _next, skipped, _src = flex_credits.build_import_from_payments(clinics, payments, 2026, 5, 50000)
-    assert len(df) == 0
-    assert len(skipped) == 1  # falls into the "no flex_master match" bucket
+    assert len(df) == 1
+    assert df.iloc[0]["Customer"] == "Epsilon"
+    assert df.iloc[0]["Product/Service Amount"] == 1000.0
+    assert len(skipped) == 1
 
 
 def test_sequential_refs_no_collisions():
