@@ -488,12 +488,36 @@ if _app_pw:
                 note=(f"Wiped {prior_payments} payment fingerprint(s) and "
                       f"{prior_files} file hash(es) from processed_payments.json."),
             )
+            # Invalidate ALL Streamlit data caches so Stage 1 / Stage 2 / Home don't
+            # serve stale ledger or master data on the next render.
+            try:
+                st.cache_data.clear()
+                loaders.clear_caches()
+            except Exception:
+                pass
+            # Also clear Stage 1 file-related session state so a re-upload after the
+            # clear doesn't keep the prior file's "already seen" override sticky.
+            for k in ("remit_file", "remit_file_override", "remit_reissue_ack"):
+                st.session_state.pop(k, None)
+
             if ok:
-                st.success(
-                    f"Ledger cleared. {prior_payments} payment fingerprint(s) "
-                    f"and {prior_files} file hash(es) removed. Action logged in "
-                    f"the audit manifest."
-                )
+                # Verify the clear actually landed by re-reading the ledger immediately.
+                verify_data, _ = ledger.load()
+                verify_payments = len(verify_data.get("payments", []))
+                verify_files = len(verify_data.get("files", []))
+                if verify_payments == 0 and verify_files == 0:
+                    st.success(
+                        f"Ledger cleared. {prior_payments} payment fingerprint(s) "
+                        f"and {prior_files} file hash(es) removed. Verified empty "
+                        "on re-read. Action logged in the audit manifest."
+                    )
+                else:
+                    st.error(
+                        f"Save reported success but ledger re-read STILL shows "
+                        f"{verify_payments} payment(s) / {verify_files} file(s). "
+                        "GitHub may not have committed — check the data/processed_payments.json "
+                        "file on the repo. Try clearing again, or hard-refresh the app."
+                    )
             else:
                 st.warning(
                     f"Cleared locally but GitHub commit failed: {info}. "

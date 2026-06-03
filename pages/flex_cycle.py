@@ -262,15 +262,26 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
     elif step_key == "upload":
         # Read setup values from session_state (set in step 1). Invoice date
         # mirrors payment date — they're always the same in the live workflow.
-        company = SS["remit_company"]
-        pay_date = SS["remit_pay_date"]
+        # Defensive: re-read SS at every render so any drift surfaces immediately.
+        company = SS.get("remit_company", "NewLane")
+        pay_date = SS.get("remit_pay_date", dt.date.today())
         inv_date = pay_date
         if company == "GreatAmerica":
             start_inv = 50000
             split = "all_flex"
         else:
-            start_inv = int(SS["remit_start_inv"])
+            start_inv = int(SS.get("remit_start_inv", 50000))
             split = "by_cents"
+
+        # Diagnostic: prominently display the values being used so a mismatch with
+        # what the operator picked is immediately visible. (Bug guard — the user
+        # reported files coming out labeled NewLane regardless of selection.)
+        st.info(
+            f":material/info: **Processing as:** company=**{company}**, "
+            f"payment date=**{pay_date}**, starting invoice #=**{start_inv if company != 'GreatAmerica' else '—'}**. "
+            "If any of these are wrong, click **◀ Back to setup** below.",
+            icon=":material/checklist:",
+        )
 
         # Setup recap
         with st.container(border=True):
@@ -712,10 +723,18 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             st.rerun()
 
     elif step_key == "review":
-        year = int(SS["cred_year"])
-        month = int(SS["cred_month"])
-        start_ref = int(SS["cred_start_ref"])
+        year = int(SS.get("cred_year", default_year))
+        month = int(SS.get("cred_month", default_month))
+        start_ref = int(SS.get("cred_start_ref", 50000))
         mname = dt.date(2000, month, 1).strftime("%B")
+
+        # Diagnostic: prominently display the values being used so a mismatch is visible.
+        st.info(
+            f":material/info: **Generating credit memos for:** **{mname} {year}**, "
+            f"starting Credit Memo # **{start_ref}**. "
+            "If any of these are wrong, click **◀ Back to setup** below.",
+            icon=":material/checklist:",
+        )
 
         # Setup recap with back / set-up-new-month buttons
         with st.container(border=True):
@@ -742,12 +761,23 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         )
 
         # ── Payments Remitted in {Month} panel ─────────────────────────────────────
-        st.markdown(f"### Payments Remitted in {mname} {year}")
+        head_l, head_r = st.columns([5, 1])
+        head_l.markdown(f"### Payments Remitted in {mname} {year}")
+        if head_r.button("↻ Refresh ledger", key="cred_refresh",
+                         help="Re-read the ledger from GitHub. Use this if you just recorded "
+                              "payments in Stage 1 and they don't appear below."):
+            try:
+                st.cache_data.clear()
+                loaders.clear_caches()
+            except Exception:
+                pass
+            st.rerun()
         if not payments:
             st.warning(
                 f"**No FLEX payments recorded in the ledger for {mname} {year}.** "
-                f"Either Stage 1 hasn't been run for this month yet, or no remittances landed. "
-                f"You can still run the **legacy active-list** mode below if you need to bootstrap."
+                f"Either Stage 1 hasn't been run for this month yet, or no remittances landed "
+                f"with kind=flex for that month. Hit ↻ Refresh ledger above if you just "
+                f"recorded payments. You can also run the **legacy active-list** mode below to bootstrap."
             )
         else:
             # Per-clinic payment count (so multi-payment clinics show up clearly)
