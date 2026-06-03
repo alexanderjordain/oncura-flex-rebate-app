@@ -316,11 +316,30 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             cols = list(raw.columns)
             st.write(f"{len(raw):,} rows.")
             g = flex_finance.guess_columns(company, cols)
-            mc1, mc2, mc3 = st.columns(3)
-            customer_col = mc1.selectbox("Customer name column", cols, index=cols.index(g["customer"]), key="remit_cust_col")
-            amount_col = mc2.selectbox("Amount column", cols, index=cols.index(g["amount"]), key="remit_amt_col")
             id_label = "Payment Invoice Number" if company == "GreatAmerica" else "Contract # / ID"
-            id_col = mc3.selectbox(f"{id_label} column", cols, index=cols.index(g["id"]), key="remit_id_col")
+            # Reset any stale widget state if a previous upload's columns aren't in this file
+            # (e.g., switched from OnePlace to NewLane between uploads).
+            for k, fallback in [("remit_cust_col", g["customer"]),
+                                ("remit_amt_col", g["amount"]),
+                                ("remit_id_col", g["id"])]:
+                if SS.get(k) not in cols:
+                    SS[k] = fallback
+            # Tuck the override controls into a collapsed expander so non-tech-savvy users
+            # aren't overwhelmed by three extra dropdowns in the typical case where
+            # guess_columns picked the right ones.
+            with st.expander(
+                f"Column mapping (auto-detected: Customer = `{SS['remit_cust_col']}`, "
+                f"Amount = `{SS['remit_amt_col']}`, {id_label} = `{SS['remit_id_col']}`) — "
+                "open if a column looks wrong",
+                expanded=False,
+            ):
+                mc1, mc2, mc3 = st.columns(3)
+                mc1.selectbox("Customer name column", cols, key="remit_cust_col")
+                mc2.selectbox("Amount column", cols, key="remit_amt_col")
+                mc3.selectbox(f"{id_label} column", cols, key="remit_id_col")
+            customer_col = SS["remit_cust_col"]
+            amount_col = SS["remit_amt_col"]
+            id_col = SS["remit_id_col"]
 
             res = flex_finance.process_remittance(
                 raw, company,
