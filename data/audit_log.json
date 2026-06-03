@@ -161,6 +161,22 @@
       "outputs": [],
       "note": "[unknown cycle_type 'settings_clear_ledger'] Wiped 59 payment fingerprint(s) and 1 file hash(es) from processed_payments.json.",
       "entry_hash": "7ffd825540600312341a8efbffdc26de6e2653680b421a45133efe66b7e92445"
+    },
+    {
+      "id": "4ca78df6-2140-4904-9cc9-12f3596ee4ed",
+      "timestamp": "2026-06-03T21:32:09",
+      "cycle_type": "settings_clear_ledger",
+      "approver": "admin",
+      "year": null,
+      "month": null,
+      "params": {
+        "prior_payments": 59,
+        "prior_files": 1
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "[unknown cycle_type 'settings_clear_ledger'] Wiped 59 payment fingerprint(s) and 1 file hash(es) from processed_payments.json.",
+      "entry_hash": "0fabc72dc931a03c66f635f3cc1027ac7239282ee5dabd1207e52f42049db53d"
     }
   ]
 }
