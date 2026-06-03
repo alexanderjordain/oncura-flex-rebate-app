@@ -119,6 +119,9 @@ with tab_overview, safe_stage("Overview"):
             unsafe_allow_html=True,
         )
 
+    # Vertical spacer between the stage cards and the this-month banner.
+    st.markdown('<div style="height: 1.25rem"></div>', unsafe_allow_html=True)
+
     # This-month callout. Stage 3 runs the month AFTER the quarter-end, closing
     # out the group whose quarter just ended. So map current month → the group
     # whose quarter ended LAST month.
