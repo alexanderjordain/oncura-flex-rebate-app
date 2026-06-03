@@ -13,7 +13,7 @@ from contextlib import contextmanager
 import streamlit as st
 
 from core import (
-    accounting_handoff, audit, auth, flex_credits, flex_finance, flex_overage, flex_unused,
+    audit, auth, flex_credits, flex_finance, flex_overage, flex_unused,
     ledger, loaders, opd_adapter, saasant, store, ui,
 )
 
@@ -214,12 +214,12 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         # GA is all-flex (Maintenance only) -> no scan invoices, so Invoice Date and the
         # scan Invoice-No starting ref are unused. Hide them to declutter the form.
         inv_date = pay_date
-        start_inv = 49000
+        start_inv = 50000
     else:
         c1, c2 = st.columns(2)
         inv_date = c1.date_input("Invoice date (scan packages)", value=dt.date.today(), key="remit_inv_date")
         start_inv = int(c2.number_input("Starting scan Invoice No (QBO max + 1)",
-                                        value=49000, step=1, key="remit_start_inv"))
+                                        value=50000, step=1, key="remit_start_inv"))
 
     meta = flex_finance.COMPANY_META.get(company, {})
     st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
@@ -550,21 +550,6 @@ the next. After all uploads, the combined total should match the bank-feed depos
                     "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
                 )
 
-        subj, body = accounting_handoff.finance_payment_email(
-            company=company, pay_date=pay_date, summary=s, has_scan=s["scan_count"] > 0,
-        )
-        attachments = [
-            (f"FlexPayments_{company}_{pay_date}.xlsx",
-             saasant.to_xlsx_bytes(res["flex_payments"], "FlexPayments")),
-        ]
-        if s["scan_count"] > 0:
-            attachments += [
-                (f"ScanInvoices_{company}_{pay_date}.xlsx",
-                 saasant.to_xlsx_bytes(res["scan_invoices"], "ScanInvoices")),
-                (f"ScanPayments_{company}_{pay_date}.xlsx",
-                 saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments")),
-            ]
-        accounting_handoff.render_handoff(subj, body, key_prefix="remit_email", attachments=attachments)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 2 — Monthly Credit Memos
@@ -782,17 +767,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
 **Bulk Upload** → **Credit Memo** → select the file → walk through the wizard.
 """
     )
-    if not df.empty:
-        subj, body = accounting_handoff.credit_memos_email(
-            year=year, month=month, count=len(df),
-            total=float(df["Product/Service Amount"].sum()),
-            start_ref=start_ref, next_ref=next_ref,
-        )
-        attachments = [
-            (f"FlexCredits_{mname}_{year}.xlsx",
-             saasant.to_xlsx_bytes(df, f"FlexCredits{mname}{year}")),
-        ]
-        accounting_handoff.render_handoff(subj, body, key_prefix="credits_email", attachments=attachments)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
@@ -806,8 +780,8 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     SS.setdefault("recap_year", today.year)
     SS.setdefault("recap_month", today.month)
     SS.setdefault("recap_sales_class", "03-Telemedicine")
-    SS.setdefault("recap_start_ref", 60000)
-    SS.setdefault("recap_direct_start", 61000)
+    SS.setdefault("recap_start_ref", 50000)
+    SS.setdefault("recap_direct_start", 50000)
     SS.setdefault("recap_uploaded_bytes", None)
     SS.setdefault("recap_uploaded_name", "")
     SS.setdefault("recap_credit_offsets", {})
@@ -867,14 +841,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     flagged = [r for r in annotated if r.get("escalation_flag")]
 
     # Dynamic step list — only include steps that have something to show
-    STEPS = [("setup", "Cycle setup"), ("upload", "Upload OPD activity")]
+    STEPS = [("setup", "Cycle setup"), ("upload", "Upload OPD activity")]  # handoff step removed — accountant runs the import directly
     if pipe and not rdf.empty:
         STEPS.append(("review", "Review activity"))
         if not udf.empty:
             STEPS.append(("recapture", "Unused recapture"))
         if overs:
             STEPS.append(("overage", "Overage routing & bills"))
-        STEPS.append(("handoff", "Hand off to accounting"))
     total = len(STEPS)
     SS.recap_step = max(0, min(SS.recap_step, total - 1))
     step_key, step_label = STEPS[SS.recap_step]
@@ -1319,36 +1292,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest "
                             f"and {added_l} fingerprint(s) in the dedup ledger."
                         )
-
-        elif step_key == "handoff":
-            st.markdown("### Hand off to accounting")
-            st.caption(
-                "Email accounting with this cycle's results + next steps. The body is pre-filled with "
-                "all the numbers, escalations, and the SaasAnt + QBO action items."
-            )
-            unused_total = float(udf["Product/Service Amount"].sum()) if not udf.empty else 0.0
-            direct_total = sum(float(r["net_overage"]) for r in annotated
-                               if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-            partner_total = sum(float(r["net_overage"]) for r in annotated
-                                if r["route"] == "partner" and r["net_overage"] > 0)
-            group_anchors = sorted({r["clinic_name"] for r in pipe["recap"] if r.get("group_id")})
-            flagged_names = [r["clinic_name"] for r in flagged]
-            # Per-clinic recapture list — each gets an explicit checklist line in the email
-            unused_clinics = [
-                {"clinic": row["Customer"], "amount": float(row["Product/Service Amount"])}
-                for _, row in udf.iterrows()
-            ] if not udf.empty else []
-            subj, body = accounting_handoff.recapture_email(
-                year=rec_year, month=rec_month,
-                unused_total=unused_total, unused_count=len(udf),
-                direct_total=direct_total, direct_count=direct_count,
-                partner_total=partner_total, partner_count=partner_count,
-                cutoff_date=cutoff,
-                escalations=flagged_names,
-                group_anchors=group_anchors,
-                unused_recapture_clinics=unused_clinics,
-            )
-            accounting_handoff.render_handoff(subj, body, key_prefix="w_recap_email")
 
     # ── Navigation ────────────────────────────────────────────────────────────
     can_back = SS.recap_step > 0
