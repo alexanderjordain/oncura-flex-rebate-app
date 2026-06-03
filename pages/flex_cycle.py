@@ -52,372 +52,136 @@ tab_overview, tab_remit, tab_credits, tab_recap = st.tabs([
 ])
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# OVERVIEW — high-level wizard: hero cards + calendar + deep-dives + pitfalls
+# OVERVIEW — minimal landing: stage cards + this-month + details on demand
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_overview, safe_stage("Overview"):
-    # Local CSS for the stage cards. Scoped to .pc-stage-card so it doesn't
-    # bleed into the rest of the app's expander/container styling.
     st.markdown(
         """
         <style>
-        .pc-hero {
-            padding: 1.1rem 1.2rem; border-radius: 10px;
-            background: linear-gradient(95deg, rgba(58,106,154,0.08), rgba(70,155,104,0.06));
-            border-left: 4px solid var(--blue); margin-bottom: 1rem;
-        }
-        .pc-hero h2 { margin: 0 0 .35rem 0 !important; font-size: 1.4rem !important; }
-        .pc-hero p { margin: 0 !important; color: var(--ink); font-size: .98rem; }
         .pc-stage-card {
-            padding: 1rem 1.1rem; border-radius: 10px; background: var(--surface);
-            border: 1px solid var(--line); border-top: 4px solid var(--blue);
+            padding: .9rem 1rem; border-radius: 10px; background: var(--surface);
+            border: 1px solid var(--line); border-top: 3px solid var(--blue);
             height: 100%;
         }
-        .pc-stage-card.s1 { border-top-color: var(--blue); }
         .pc-stage-card.s2 { border-top-color: var(--green); }
         .pc-stage-card.s3 { border-top-color: var(--amber); }
         .pc-stage-num {
-            display: inline-block; width: 1.6rem; height: 1.6rem; line-height: 1.6rem;
-            text-align: center; border-radius: 50%; font-weight: 700;
-            font-family: var(--mono); font-size: .82rem; margin-right: .4rem;
-            color: var(--surface);
+            display: inline-block; width: 1.4rem; height: 1.4rem; line-height: 1.4rem;
+            text-align: center; border-radius: 50%; font-family: var(--mono);
+            font-weight: 700; font-size: .75rem; color: var(--surface);
+            margin-right: .35rem; background: var(--blue);
         }
-        .pc-stage-card.s1 .pc-stage-num { background: var(--blue); }
         .pc-stage-card.s2 .pc-stage-num { background: var(--green); }
         .pc-stage-card.s3 .pc-stage-num { background: var(--amber); }
-        .pc-stage-card .pc-title { font-family: var(--serif); font-size: 1.1rem;
-            color: var(--blue); font-weight: 600; line-height: 1.2; margin: 0; }
+        .pc-stage-card .pc-title { font-family: var(--serif); font-size: 1.05rem;
+            color: var(--blue); font-weight: 600; margin: 0 0 .35rem 0; line-height: 1.2; }
         .pc-stage-card .pc-cadence {
-            display: inline-block; font-family: var(--mono); font-size: .68rem;
-            text-transform: uppercase; letter-spacing: .12em;
-            padding: .15rem .5rem; border-radius: 999px;
-            background: rgba(58,106,154,.08); color: var(--blue-deep);
-            margin: .55rem 0 .6rem 0;
+            font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+            letter-spacing: .1em; color: var(--muted); margin-bottom: .4rem;
         }
-        .pc-stage-card.s2 .pc-cadence { background: rgba(70,155,104,.10); color: var(--green); }
-        .pc-stage-card.s3 .pc-cadence { background: rgba(227,160,51,.12); color: #8c5d1c; }
-        .pc-stage-card p { margin: 0 0 .35rem 0 !important; font-size: .92rem; }
-        .pc-stage-card .pc-stat {
-            font-family: var(--mono); font-size: .82rem; color: var(--muted);
-            margin-top: .55rem; padding-top: .55rem;
-            border-top: 1px dashed var(--line);
-        }
-        .pc-pill {
-            display: inline-block; padding: .12rem .55rem; border-radius: 999px;
-            font-family: var(--mono); font-size: .72rem; font-weight: 500;
-            margin-right: .25rem;
-        }
-        .pc-pill-cal { background: rgba(58,106,154,.12); color: var(--blue-deep); }
-        .pc-pill-mam { background: rgba(70,155,104,.14); color: var(--green); }
-        .pc-pill-mjj { background: rgba(227,160,51,.18); color: #8c5d1c; }
-        .pc-month-row {
-            display: flex; align-items: center; padding: .35rem .55rem;
-            border-bottom: 1px solid var(--line); font-size: .9rem;
-        }
-        .pc-month-row.this { background: rgba(58,106,154,.06); font-weight: 600; }
-        .pc-month-name {
-            font-family: var(--mono); width: 5.5rem; font-size: .8rem;
-            color: var(--muted); text-transform: uppercase; letter-spacing: .08em;
-        }
-        .pc-month-row.this .pc-month-name { color: var(--blue); }
-        .pc-done-card {
-            padding: .85rem 1rem; border-radius: 8px; background: var(--surface);
-            border: 1px solid var(--line); height: 100%;
-        }
-        .pc-done-card .pc-done-stage {
-            font-family: var(--mono); font-size: .7rem; letter-spacing: .14em;
-            text-transform: uppercase; color: var(--blue); margin-bottom: .3rem;
-        }
-        .pc-done-card p { margin: 0 !important; font-size: .88rem; color: var(--ink); }
+        .pc-stage-card p { margin: 0 !important; font-size: .9rem; }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # ── HERO ────────────────────────────────────────────────────────────────
     st.markdown(
-        """
-        <div class="pc-hero">
-          <h2>The monthly close, end-to-end</h2>
-          <p>This page runs the accounting close for <b>FLEX</b> (telemedicine financing)
-          and <b>scan-package (pass-through)</b> payments together. It generates
-          SaasAnt import files and emails accounting — humans approve every QBO posting.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+        "Handles **FLEX** and **scan-package (pass-through)** payments together. "
+        "Generates SaasAnt files and emails accounting — humans approve every QBO posting."
     )
 
-    # ── THREE STAGE CARDS ───────────────────────────────────────────────────
     c1, c2, c3 = st.columns(3, gap="medium")
     with c1:
         st.markdown(
-            """
-            <div class="pc-stage-card s1">
-              <p class="pc-title"><span class="pc-stage-num">1</span> Finance Payment Imports</p>
-              <span class="pc-cadence">As remittances arrive</span>
-              <p>Process each finance-company remittance (OnePlace · NewLane · GreatAmerica)
-              as soon as it lands. Splits flex vs scan, generates the SaasAnt
-              receive-payments + scan invoice/payment files.</p>
-              <p class="pc-stat">~3 runs per month · one per finance company</p>
-            </div>
-            """,
+            """<div class="pc-stage-card s1">
+            <p class="pc-title"><span class="pc-stage-num">1</span> Finance Payment Imports</p>
+            <p class="pc-cadence">As remittances arrive</p>
+            <p>Process each finance-company remittance. Splits flex vs scan, builds the SaasAnt receive-payments file.</p>
+            </div>""",
             unsafe_allow_html=True,
         )
     with c2:
         st.markdown(
-            """
-            <div class="pc-stage-card s2">
-              <p class="pc-title"><span class="pc-stage-num">2</span> Monthly Credit Memos</p>
-              <span class="pc-cadence">Once near month-end</span>
-              <p>After all of the month's Stage 1 imports are in, build the credit-memo
-              SaasAnt file. One credit memo per FLEX payment per SOP-10:
-              <i>one Flex payment in, one credit out</i>.</p>
-              <p class="pc-stat">1 run per month · close out the books</p>
-            </div>
-            """,
+            """<div class="pc-stage-card s2">
+            <p class="pc-title"><span class="pc-stage-num">2</span> Monthly Credit Memos</p>
+            <p class="pc-cadence">Once near month-end</p>
+            <p>Build one credit memo per FLEX payment in the month. <i>One Flex payment in, one credit out.</i></p>
+            </div>""",
             unsafe_allow_html=True,
         )
     with c3:
         st.markdown(
-            """
-            <div class="pc-stage-card s3">
-              <p class="pc-title"><span class="pc-stage-num">3</span> Unused / Overage</p>
-              <span class="pc-cadence">Every month · one clinic group</span>
-              <p>FLEX runs three staggered quarter cycles. Every month, one group's
-              quarter just closed — this stage builds their recapture invoices and
-              overage list. The wizard auto-filters to the closing group.</p>
-              <p class="pc-stat">12 runs per year · 1 group per month</p>
-            </div>
-            """,
+            """<div class="pc-stage-card s3">
+            <p class="pc-title"><span class="pc-stage-num">3</span> Unused / Overage</p>
+            <p class="pc-cadence">Monthly · one clinic group</p>
+            <p>Three staggered quarter cycles run in parallel. Each month, one group closes — the wizard auto-filters.</p>
+            </div>""",
             unsafe_allow_html=True,
         )
 
-    st.markdown(" ")
-
-    # ── MONTHLY RHYTHM CALENDAR ─────────────────────────────────────────────
-    st.subheader("This month at a glance")
-    today = dt.date.today()
-    # Map month → which clinic group's quarter ends here, and clinic count.
-    # Calendar: ends Mar/Jun/Sep/Dec; March-April-May: ends Feb/May/Aug/Nov;
-    # May-June-July: ends Jan/Apr/Jul/Oct.
-    GROUP_MONTHS = {
-        1:  ("May-June-July",   "mjj", "20 clinics"),
-        2:  ("March-April-May", "mam", "39 clinics"),
-        3:  ("Calendar",         "cal", "22 clinics"),
-        4:  ("May-June-July",   "mjj", "20 clinics"),
-        5:  ("March-April-May", "mam", "39 clinics"),
-        6:  ("Calendar",         "cal", "22 clinics"),
-        7:  ("May-June-July",   "mjj", "20 clinics"),
-        8:  ("March-April-May", "mam", "39 clinics"),
-        9:  ("Calendar",         "cal", "22 clinics"),
-        10: ("May-June-July",   "mjj", "20 clinics"),
-        11: ("March-April-May", "mam", "39 clinics"),
-        12: ("Calendar",         "cal", "22 clinics"),
+    # This-month callout — which Stage 3 group fires now.
+    GROUP_BY_MONTH = {
+        1: ("May-June-July", 20), 4: ("May-June-July", 20),
+        7: ("May-June-July", 20), 10: ("May-June-July", 20),
+        2: ("March-April-May", 39), 5: ("March-April-May", 39),
+        8: ("March-April-May", 39), 11: ("March-April-May", 39),
+        3: ("Calendar", 22), 6: ("Calendar", 22),
+        9: ("Calendar", 22), 12: ("Calendar", 22),
     }
-    rows = []
-    for m in range(1, 13):
-        group, css, n = GROUP_MONTHS[m]
-        mname = dt.date(2000, m, 1).strftime("%B")
-        is_this = (m == today.month)
-        rows.append(
-            f'<div class="pc-month-row{" this" if is_this else ""}">'
-            f'<span class="pc-month-name">{mname}{" — now" if is_this else ""}</span>'
-            f'<span class="pc-pill pc-pill-{css}">Stage 3 · {group}</span>'
-            f'<span style="color:var(--muted); font-size:.82rem;">{n} closing this month</span>'
-            f'</div>'
-        )
-    st.markdown("".join(rows), unsafe_allow_html=True)
-    st.caption(
-        "Stages 1 & 2 run every month for every clinic — only Stage 3 rotates "
-        "through the three groups."
+    today = dt.date.today()
+    group, n = GROUP_BY_MONTH[today.month]
+    st.info(
+        f"**This month ({today.strftime('%B %Y')}):** Stage 3 closes the "
+        f"**{group}** group ({n} clinics).",
+        icon=":material/event_available:",
     )
 
-    st.markdown(" ")
-
-    # ── DEEP-DIVE EXPANDERS (default closed; click to learn more) ───────────
-    st.subheader("Stage deep-dives")
-    st.caption("Click any stage to expand its full procedure.")
-
-    with st.expander(":material/looks_one: **Stage 1 — Finance Payment Imports**  ·  per remittance"):
+    with st.expander("Full procedure for each stage"):
         st.markdown(
             """
-**Trigger.** OnePlace, NewLane, or GreatAmerica emails or posts a monthly
-remittance file listing what they paid Oncura on behalf of the clinics.
-Typically arrives **1–2 weeks into the following month** (May's payments land
-~mid-June).
+**Stage 1 — Finance Payment Imports** *(run per remittance)*
+1. Download the remittance file from OnePlace / NewLane / GreatAmerica.
+2. Pick the company + payment date, upload the file.
+3. Resolve any unmapped clinic names (mappings persist automatically).
+4. Sanity-check the total, download the SaasAnt file(s), hand off to accounting.
 
-**Your steps:**
-1. Download the remittance file (CSV / XLSX).
-2. Open the **1. Finance Payment Imports** tab.
-3. Pick the company and payment date. Upload the file.
-4. If the app prompts you to resolve unknown clinic names (legal name →
-   QuickBooks payee), pick carefully — bad mappings post to the wrong
-   customer in QBO. Your mappings persist automatically.
-5. Sanity-check the total against the remittance file total.
-6. Download the SaasAnt file(s).
-7. Use the **Hand off to accounting** card to email accounting with the
-   file(s) attached.
+**Stage 2 — Monthly Credit Memos** *(run once near month-end, after all Stage 1 runs)*
+1. Pick the year and month you're closing.
+2. Review the credit-memo total — one credit per ledger payment for that month.
+3. Download the SaasAnt file, hand off to accounting.
+4. Late remittance? Re-run safely — ledger dedup prevents double-issuing.
 
-**Why it's safe to re-process:** the ledger dedups by file hash and by
-per-row fingerprint. Re-uploading the same file is blocked. The reissue
-check flags same-amount-different-date rows for confirm-and-proceed.
+**Stage 3 — Unused / Overage** *(run every month for the closing group)*
+1. Pick the year and the month you just closed; the wizard auto-filters to the
+   group whose quarter is ending.
+2. Review recapture totals (internal entries; not mailed) and the overage list.
+3. For each overage: submit to finance partner or direct-bill per SOP-6.
+4. Hand off to accounting. The Accounting Manager then un-applies / re-applies
+   in QBO per SOP-11 — manual, not done by the app.
             """
         )
 
-    with st.expander(":material/looks_two: **Stage 2 — Monthly Credit Memos**  ·  once near month-end"):
-        st.markdown(
-            """
-**Trigger.** End-of-month routine. Per Accounting SOP-10, every FLEX payment
-in Stage 1 needs a matching credit memo on the clinic's QBO account:
-*one Flex payment in, one credit out*.
-
-**Your steps:**
-1. Open the **2. Monthly Credit Memos** tab.
-2. Pick the year and month you're closing.
-3. Review the credit-memo total — one credit per ledger payment row from
-   Stage 1 for that month.
-4. Download the SaasAnt file.
-5. Hand off to accounting.
-6. Confirm with accounting they uploaded **both** the Stage 1 payments and
-   the Stage 2 credit memos for the month before considering the month closed.
-
-**Late remittance?** Re-run Stage 2 for that month after they land — ledger
-dedup prevents double-issuing the same credit. The fingerprint includes the
-source payment hash, so customer renames don't break dedup either.
-            """
-        )
-
-    with st.expander(":material/looks_3: **Stage 3 — Unused / Overage**  ·  every month, one clinic group"):
-        st.markdown(
-            """
-**Trigger.** A clinic group's quarter just closed. FLEX runs three staggered
-quarter cycles in parallel; each clinic is assigned to one via its
-`calendar_spread` field. The wizard auto-filters to the closing group based
-on the month you pick — you don't pick the group manually.
-
-**Your steps:**
-1. Open the **3. Unused / Overage** tab.
-2. Pick the year and the month you just closed.
-3. Review recapture totals per clinic — these convert unused credit balances
-   into recognized revenue. Internal entries only; **not mailed to clinics**.
-4. Review the overage list. For each clinic over its threshold, decide:
-   submit to finance partner (if config flag says they handle overages) or
-   direct-bill (SOP-6 — remember to void the direct-bill invoice in QBO after
-   sending).
-5. Download both files (recapture + overage). Hand off to accounting.
-6. Per SOP-11, the Accounting Manager then manually un-applies and re-applies
-   the quarter's auto-matched payments against scan invoices in QBO. **App
-   does not do this step.**
-
-**Group schedule.** Stage 3 fires every month for one of the three groups —
-see the calendar above.
-            """
-        )
-
-    st.markdown(" ")
-
-    # ── DONE CRITERIA (3-up cards) ───────────────────────────────────────────
-    st.subheader("What \"done\" looks like")
-    d1, d2, d3 = st.columns(3, gap="medium")
-    with d1:
-        st.markdown(
-            """
-            <div class="pc-done-card">
-              <p class="pc-done-stage">Stage 1</p>
-              <p>Accounting confirms the SaasAnt file uploaded cleanly and the
-              deposit reconciles on the correct bank feed.</p>
-            </div>
-            """, unsafe_allow_html=True,
-        )
-    with d2:
-        st.markdown(
-            """
-            <div class="pc-done-card">
-              <p class="pc-done-stage">Stage 2</p>
-              <p>Accounting confirms credit-memo SaasAnt uploaded; every Stage 1
-              payment for the month has a matching credit memo on the clinic's
-              QBO account.</p>
-            </div>
-            """, unsafe_allow_html=True,
-        )
-    with d3:
-        st.markdown(
-            """
-            <div class="pc-done-card">
-              <p class="pc-done-stage">Stage 3</p>
-              <p>Recapture invoices + overage entries posted in QBO. Partner
-              submissions emailed. Direct-bill overage invoices mailed AND
-              voided in QBO.</p>
-            </div>
-            """, unsafe_allow_html=True,
-        )
-
-    st.markdown(" ")
-
-    # ── PITFALLS (color-coded, click to expand) ──────────────────────────────
-    with st.expander(":material/warning: **Common pitfalls** — read once before your first close"):
+    with st.expander("Common pitfalls"):
         st.warning(
-            "**Forgetting Stage 3.** It runs **every month** for whichever clinic "
-            "group's quarter is ending — not just at calendar-quarter-end. Each "
-            "individual clinic is recapped four times a year, but YOU run Stage 3 "
-            "twelve times a year. Make it part of your end-of-month routine right "
-            "after Stage 2.",
+            "**Forgetting Stage 3.** Runs every month for whichever group's "
+            "quarter is ending — not just at calendar quarter-end. Each clinic "
+            "is recapped 4×/year, but you run Stage 3 12×/year.",
             icon=":material/event_repeat:",
         )
         st.info(
-            "**Picking the wrong month in Stage 2.** Always pick the month the "
-            "payments arrived for, not the month they were *received in*. Easy "
-            "mix-up at month boundaries.",
+            "**Wrong month in Stage 2.** Pick the month payments arrived FOR, "
+            "not the month they were *received in*.",
             icon=":material/calendar_month:",
         )
-        st.info(
-            "**Re-running Stage 2 after a late remittance.** Safe — the ledger "
-            "dedups by payment fingerprint, so credits already issued won't "
-            "reissue. Just confirm the new total reflects the additional credits.",
-            icon=":material/refresh:",
-        )
-        st.warning(
-            "**Skipping the email handoff.** Accounting needs the email — that's "
-            "their paper trail for the audit log. Don't just hand them files in "
-            "person.",
-            icon=":material/forward_to_inbox:",
-        )
         st.error(
-            "**Manual QBO un-apply / re-apply at quarter-end.** The app surfaces "
-            "what to do but doesn't do it — the Accounting Manager has to manually "
-            "un-apply the auto-matched payments and re-apply per SOP-11.",
+            "**Manual QBO un-apply / re-apply at quarter-end** (SOP-11). The "
+            "app generates files; the Accounting Manager does this step in QBO.",
             icon=":material/build:",
         )
 
-    # ── REFERENCE LINKS ──────────────────────────────────────────────────────
-    with st.expander(":material/menu_book: **Where to read more**"):
-        st.markdown(
-            """
-- **`docs/FLEX_PROGRAM_EXPLAINED.md`** — the FLEX accounting model in depth
-  (payment + credit memo per month, quarter-end reconciliation, why ratios
-  aren't exactly 2:1).
-- **`docs/ACCOUNTING_HANDOFF.md`** — manual steps that happen in QBO *after*
-  the app generates files.
-- **`docs/EMAIL_HANDOFF_USER_GUIDE.md`** — using the email-draft card at the
-  bottom of each stage.
-- **`docs/STRESS_TEST_PLAYBOOK.md`** — 22-case end-to-end test plan for
-  validating any new build.
-- **`docs/RECOVERY.md`** — what to do if something breaks (broken Cloud
-  deploy, import errors, etc.). Designed so anyone can recover.
-
-If you get stuck mid-cycle, the traceback inside any failed stage (each tab
-catches its own errors) is the fastest thing to share for help.
-            """
-        )
-
-    st.markdown(" ")
-
-    # ── CTA ─────────────────────────────────────────────────────────────────
-    st.success(
-        "**Ready to start?** Click the **1. Finance Payment Imports** tab "
-        "above when a remittance arrives — or jump straight to **2. Monthly "
-        "Credit Memos** if you're closing the month, or **3. Unused / Overage** "
-        "if a clinic group's quarter just ended.",
-        icon=":material/play_arrow:",
+    st.caption(
+        "Click a tab above to start. Deeper docs: `docs/FLEX_PROGRAM_EXPLAINED.md`, "
+        "`docs/ACCOUNTING_HANDOFF.md`, `docs/RECOVERY.md`."
     )
 
 # ═══════════════════════════════════════════════════════════════════════════════
