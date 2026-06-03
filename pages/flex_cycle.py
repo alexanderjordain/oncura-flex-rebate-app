@@ -198,6 +198,7 @@ with tab_overview, safe_stage("Overview"):
 # STAGE 1 — Finance Company Payment Imports
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
+    SS = st.session_state
     st.caption("Upload a finance-company remittance — produces the SaasAnt receive-payments "
                "(and scan invoices + scan payments for OnePlace / NewLane).")
 
