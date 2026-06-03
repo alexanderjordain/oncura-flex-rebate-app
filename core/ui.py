@@ -160,30 +160,87 @@ section[data-testid="stSidebar"] .stMarkdown { font-family:var(--sans); }
 a, a:visited { color:var(--blue-deep); text-decoration-color:var(--amber); }
 [data-testid="stExpander"] { border:1px solid var(--line); border-radius:6px; background:var(--surface); }
 
-/* sidebar nav: expanders styled as flat section headers (no border, no fill).
-   Used by the hand-rolled nav in app.py so the section groups render as
-   plain labels above their page links. */
+/* ── Sidebar custom navigation (rendered by app.py's hand-rolled nav block) ─── */
+
+/* Flatten the expanders that wrap each section group — no border, no fill,
+   no chunky padding. They should read as plain nav section headers. */
+.oncura-nav [data-testid="stExpander"],
 section[data-testid="stSidebar"] [data-testid="stExpander"] {
   border: none !important;
   background: transparent !important;
-  margin: .1rem 0 !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
-section[data-testid="stSidebar"] [data-testid="stExpander"] details {
+.oncura-nav [data-testid="stExpander"] > details,
+section[data-testid="stSidebar"] [data-testid="stExpander"] > details {
+  border: none !important;
   background: transparent !important;
 }
+/* Section header (summary): looks like a nav row, hover highlight, blue when open. */
+.oncura-nav [data-testid="stExpander"] summary,
 section[data-testid="stSidebar"] [data-testid="stExpander"] summary {
-  padding: .35rem .25rem !important;
+  padding: .45rem .6rem !important;
+  border-radius: 8px !important;
   font-family: var(--sans) !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
+  font-size: .92rem !important;
+  letter-spacing: .01em !important;
   color: var(--ink) !important;
+  list-style: none !important;
+  cursor: pointer !important;
+  transition: background .12s ease, color .12s ease !important;
 }
+.oncura-nav [data-testid="stExpander"] summary p,
 section[data-testid="stSidebar"] [data-testid="stExpander"] summary p {
-  font-weight: 500 !important;
-  color: var(--ink) !important;
+  font-weight: 600 !important;
+  color: inherit !important;
   margin: 0 !important;
 }
+.oncura-nav [data-testid="stExpander"] summary:hover,
+section[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
+  background: rgba(58,106,154,.07) !important;
+  color: var(--blue) !important;
+}
+.oncura-nav [data-testid="stExpander"] details[open] > summary,
+section[data-testid="stSidebar"] [data-testid="stExpander"] details[open] > summary {
+  color: var(--blue) !important;
+}
+/* Indent the children of an open section so the hierarchy reads at a glance. */
+.oncura-nav [data-testid="stExpander"] [data-testid="stExpanderDetails"],
 section[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {
-  padding-left: .5rem !important;
+  padding: .15rem 0 .25rem .65rem !important;
+  border-left: 2px solid rgba(58,106,154,.15) !important;
+  margin-left: .9rem !important;
+}
+
+/* Page-link rows (Home + child links inside each section): tighter padding,
+   subtle hover, blue + light fill when active. */
+section[data-testid="stSidebar"] [data-testid="stPageLink"] a,
+section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
+  padding: .4rem .6rem !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  color: var(--ink) !important;
+  font-size: .92rem !important;
+  transition: background .12s ease, color .12s ease !important;
+}
+section[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover,
+section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"]:hover {
+  background: rgba(58,106,154,.07) !important;
+  color: var(--blue) !important;
+}
+section[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"],
+section[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current="page"] {
+  background: rgba(58,106,154,.12) !important;
+  color: var(--blue) !important;
+  font-weight: 600 !important;
+}
+
+/* Divider above the role/logout footer */
+.oncura-sidebar-footer {
+  border-top: 1px solid var(--line);
+  margin: 1.25rem 0 .6rem 0;
 }
 
 /* top header bar -> white with a hairline (echoes the dashboard's white header) */

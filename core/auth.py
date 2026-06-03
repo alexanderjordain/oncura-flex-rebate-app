@@ -123,12 +123,21 @@ def require(permission: str) -> bool:
 
 
 def sidebar_identity():
+    """Combined brand-then-footer renderer (legacy). Prefer
+    ui.sidebar_brand() at the top + sidebar_footer() at the bottom so the
+    nav can sit between them."""
     from . import ui
 
     ui.sidebar_brand()
+    sidebar_footer()
+
+
+def sidebar_footer():
+    """Role badge + log-out button. Render at the bottom of the sidebar."""
     role = current_role()
     with st.sidebar:
+        st.markdown('<div class="oncura-sidebar-footer"></div>', unsafe_allow_html=True)
         st.markdown(f"**Role:** `{role}`")
-        if st.button("Log out"):
+        if st.button("Log out", key="sidebar_logout_btn"):
             st.session_state.pop("auth_role", None)
             st.rerun()

@@ -12,10 +12,9 @@ from core import auth, ui, graph_email
 
 st.set_page_config(page_title="Oncura FLEX + Rebate", page_icon="*", layout="wide")
 
-# Auth + theme + sidebar wordmark/logo apply across every page in the app
+# Auth + theme: gate is enforced first; theme CSS injected once per page run
 auth.require_login()
 ui.inject()
-auth.sidebar_identity()
 
 # OAuth callback handler — Microsoft Graph redirects here with ?code=... after sign-in
 _qp = st.query_params
@@ -48,7 +47,11 @@ pages = {
 }
 nav = st.navigation(pages, position="hidden")
 
+# Sidebar order: brand (logo + wordmark) → navigation → footer (role + logout).
+ui.sidebar_brand()
+
 with st.sidebar:
+    st.markdown('<div class="oncura-nav">', unsafe_allow_html=True)
     st.page_link("pages/home.py", label="Home")
     with st.expander("Rebates", expanded=False):
         st.page_link("pages/rebate_cycle.py", label="Rebate Cycle")
@@ -58,5 +61,8 @@ with st.sidebar:
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
         st.page_link("pages/settings.py", label="Settings")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+auth.sidebar_footer()
 
 nav.run()
