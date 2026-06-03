@@ -87,6 +87,22 @@
       ],
       "note": "59 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "d49a3a2fbb7c36ac723ea69203840c1ea0c259a91dfb1ad3341772695ab9a9a4"
+    },
+    {
+      "id": "c24f0de4-34e4-4f70-a6c2-3bdf270dee72",
+      "timestamp": "2026-06-03T19:04:40",
+      "cycle_type": "settings_clear_ledger",
+      "approver": "admin",
+      "year": null,
+      "month": null,
+      "params": {
+        "prior_payments": 59,
+        "prior_files": 1
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "[unknown cycle_type 'settings_clear_ledger'] Wiped 59 payment fingerprint(s) and 1 file hash(es) from processed_payments.json.",
+      "entry_hash": "746cf7d89bb8c4dc9cdff2cc44b95f0db590f2434519cb80513da1d024490193"
     }
   ]
 }
