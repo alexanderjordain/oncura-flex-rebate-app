@@ -498,29 +498,38 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 st.warning("Resolve the names above before uploading these imports.")
 
             st.divider()
-            st.subheader("Flex receive payments")
+            st.markdown("### Downloads")
+            st.caption("Click a section to preview the rows before downloading.")
+
             if not res["flex_payments"].empty:
-                st.dataframe(res["flex_payments"], use_container_width=True, height=240)
-                st.download_button("Download flex payments (xlsx)",
-                                   saasant.to_xlsx_bytes(res["flex_payments"], "FlexPayments"),
-                                   file_name=f"{company}_FlexPayments_{pay_date}.xlsx",
-                                   key="remit_dl_flex")
+                with st.expander(f"Flex receive payments  ·  {len(res['flex_payments'])} rows", expanded=False):
+                    st.dataframe(res["flex_payments"], use_container_width=True, height=240)
+                    st.download_button("Download flex payments (xlsx)",
+                                       saasant.to_xlsx_bytes(res["flex_payments"], "FlexPayments"),
+                                       file_name=f"{company}_FlexPayments_{pay_date}.xlsx",
+                                       key="remit_dl_flex")
             else:
                 st.caption("No flex rows.")
 
             if not res["scan_invoices"].empty:
-                st.subheader("Scan-package invoices (upload BEFORE scan payments)")
-                st.dataframe(res["scan_invoices"], use_container_width=True, height=220)
-                st.download_button("Download scan invoices (xlsx)",
-                                   saasant.to_xlsx_bytes(res["scan_invoices"], "ScanInvoices"),
-                                   file_name=f"{company}_ScanInvoices_{inv_date}.xlsx",
-                                   key="remit_dl_inv")
-                st.subheader("Scan-package receive payments")
-                st.dataframe(res["scan_payments"], use_container_width=True, height=220)
-                st.download_button("Download scan payments (xlsx)",
-                                   saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments"),
-                                   file_name=f"{company}_ScanPayments_{pay_date}.xlsx",
-                                   key="remit_dl_scan")
+                with st.expander(
+                    f"Scan-package invoices  ·  {len(res['scan_invoices'])} rows  ·  upload BEFORE scan payments",
+                    expanded=False,
+                ):
+                    st.dataframe(res["scan_invoices"], use_container_width=True, height=220)
+                    st.download_button("Download scan invoices (xlsx)",
+                                       saasant.to_xlsx_bytes(res["scan_invoices"], "ScanInvoices"),
+                                       file_name=f"{company}_ScanInvoices_{inv_date}.xlsx",
+                                       key="remit_dl_inv")
+                with st.expander(
+                    f"Scan-package receive payments  ·  {len(res['scan_payments'])} rows",
+                    expanded=False,
+                ):
+                    st.dataframe(res["scan_payments"], use_container_width=True, height=220)
+                    st.download_button("Download scan payments (xlsx)",
+                                       saasant.to_xlsx_bytes(res["scan_payments"], "ScanPayments"),
+                                       file_name=f"{company}_ScanPayments_{pay_date}.xlsx",
+                                       key="remit_dl_scan")
             st.markdown(
                 """
     **Uploading to SaasAnt**
