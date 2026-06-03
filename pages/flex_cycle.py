@@ -787,15 +787,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     st.caption("Either they paid ahead in a prior month, are between cycles, or their FLEX program ended.")
                     st.write(unpaid)
 
-        if skipped:
-            with st.expander(f"⚠ Skipped {len(skipped)} payment(s) — no flex_master match"):
-                st.caption(
-                    "These payments are in the ledger but don't map to any active flex_master clinic. "
-                    "Could be name drift (fix in Rebate Program Controls) or a non-FLEX clinic mis-classified in Stage 1."
-                )
-                import pandas as _pd
-                st.dataframe(_pd.DataFrame(skipped), use_container_width=True)
-
         # ── Generated credit memos preview ─────────────────────────────────────────
         st.markdown("### Credit memos to be generated")
         m1, m2 = st.columns(2)
