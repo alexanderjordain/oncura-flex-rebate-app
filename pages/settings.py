@@ -401,8 +401,10 @@ if audit_summary["entry_count"]:
     # Flatten for table view
     rows = []
     for e in entries:
-        out_total = sum(o.get("total") or 0 for o in (e.get("outputs") or []))
-        out_rows = sum(o.get("row_count") or 0 for o in (e.get("outputs") or []))
+        outs = e.get("outputs") or []
+        out_total = sum(o.get("total") or 0 for o in outs)
+        out_rows = sum(o.get("row_count") or 0 for o in outs)
+        out_names = ", ".join(o.get("name", "") for o in outs if o.get("name"))
         rows.append({
             "timestamp": e.get("timestamp", "")[:19],
             "cycle_type": e.get("cycle_type"),
@@ -411,6 +413,7 @@ if audit_summary["entry_count"]:
             "month": e.get("month"),
             "output_rows": out_rows,
             "output_total": f"${out_total:,.2f}" if out_total else "",
+            "output_files": out_names,
             "source_file": (e.get("source_file") or {}).get("name", ""),
             "note": e.get("note", ""),
             "entry_id": e.get("id", "")[:8],
