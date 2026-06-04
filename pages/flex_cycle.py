@@ -680,6 +680,17 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                         "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
                     )
 
+            # Next-step reminder for Acct SOP-2: bank-feed matching in QBO.
+            st.divider()
+            st.info(
+                ":material/account_balance: **Next step — Acct SOP-2: Match the payments in the QBO bank feed.**  \n"
+                f"After the SaasAnt files above are imported to QBO, open the **{meta.get('bank_feed', 'bank feed')}** "
+                "in QBO and match the deposit against the receive payments you just created. "
+                "Confirm the deposit amount equals the **Total** shown on this page; if there's a mismatch, "
+                "stop and reconcile before posting the next remittance.",
+                icon=":material/account_balance:",
+            )
+
             # Bottom-of-page "Set up new import" — same handler as the top-card button,
             # for operators who've scrolled all the way down and don't want to scroll back.
             st.divider()
