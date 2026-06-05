@@ -5,7 +5,7 @@ import traceback
 import pandas as pd
 import streamlit as st
 
-from core import accounting_handoff, loaders, opd_adapter, rebate_calc, rebate_report, ui
+from core import accounting_handoff, audit, auth, loaders, opd_adapter, rebate_calc, rebate_report, ui
 
 
 @contextmanager
@@ -172,7 +172,7 @@ elif step_key == "upload":
         else:
             st.info(
                 "**How to pull the OPD export:**\n\n"
-                "1. OPD → **Consults** → **Completed**\n"
+                "1. [OPD](https://telehealth.oncurapartners.com) → **Consults** → **Completed**\n"
                 "2. **Department** dropdown — select **Cardiology**, **General Radiology**, "
                 "**Internal Medicine**, and **Ultrasound** (titles capitalized exactly as shown)\n"
                 "3. Set **Finalized From** and **Finalized To** dates to cover the selected months above\n"
@@ -229,8 +229,9 @@ elif step_key == "review":
 
             unmatched_total = set()
             fuzzy_matches = []   # (month_label, clinic_name, matched_master_name, rebate_amt)
-            variance_rows = []   # (month_label, clinic_name, rate_total, feed_total, variance)
+            variance_rows = []   # (month_label, clinic_name, rate_based, feed_based, variance)
             rads_pending = []    # (month_label, clinic_name) for self-funded clinics w/ unconfirmed rate
+            cycle_has_feed = False  # True if ANY selected month carries OData feed columns
             for m, label in zip(months, month_labels):
                 start = pd.Timestamp(m)
                 next_y, next_m = (m.year + 1, 1) if m.month == 12 else (m.year, m.month + 1)
@@ -240,6 +241,8 @@ elif step_key == "review":
                     continue
                 res = rebate_calc.calculate(sub, master, cfg)
                 pc = res["per_clinic"]
+                if res.get("has_feed"):
+                    cycle_has_feed = True
                 if not res["unmatched"].empty:
                     unmatched_total.update(res["unmatched"]["opd_clinic"].astype(str).tolist())
                 for _, r in pc.iterrows():
@@ -255,12 +258,17 @@ elif step_key == "review":
                     if r.get("match") == "fuzzy":
                         fuzzy_matches.append((label, str(r.get("opd_clinic", "")),
                                               clinic_name, round(amt, 2)))
-                    var = float(r.get("variance", 0.0) or 0.0)
-                    if abs(var) >= 1.00:  # ignore sub-dollar floating-point noise
-                        variance_rows.append((label, clinic_name,
-                                              float(r.get("rate_total", 0.0)),
-                                              float(r.get("feed_total", 0.0)),
-                                              round(var, 2)))
+                    # Variance check only has signal when the OPD export carried feed
+                    # columns. For case_grid exports (the common one) feed_total is 0
+                    # for everyone, so variance degenerates into rate_total and flags
+                    # every clinic with any rebate — pure noise. Skip when no feed.
+                    if res.get("has_feed"):
+                        var = float(r.get("variance", 0.0) or 0.0)
+                        if abs(var) >= 1.00:  # ignore sub-dollar floating-point noise
+                            variance_rows.append((label, clinic_name,
+                                                  float(r.get("rebate_rate_based", 0.0)),
+                                                  float(r.get("rebate_feed_based", 0.0)),
+                                                  round(var, 2)))
                     if r.get("rads_pending_confirmation"):
                         rads_pending.append((label, clinic_name))
 
@@ -275,6 +283,7 @@ elif step_key == "review":
                 "fuzzy_matches": fuzzy_matches,
                 "variance_rows": variance_rows,
                 "rads_pending": rads_pending,
+                "has_feed": cycle_has_feed,
             }
 
         results = SS["cycle_results"]
@@ -310,15 +319,23 @@ elif step_key == "review":
         rads_pending = results.get("rads_pending", [])
         unmatched_total = results.get("unmatched_total", [])
 
-        if variance_rows:
+        # Variance only meaningful when the cycle's OPD export carries the OData
+        # feed columns (RebateUltrasoundFinance/Cash, RebateRadFinance/Cash).
+        # case_grid exports — the default OPD → Consults → Completed → Export
+        # path — don't carry those columns, so we suppress the variance block
+        # entirely on those cycles. (Showing variance for a feed-less cycle
+        # flagged every clinic with any rebate, which was pure noise.)
+        if variance_rows and results.get("has_feed"):
             with st.expander(
-                f":material/warning: **Rate vs feed variance** — {len(variance_rows)} row(s) over $1.00 difference",
+                f":material/info: **Rate vs feed variance** — {len(variance_rows)} row(s) over $1.00 difference",
                 expanded=False,
             ):
                 st.caption(
-                    "Rebate computed from rate × OPD revenue disagrees with the OPD feed's "
-                    "pre-calculated `RadCash` / `UltraCash` total by more than $1. Usually a "
-                    "rate-override drift or a service-categorization issue. Review before exporting."
+                    "Informational, not a defect. The feed's `RadCash` / `UltraCash` columns "
+                    "reflect the rebate rate that was in effect at the moment each case was "
+                    "finalized — if rates have changed in the master since then, the recomputed "
+                    "rate-based total won't match the historical feed total. The rate-based "
+                    "column is what's used in the export."
                 )
                 vdf = pd.DataFrame(
                     variance_rows,
@@ -332,9 +349,11 @@ elif step_key == "review":
                 expanded=False,
             ):
                 st.caption(
-                    "These OPD clinic names matched the master roster via fuzzy match "
-                    "(token similarity ≥ 88%), not exact. Confirm each one is the right clinic — "
-                    "a wrong match silently routes revenue to the wrong finance bucket."
+                    "These OPD clinic names matched the master roster via fuzzy match — exact "
+                    "match failed, but after stripping common boilerplate (animal / veterinary / "
+                    "hospital / LLC) the distinguishing tokens lined up at ≥ 92% similarity AND "
+                    "their first words also matched. Worth a quick confirm; a wrong match silently "
+                    "routes revenue to the wrong finance bucket."
                 )
                 fdf = pd.DataFrame(
                     fuzzy_matches,
@@ -355,22 +374,12 @@ elif step_key == "review":
                 pdf = pd.DataFrame(rads_pending, columns=["Month", "Clinic"]).drop_duplicates()
                 st.dataframe(pdf, use_container_width=True, hide_index=True)
 
-        if unmatched_total:
-            with st.expander(
-                f":material/error: **Unmatched OPD clinics** — {len(unmatched_total)} not in roster",
-                expanded=False,
-            ):
-                st.caption(
-                    "OPD lists these clinic names but they don't match any clinic in the Rebate "
-                    "Program Controls roster (even via fuzzy match). Their revenue is excluded "
-                    "from the rebate calculation. Add them to the roster if they should be in."
-                )
-                st.write("\n".join(f"- `{n}`" for n in unmatched_total[:50]))
-                if len(unmatched_total) > 50:
-                    st.caption(f"…and {len(unmatched_total) - 50} more.")
+        # Note: "Unmatched OPD clinics" dropdown intentionally removed — OPD always lists
+        # several hundred clinics that aren't in the rebate program roster (rebate enrolls
+        # a subset of all OPD clinics), so the count is normal noise, not a flag.
 
         # Sign-off gate: operator must tick this before the Next button enables.
-        if variance_rows or fuzzy_matches or rads_pending or unmatched_total:
+        if variance_rows or fuzzy_matches or rads_pending:
             SS["cycle_review_acked"] = st.checkbox(
                 "I've reviewed the flagged rows above and they're acceptable.",
                 value=SS.get("cycle_review_acked", False),
@@ -406,11 +415,6 @@ elif step_key == "export":
 
             xlsx_bytes = rebate_report.build(per_bucket, months)
             fname = f"Rebates_{rebate_report.short_period(months).replace(' ', '_').replace('&','and')}.xlsx"
-            st.download_button(
-                "Download multi-tab rebate report (xlsx)",
-                xlsx_bytes,
-                file_name=fname,
-            )
             st.caption(f"Grand total: **${grand:,.2f}** across {len(per_bucket)} bucket(s).")
 
             # Accounting handoff
@@ -426,6 +430,78 @@ elif step_key == "export":
             )
             accounting_handoff.render_handoff(_subj, _body, key_prefix="rebate_email",
                                               attachments=[(fname, xlsx_bytes)])
+
+            # Download placed AFTER the handoff section so the operator sends the email
+            # first, then downloads the workbook to attach. Keeps the natural top-to-bottom
+            # flow: review → handoff → download → record to audit.
+            st.divider()
+            st.download_button(
+                "Download multi-tab rebate report (xlsx)",
+                xlsx_bytes,
+                file_name=fname,
+                type="primary",
+            )
+
+            # ── Record to audit manifest ────────────────────────────────────────────
+            st.divider()
+            n_clinics = sum(len(c) for c in per_bucket.values())
+            already_recorded = any(
+                e.get("outputs") and e["outputs"][0].get("sha256") == audit.output_hash_bytes(xlsx_bytes)
+                for e in audit.list_entries(cycle_type="rebate_report", limit=50)
+            )
+            if already_recorded:
+                st.success(
+                    ":material/check_circle: This exact rebate report (same bytes) is already in the audit manifest. "
+                    "Re-recording it would create a duplicate entry — skip the button below unless something changed."
+                )
+            else:
+                st.error(
+                    ":material/priority_high: **IMPORTANT — Confirm this report has been handed off to accounting.**  "
+                    "Click below **only after** you've sent the email and shared the xlsx. This appends an immutable "
+                    "entry to the audit manifest capturing the source-file hash, the output hash, the months, the "
+                    "totals, and who ran it — so any future question about this cycle has a paper trail.",
+                    icon=":material/warning:",
+                )
+            if st.button(
+                "Record rebate cycle to audit manifest",
+                key="rebate_audit_mark",
+                type="primary",
+                disabled=already_recorded,
+            ):
+                src_bytes = SS.get("cycle_uploaded_bytes") or b""
+                ok, entry_id, info = audit.record_cycle(
+                    cycle_type="rebate_report",
+                    approver=auth.current_role(),
+                    year=None, month=None,  # multi-month cycle — full list in params
+                    params={
+                        "months": [m.strftime("%Y-%m") for m in months],
+                        "period_label": _period_label,
+                        "buckets": list(per_bucket.keys()),
+                        "n_clinics": n_clinics,
+                        "per_bucket_totals": _per_bucket_totals,
+                        "grand_total": round(float(grand), 2),
+                    },
+                    source_file={
+                        "name": SS.get("cycle_uploaded_name", "unknown"),
+                        "sha256": audit.output_hash_bytes(src_bytes),
+                        "size_bytes": len(src_bytes),
+                    },
+                    outputs=[{
+                        "name": fname,
+                        "sha256": audit.output_hash_bytes(xlsx_bytes),
+                        "row_count": n_clinics,
+                        "total": round(float(grand), 2),
+                    }],
+                    note=f"Rebate cycle for {_period_label}",
+                )
+                if ok:
+                    st.success(f"Recorded to audit manifest. Entry ID: `{entry_id[:8]}…`  ·  {info}")
+                else:
+                    st.warning(
+                        f"Recorded locally (no GitHub commit). Entry ID: `{entry_id[:8]}…`  ·  {info}  \n"
+                        "Set `GITHUB_TOKEN` in secrets for persistent audit history on Cloud."
+                    )
+                st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Wizard navigation

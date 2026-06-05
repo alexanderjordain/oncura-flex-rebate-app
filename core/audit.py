@@ -66,6 +66,11 @@ def output_hash_df(df) -> str:
     return _sha256_bytes(buf.getvalue().encode("utf-8"))
 
 
+def output_hash_bytes(content: bytes | None) -> str:
+    """SHA256 of arbitrary byte content (e.g. an xlsx download or uploaded source file)."""
+    return _sha256_bytes(content or b"")
+
+
 def _entry_hash(entry: dict) -> str:
     """SHA256 of the entry's content (excluding entry_hash field itself)."""
     content = {k: v for k, v in entry.items() if k != "entry_hash"}

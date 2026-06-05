@@ -23,31 +23,106 @@ except ImportError:
     _HAVE_FUZZ = False
 
 ULTRASOUND_EXCLUDED = {"stat", "assistance", "non_ema", "cancellation", "overage"}
-FUZZY_THRESHOLD = 88  # token_sort_ratio cutoff per house preference
+
+# Fuzzy match: we score only the DISTINGUISHING tokens (after stripping common
+# clinic-name boilerplate). The old approach scored full strings via
+# token_sort_ratio at 88% — but boilerplate words like "animal hospital" are
+# most of the string, so unrelated clinics like "abell animal hospital" vs
+# "ace animal hospital" cleared the bar. Stripping boilerplate first means we
+# compare what actually distinguishes one clinic from another.
+FUZZY_THRESHOLD = 92  # raised from 88; applies to stripped-boilerplate tokens
+
+_BOILERPLATE_TOKENS = {
+    "animal", "animals", "pet", "pets",
+    "veterinary", "vet", "vets", "veterinarian",
+    "hospital", "hospitals", "clinic", "clinics",
+    "center", "centre", "centers",
+    "care", "cares", "caring",
+    "medical",
+    "service", "services",
+    "group", "groups",
+    "associates", "assoc",
+    "llc", "inc", "pllc", "pa", "pc", "ltd", "corp",
+    "dba", "co", "company",
+    "dr", "drs", "doctor", "doctors",
+    "the", "of", "at", "and", "for", "a", "an",
+    "&", "-", "—", "/", ",", "+",
+}
+
+
+def _normalize(name: str) -> str:
+    """Lowercase + collapse whitespace. Same casefold rule used everywhere."""
+    return " ".join(str(name or "").casefold().split())
+
+
+def _strip_boilerplate(name: str) -> str:
+    """Drop tokens that appear in many clinic names ('animal', 'hospital', etc.)
+    so fuzzy matching scores the distinguishing tokens only."""
+    out = []
+    for tok in _normalize(name).split():
+        clean = tok.strip(".,'\"")
+        if not clean or clean in _BOILERPLATE_TOKENS:
+            continue
+        out.append(clean)
+    return " ".join(out)
 
 
 def _build_index(master_clinics: list[dict]) -> dict[str, dict]:
-    """name (lowercased) -> clinic record, for both clinic_name and legal_name."""
+    """name (normalized) -> clinic record, for both clinic_name and legal_name."""
     idx = {}
     for c in master_clinics:
         for key in (c.get("clinic_name"), c.get("legal_name")):
             if key:
-                idx.setdefault(str(key).strip().lower(), c)
+                idx.setdefault(_normalize(key), c)
     return idx
 
 
 def match_clinic(name: str, index: dict[str, dict]):
-    """Return (clinic_record, match_quality). quality in {'exact','fuzzy','none'}."""
+    """Return (clinic_record, match_quality). quality in {'exact','fuzzy','none'}.
+
+    Robust fuzzy matching: scores only the distinguishing tokens (after
+    stripping clinic-name boilerplate) at a 92% similarity threshold, AND
+    requires the first distinguishing token to match closely. Both gates are
+    needed — overall similarity protects against random noise, first-token
+    gate protects against 'abell' getting matched to 'ace'.
+    """
     if not name:
         return None, "none"
-    key = str(name).strip().lower()
+    key = _normalize(name)
     if key in index:
         return index[key], "exact"
-    if _HAVE_FUZZ and index:
-        hit = process.extractOne(key, list(index.keys()), scorer=fuzz.token_sort_ratio)
-        if hit and hit[1] >= FUZZY_THRESHOLD:
-            return index[hit[0]], "fuzzy"
-    return None, "none"
+    if not _HAVE_FUZZ or not index:
+        return None, "none"
+
+    src_strip = _strip_boilerplate(key)
+    if not src_strip:
+        return None, "none"  # nothing distinctive left to match on
+
+    # Build a stripped index — keys are distinguishing tokens, values point back
+    # to the master record. If two master names strip to the same key, first one wins.
+    stripped_index: dict[str, dict] = {}
+    for k, rec in index.items():
+        s = _strip_boilerplate(k)
+        if s:
+            stripped_index.setdefault(s, rec)
+
+    hit = process.extractOne(src_strip, list(stripped_index.keys()),
+                             scorer=fuzz.token_sort_ratio)
+    if not hit or hit[1] < FUZZY_THRESHOLD:
+        return None, "none"
+
+    # First-distinguishing-token gate. Most legitimate fuzzy matches differ
+    # only in suffix/abbreviation ('vet'/'veterinary', 'LLC' present/absent);
+    # bad matches usually differ in the first word ('abell' vs 'ace'). Require
+    # the first stripped token to match the candidate's first stripped token
+    # at >= 85% similarity.
+    src_first = src_strip.split()[0]
+    cand_first = hit[0].split()[0]
+    first_score = fuzz.ratio(src_first, cand_first)
+    if first_score < 85:
+        return None, "none"
+
+    return stripped_index[hit[0]], "fuzzy"
 
 
 def calculate(norm_df: pd.DataFrame, master: dict, config: dict) -> dict:
