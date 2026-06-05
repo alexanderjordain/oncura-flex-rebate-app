@@ -100,13 +100,19 @@ def test_recapture_skips_inactive_clinic():
     assert rows == []
 
 
-def test_recapture_no_activity_yields_none_marker():
-    clinics = [_clinic("Epsilon")]
+def test_recapture_no_activity_yields_full_threshold_as_unused():
+    """A clinic that's active on the FLEX program but has no OPD activity at
+    all this quarter still gets a full-threshold unused invoice — they
+    prepaid and none of the credit was consumed. activity_match='none' is
+    surfaced separately in the UI so the operator can sanity-check that the
+    lack of activity is real and not a name-mismatch issue."""
+    clinics = [_clinic("Epsilon", threshold=6000.0)]
     rows = flex_unused.compute_recapture(clinics, {}, 2026, 5)
     assert len(rows) == 1
     assert rows[0]["activity_match"] == "none"
-    assert rows[0]["unused"] is None
-    assert rows[0]["overage"] is None
+    assert rows[0]["quarter_activity"] == 0.0
+    assert rows[0]["unused"] == 6000.0
+    assert rows[0]["overage"] == 0.0
 
 
 def test_recapture_pools_multi_clinic_group_thresholds_and_activity():

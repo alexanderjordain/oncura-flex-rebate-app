@@ -175,11 +175,16 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
         threshold = round(threshold, 2)
 
         activity, q, matched_opd, fuzzy_score = match_activity(c, pooled_activity)
-        activity_val = float(activity) if activity is not None else None
-        unused = overage = None
-        if activity_val is not None:
-            unused = round(max(threshold - activity_val, 0.0), 2)
-            overage = round(max(activity_val - threshold, 0.0), 2)
+        # A clinic that's active on the FLEX program and whose quarter ends this
+        # month BUT has no OPD activity match still gets a full-threshold
+        # unused invoice — they prepaid for the quarter and didn't use any of
+        # the credit, so all of it becomes recognized revenue. activity_match
+        # 'none' is still surfaced in the review-step warning so the operator
+        # can sanity-check that the lack of activity is real and not a name
+        # mismatch hiding genuine consults.
+        activity_val = float(activity) if activity is not None else 0.0
+        unused = round(max(threshold - activity_val, 0.0), 2)
+        overage = round(max(activity_val - threshold, 0.0), 2)
         fc = c.get("finance_company")
         contract_number = (
             c.get("contract_greatamerica") if fc == "GreatAmerica"
@@ -194,7 +199,7 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
                 "finance_company": c.get("finance_company"),
                 "calendar_spread": spread,
                 "quarterly_threshold": round(threshold, 2),
-                "quarter_activity": (round(activity_val, 2) if activity_val is not None else None),
+                "quarter_activity": round(activity_val, 2),
                 "unused": unused,
                 "overage": overage,
                 "activity_match": q,
