@@ -15,6 +15,14 @@
       "uploaded_at": "2026-06-05T17:40:12",
       "row_count": 28,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-05-05"
+    },
+    {
+      "sha256": "a902bae6f7ac9aa2a61336e7809edfc544aafdb039b0e0bc143796602b6196b8",
+      "filename": "Remittance Detail Downloadable (11) 5-12.csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-05T17:40:53",
+      "row_count": 2,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-05-12"
     }
   ],
   "payments": [
@@ -877,6 +885,26 @@
       "payment_date": "2026-05-05",
       "amount": 920.8,
       "recorded_at": "2026-06-05T17:40:12"
+    },
+    {
+      "fingerprint": "a0f0ea511b873451aae68e06815cc0471ee1d4ca71f264b220a58b05ae7509d3",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41722573",
+      "qb_customer": "Allen Veterinary Hospital",
+      "payment_date": "2026-05-12",
+      "amount": 921.84,
+      "recorded_at": "2026-06-05T17:40:53"
+    },
+    {
+      "fingerprint": "db9f42e2a54a99cc4eb83bc2ab6d63369b289d70e3390e0f230065552bbd000f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41724002",
+      "qb_customer": "Clark Veterinary Hospital",
+      "payment_date": "2026-05-12",
+      "amount": 921.84,
+      "recorded_at": "2026-06-05T17:40:53"
     }
   ]
 }
