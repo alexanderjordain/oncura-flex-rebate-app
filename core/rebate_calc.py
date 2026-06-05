@@ -33,20 +33,22 @@ ULTRASOUND_EXCLUDED = {"stat", "assistance", "non_ema", "cancellation", "overage
 FUZZY_THRESHOLD = 92  # raised from 88; applies to stripped-boilerplate tokens
 
 _BOILERPLATE_TOKENS = {
+    # Pure descriptors of business type — meaningless without context.
     "animal", "animals", "pet", "pets",
     "veterinary", "vet", "vets", "veterinarian",
-    "hospital", "hospitals", "clinic", "clinics",
-    "center", "centre", "centers",
-    "care", "cares", "caring",
-    "medical",
-    "service", "services",
-    "group", "groups",
-    "associates", "assoc",
+    # Legal-entity suffixes.
     "llc", "inc", "pllc", "pa", "pc", "ltd", "corp",
     "dba", "co", "company",
+    # Honorific prefixes and articles.
     "dr", "drs", "doctor", "doctors",
     "the", "of", "at", "and", "for", "a", "an",
     "&", "-", "—", "/", ",", "+",
+    # NOTE: 'hospital', 'clinic', 'center', 'group', 'services', 'care',
+    # 'medical', 'associates' are DELIBERATELY NOT in this list. They look
+    # like boilerplate, but the same prefix with a different venue word is
+    # often a different business — e.g. 'Southwest Veterinary Hospital'
+    # vs 'Southwest Veterinary Clinic'. Treating those words as discriminating
+    # tokens prevents silent wrong-clinic matches.
 }
 
 
