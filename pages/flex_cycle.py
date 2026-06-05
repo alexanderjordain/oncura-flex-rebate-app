@@ -379,12 +379,17 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             amount_col = SS["remit_amt_col"]
             id_col = SS["remit_id_col"]
 
-            # GreatAmerica remittances carry only ContractID (customer-name
-            # column is typically blank), so we resolve QB customer via the
-            # contract → qb_name map built from flex_master.json. For other
-            # companies the map is empty (process_remittance falls through to
-            # the legacy name_map lookup).
-            contract_qb_map = flex_finance.build_contract_qb_map(flex_clinics, company)
+            # GreatAmerica remittances key off ContractID — the customer-name
+            # column carries unrelated legal-entity names that don't match QB.
+            # Merge two contract → qb_name sources:
+            #   1. The contract_<company> field on each flex_master clinic
+            #   2. Operator-added entries in data/contract_qb_map.json for
+            #      clinics not (yet) in flex_master
+            cm_base = loaders.contract_qb_map()
+            extras = (cm_base.get("map") or {}).get(company, {})
+            contract_qb_map = flex_finance.build_contract_qb_map(
+                flex_clinics, company, extras=extras,
+            )
             res = flex_finance.process_remittance(
                 raw, company,
                 customer_col=customer_col, amount_col=amount_col, id_col=id_col,
@@ -555,7 +560,61 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 m1.metric("Flex", f"{s['flex_count']}  (${s['flex_total']:,.2f})")
                 m2.metric("Total", f"${s['total']:,.2f}")
 
-            if unmapped:
+            # GA resolves rows by ContractID — surface the unmapped CONTRACTS
+            # (with the remittance legal name as a hint) so the operator can
+            # map each contract → QB Display Name. Saved to
+            # data/contract_qb_map.json under {company: {contract: qb_name}}.
+            unmapped_contracts = res.get("unmapped_contracts") or []
+            if unmapped_contracts and company in flex_finance.CONTRACT_PRIMARY_COMPANIES:
+                st.divider()
+                st.subheader(f"Resolve {len(unmapped_contracts)} unmatched contract(s)")
+                st.caption(
+                    "These ContractIDs aren't in the FLEX master or the saved contract map. "
+                    "Paste the matching QuickBooks Display Name on the right — the legal name "
+                    "from the remittance is shown as context. Saved mappings persist so future "
+                    "cycles auto-match by contract."
+                )
+                qb_inputs = {}
+                hc1, hc2 = st.columns(2)
+                hc1.markdown("**Contract ID** (legal name from remittance as hint)")
+                hc2.markdown("**QuickBooks display name**")
+                for i, entry in enumerate(unmapped_contracts):
+                    cid = entry["contract"]
+                    hint = entry.get("remittance_name") or "—"
+                    cc1, cc2 = st.columns(2)
+                    with cc1:
+                        st.code(cid, language=None)
+                        st.caption(f":gray[from remittance: {hint}]")
+                    with cc2:
+                        qb_inputs[cid] = st.text_input(
+                            "qb", key=f"qbfix_contract_{i}",
+                            label_visibility="collapsed",
+                            placeholder="paste QuickBooks display name",
+                        )
+                if st.button("Save contract mappings", type="primary", key="remit_save_contract_map"):
+                    new_pairs = {c.strip(): str(qb).strip()
+                                 for c, qb in qb_inputs.items() if str(qb).strip()}
+                    if new_pairs:
+                        cm = loaders.contract_qb_map()
+                        cm = {**cm, "map": {**(cm.get("map") or {})}}
+                        company_map = dict((cm["map"].get(company) or {}))
+                        company_map.update(new_pairs)
+                        cm["map"][company] = company_map
+                        ok, _ = store.save_json(
+                            "contract_qb_map.json", cm,
+                            f"Add {len(new_pairs)} {company} contract→QB mapping(s)",
+                        )
+                        loaders.contract_qb_map.clear()
+                        st.success(
+                            f"Saved {len(new_pairs)} contract mapping(s) " +
+                            ("— committed to the repo for everyone." if ok
+                             else "— applied locally. Set GITHUB_TOKEN on Cloud to share.")
+                        )
+                        st.rerun()
+                    else:
+                        st.warning("Enter at least one QuickBooks display name first.")
+                st.warning("Resolve the contracts above before uploading these imports.")
+            elif unmapped:
                 st.divider()
                 st.subheader(f"Resolve {len(unmapped)} unmatched customer name(s)")
                 st.caption("Copy the legal name (click the copy icon) → paste into QuickBooks → "

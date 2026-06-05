@@ -49,6 +49,15 @@ def service_prices():
     return data
 
 
+@st.cache_data(show_spinner=False)
+def contract_qb_map():
+    """Operator-added {company: {contract_id: qb_name}} mappings for clinics
+    not (yet) in flex_master. Primary use: GreatAmerica remittances whose
+    contract IDs reference clinics we don't have FLEX records for."""
+    data, _ = _load("contract_qb_map.json", {"map": {}})
+    return data
+
+
 def clear_caches():
     rebate_master.clear()
     flex_master.clear()
@@ -56,3 +65,4 @@ def clear_caches():
     config.clear()
     name_map.clear()
     service_prices.clear()
+    contract_qb_map.clear()

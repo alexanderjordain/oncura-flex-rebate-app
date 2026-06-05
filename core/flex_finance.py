@@ -149,13 +149,21 @@ def _assert_unique(values, where):
         raise ValueError(f"Non-unique Ref No in {where} (SaasAnt will collapse rows): {sorted(map(str, dupes))[:10]}")
 
 
-def build_contract_qb_map(flex_clinics: list[dict], company: str) -> dict:
-    """Build ``{contract_id: qb_name}`` for one finance company from flex_master.
+def build_contract_qb_map(flex_clinics: list[dict], company: str,
+                          extras: dict | None = None) -> dict:
+    """Build ``{contract_id: qb_name}`` for one finance company.
 
-    Used to resolve GreatAmerica remittance rows that carry only a ContractID
-    (the customer-name column is typically blank on their statements). Looking
-    up by contract is the authoritative match — the contract IDs are immutable
-    where clinic names can vary in formatting between systems.
+    Merges two sources:
+      1. The per-clinic ``contract_<company>`` field on each flex_master record
+         (curated, immutable, the structural source of truth)
+      2. The optional ``extras`` dict — operator-added contracts persisted in
+         ``data/contract_qb_map.json`` for clinics that aren't yet (or aren't
+         going to be) in flex_master
+
+    Used to resolve remittance rows that carry only a contract ID (typical for
+    GreatAmerica — the customer-name column is blank or full of legal-entity
+    boilerplate). The contract ID is immutable where clinic names can vary in
+    formatting between systems.
     """
     field_by_company = {
         "GreatAmerica": "contract_greatamerica",
@@ -164,14 +172,28 @@ def build_contract_qb_map(flex_clinics: list[dict], company: str) -> dict:
     }
     field = field_by_company.get(company)
     if not field:
-        return {}
+        return dict(extras or {})
     out: dict[str, str] = {}
     for c in flex_clinics:
         contract = (c.get(field) or "").strip()
         qb_name = (c.get("qb_name") or "").strip()
         if contract and qb_name:
             out[contract] = qb_name
+    # Operator-added entries overlay; they win if duplicated (operator's
+    # latest edit is the most recent intent).
+    for k, v in (extras or {}).items():
+        k = (k or "").strip()
+        v = (v or "").strip()
+        if k and v:
+            out[k] = v
     return out
+
+
+# Companies where contract-ID lookup is the PRIMARY resolution path (not just
+# a fallback to name-based mapping). For these companies the remittance's
+# customer-name column is unreliable or absent, so unresolved rows surface as
+# 'contract:022-XXX' in the unmapped list — the operator maps by contract.
+CONTRACT_PRIMARY_COMPANIES = {"GreatAmerica"}
 
 
 def process_remittance(
@@ -225,17 +247,26 @@ def process_remittance(
     qb_pairs = [translate_name(n, name_map) for n in work[customer_col]]
     qb_customers: list[str] = []
     unmapped_set: set[str] = set()
+    # For companies where contract is the primary key (GreatAmerica), surface
+    # unmapped rows as {contract, remittance_name} so the UI resolver can show
+    # the contract ID as the actionable key with the legal name as context.
+    contract_primary = company in CONTRACT_PRIMARY_COMPANIES
+    unmapped_contracts: dict[str, str] = {}  # {contract_id: remittance_legal_name}
     for i, (qb_from_name, name_found) in enumerate(qb_pairs):
         ident = str(work[id_col].iloc[i]).strip() if id_col and id_col in work else ""
         qb_from_contract = (contract_qb_map or {}).get(ident) if ident else None
         if qb_from_contract:
             qb_customers.append(qb_from_contract)
-        else:
-            qb_customers.append(qb_from_name)
-            if not name_found:
-                # Report unmapped using whatever identifier the operator can act on.
-                raw_name = str(work[customer_col].iloc[i]).strip() if pd.notna(work[customer_col].iloc[i]) else ""
-                unmapped_set.add(raw_name or f"contract:{ident}")
+            continue
+        qb_customers.append(qb_from_name)
+        if name_found and not contract_primary:
+            continue
+        raw_name = str(work[customer_col].iloc[i]).strip() if pd.notna(work[customer_col].iloc[i]) else ""
+        if contract_primary and ident:
+            # GA + unresolved → record the contract; later UI maps it to QB name.
+            unmapped_contracts.setdefault(ident, raw_name)
+        elif not name_found:
+            unmapped_set.add(raw_name or f"contract:{ident}")
     work["_qb_customer"] = qb_customers
     unmapped = sorted(unmapped_set)
 
@@ -273,6 +304,13 @@ def process_remittance(
         "scan_invoices": scan_invoices,
         "scan_payments": scan_payments,
         "unmapped": unmapped,
+        # For contract-primary companies (GA): list of {contract, remittance_name}
+        # for rows where the contract isn't in contract_qb_map. UI uses this to
+        # render a contract-based resolver instead of the legal-name one.
+        "unmapped_contracts": [
+            {"contract": k, "remittance_name": v}
+            for k, v in sorted(unmapped_contracts.items())
+        ],
         "summary": {
             "flex_count": len(flex), "scan_count": len(scan),
             "flex_total": round(float(flex["_amount"].sum()), 2) if len(flex) else 0.0,
