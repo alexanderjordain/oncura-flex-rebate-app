@@ -421,6 +421,41 @@ def recapture_email(*, year: int, month: int,
     return subj, "\n".join(parts)
 
 
+def direct_bill_overage_email(*, year: int, month: int,
+                              invoice_count: int, invoice_total: float) -> tuple[str, str]:
+    """FLEX direct-bill overage handoff to accounting (Tanya). One file attached,
+    instructions in the body so the operator doesn't have to manually copy any of
+    this into a separate email.
+
+    The attached xlsx has NO 'Invoice No' column — Tanya generates the QBO invoice
+    numbers herself in SaasAnt during the import wizard.
+    """
+    month_name = dt.date(year, month, 1).strftime("%B")
+    subj = f"[Action Required] FLEX Direct-Bill Overage — {month_name} {year}"
+    parts = [
+        "Hi Tanya,",
+        "",
+        f"Direct-bill overage invoices for {month_name} {year} — "
+        f"{invoice_count} invoice(s) totalling ${invoice_total:,.2f}. ",
+        "File attached.",
+        "",
+        "Work order (SOP-6 / SOP-12):",
+        "  1. Upload the attached xlsx to SaasAnt → Bulk Upload → Invoice.",
+        "     The file does NOT contain Invoice Numbers — SaasAnt will assign them",
+        "     fresh from the next available number in QBO.",
+        "  2. Send each clinic an Authorize.net payment link (or QBO invoice PDF).",
+        "  3. VOID each QBO invoice immediately after sending — revenue was",
+        "     already captured by the OPD invoices, so leaving them open",
+        "     overstates AR (SOP-6).",
+        "  4. When payment arrives, apply it to zero out the clinic's account.",
+        "  5. No refunds on FLEX overpayments (SOP-12) — overpayment stays as",
+        "     credit for future overages.",
+        "",
+        "Reply if anything looks off and I'll re-run the cycle.",
+    ]
+    return subj, "\n".join(parts)
+
+
 def rebate_email(*, period_label: str, per_bucket_totals: dict,
                  grand_total: float) -> tuple[str, str]:
     subj = f"[Action Required] Rebate Period Report — {period_label}"

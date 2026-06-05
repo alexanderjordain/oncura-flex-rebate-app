@@ -13,8 +13,8 @@ from contextlib import contextmanager
 import streamlit as st
 
 from core import (
-    audit, auth, flex_credits, flex_finance, flex_overage, flex_unused,
-    ledger, loaders, opd_adapter, saasant, store, ui,
+    accounting_handoff, audit, auth, flex_credits, flex_finance, flex_overage,
+    flex_unused, ledger, loaders, opd_adapter, saasant, store, ui,
 )
 
 
@@ -1502,33 +1502,41 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 
             def _direct_block():
                 st.caption(
-                    f"Bill these clinics directly via QBO. Per **SOP-6**: void each invoice in "
-                    f"QBO immediately after sending — revenue was already captured by the OPD "
-                    f"invoices, so leaving them open overstates AR."
+                    f"These overages go to **accounting@oncurapartners.com** for direct billing. "
+                    f"Tanya uploads the attached file to SaasAnt (generating fresh QBO invoice "
+                    f"numbers there), sends the invoices, and voids each per **SOP-6**."
                 )
                 bc1, bc2 = st.columns(2)
                 bc1.metric("Invoices", direct_count)
                 bc2.metric("Total", f"${direct_total:,.2f}")
-                SS.recap_direct_start = int(st.number_input(
-                    "Starting Invoice No (direct-bill)", value=int(SS.recap_direct_start),
-                    step=1, key="w_overage_direct_start",
-                ))
-                didf, direct_next = flex_overage.build_direct_invoice_import(
-                    annotated, rec_year, rec_month, int(SS.recap_direct_start), sales_class, cfg_all,
+                # Build the xlsx and strip the Invoice No column — Tanya generates
+                # those in SaasAnt during her import, so the operator doesn't need
+                # to pick a starting reference. The flex_overage builder still
+                # wants a start_ref internally; pass a sentinel since we drop the
+                # column before sending.
+                didf_raw, _unused_next = flex_overage.build_direct_invoice_import(
+                    annotated, rec_year, rec_month, 1, sales_class, cfg_all,
                 )
-                st.download_button(
-                    ":material/download:  Download direct-bill overage invoices (xlsx)",
-                    saasant.to_xlsx_bytes(didf, "OverageDirect"),
-                    file_name=f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
-                    type="primary",
-                    use_container_width=True,
-                    key="w_recap_dl_direct",
-                )
-                st.caption(
-                    f":gray[Next available invoice number: {direct_next}  ·  *See send & void "
-                    f"steps below.*]"
-                )
-                # Dedup against ledger — flag rows already emitted in prior runs
+                didf = didf_raw.drop(columns=["Invoice No"], errors="ignore")
+                xlsx_bytes = saasant.to_xlsx_bytes(didf, "OverageDirect")
+                fname = f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
+
+                # Email handoff to Tanya — file attached, SOP-6 instructions in
+                # the body so she can work the list without anything extra here.
+                if not didf.empty:
+                    _subj, _body = accounting_handoff.direct_bill_overage_email(
+                        year=rec_year, month=rec_month,
+                        invoice_count=len(didf),
+                        invoice_total=float(direct_total),
+                    )
+                    accounting_handoff.render_handoff(
+                        _subj, _body, key_prefix="recap_direct_email",
+                        attachments=[(fname, xlsx_bytes)],
+                    )
+                else:
+                    st.info("No direct-bill rows to send.")
+
+                # Dedup against ledger — flag rows already emitted in prior runs.
                 direct_payments_for_ledger = []
                 already_direct: list[str] = []
                 if not didf.empty:
@@ -1550,37 +1558,28 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     already_direct = ledger.check_payments_seen(direct_fps)
                     if already_direct:
                         st.warning(
-                            f"**{len(already_direct)} direct-bill invoice(s) already recorded "
-                            f"for this period.** Re-uploading them to QBO will double-bill — "
-                            f"review the download before importing."
+                            f"**{len(already_direct)} direct-bill invoice(s) already sent for "
+                            f"this period.** Re-sending tells Tanya to bill these twice — "
+                            f"review the file before sending the email."
                         )
-
-                # Send & void steps — inline as a numbered list (load-bearing for SOP-6).
-                st.divider()
-                st.markdown(
-                    "**Send & void steps (SOP-6)**\n"
-                    "1. Upload to SaasAnt → **[transactions.saasant.com](https://transactions.saasant.com)** "
-                    "→ **Bulk Upload → Invoice** → select the file you just downloaded.\n"
-                    "2. Send each clinic an Authorize.net payment link (or the QBO invoice PDF).\n"
-                    "3. **VOID each QBO invoice immediately after sending** — revenue was already "
-                    "captured by the OPD invoices.\n"
-                    "4. When payment arrives, apply it to zero out the clinic's account.\n"
-                    "5. **No refunds** (SOP-12) — overpayments stay on account for future overages."
-                )
 
                 if not didf.empty:
                     st.divider()
+                    st.caption(
+                        ":gray[Initial below **after** you've sent the email above. This logs "
+                        "the send to the audit manifest + dedup ledger.]"
+                    )
                     direct_initials = ui.initials_input("stage3_direct_audit_initials")
                 else:
                     direct_initials = ""
                 if not didf.empty and st.button(
-                    f"Mark {len(didf)} direct-bill invoice(s) as imported",
+                    f"Record {len(didf)} direct-bill invoice(s) as sent to accounting",
                     key="w_recap_mark_direct", type="primary",
                     disabled=not direct_initials,
                 ):
                     ok_l, added_l, _ = ledger.record_batch(
                         file_content=None,
-                        filename=f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                        filename=fname,
                         company="INTERNAL",
                         payments=direct_payments_for_ledger,
                         note=f"Stage 3 direct-bill / {dt.date(2000, rec_month, 1):%B} {rec_year}",
@@ -1591,9 +1590,8 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         year=rec_year, month=rec_month,
                         params={
                             "route": "direct_bill",
-                            "start_ref": int(SS.recap_direct_start),
-                            "next_ref": direct_next,
                             "clinic_count": direct_count,
+                            "sent_to": "accounting@oncurapartners.com",
                         },
                         outputs=[{
                             "name": "overage_direct_invoices",
@@ -1601,7 +1599,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "row_count": len(didf),
                             "total": round(float(direct_total), 2),
                         }],
-                        note=f"Direct-bill overages for {dt.date(2000, rec_month, 1):%B %Y}",
+                        note=f"Direct-bill overages emailed to accounting for {dt.date(2000, rec_month, 1):%B %Y}",
                     )
                     st.success(
                         f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest "
