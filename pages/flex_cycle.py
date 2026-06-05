@@ -1239,14 +1239,22 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 int(SS.recap_year), int(SS.recap_month),
                 int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)),
             )
-            cs = ":green[on time]" if today_d <= new_cutoff else ":red[cutoff missed]"
+            cs = ":green[**on time**]" if today_d <= new_cutoff else ":red[**cutoff missed**]"
             with bot_r:
                 with st.container(border=True):
                     st.markdown(
-                        f"**Quarter window**  \n"
-                        f"{new_win_s:%b %d} → {new_win_e:%b %d, %Y}  \n"
-                        f"**Qualifying clinics:** {len(new_group)}  \n"
-                        f"**Partner cutoff:** {new_cutoff:%b %d, %Y} ({cs})"
+                        ":material/calendar_month:&nbsp;&nbsp;:gray[**QUARTER WINDOW**]"
+                    )
+                    st.markdown(
+                        f"### :blue[{new_win_s:%b %d}&nbsp;&nbsp;→&nbsp;&nbsp;{new_win_e:%b %d, %Y}]"
+                    )
+                    c_qa, c_qb = st.columns(2)
+                    c_qa.markdown(
+                        f":gray[Qualifying clinics]  \n**{len(new_group)}**"
+                    )
+                    c_qb.markdown(
+                        f":gray[Partner cutoff]  \n"
+                        f"**{new_cutoff:%b %d, %Y}**  ·  {cs}"
                     )
 
         elif step_key == "upload":
