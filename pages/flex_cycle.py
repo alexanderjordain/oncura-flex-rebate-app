@@ -379,11 +379,17 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             amount_col = SS["remit_amt_col"]
             id_col = SS["remit_id_col"]
 
+            # GreatAmerica remittances carry only ContractID (customer-name
+            # column is typically blank), so we resolve QB customer via the
+            # contract → qb_name map built from flex_master.json. For other
+            # companies the map is empty (process_remittance falls through to
+            # the legacy name_map lookup).
+            contract_qb_map = flex_finance.build_contract_qb_map(flex_clinics, company)
             res = flex_finance.process_remittance(
                 raw, company,
                 customer_col=customer_col, amount_col=amount_col, id_col=id_col,
                 payment_date=pay_date, invoice_date=inv_date, start_invoice_no=start_inv,
-                name_map=nm, split=split,
+                name_map=nm, contract_qb_map=contract_qb_map, split=split,
             )
 
             # ── Row-level dedup against the processed-payments ledger ──────────────

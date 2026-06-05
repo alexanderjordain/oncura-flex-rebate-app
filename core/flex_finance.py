@@ -149,6 +149,31 @@ def _assert_unique(values, where):
         raise ValueError(f"Non-unique Ref No in {where} (SaasAnt will collapse rows): {sorted(map(str, dupes))[:10]}")
 
 
+def build_contract_qb_map(flex_clinics: list[dict], company: str) -> dict:
+    """Build ``{contract_id: qb_name}`` for one finance company from flex_master.
+
+    Used to resolve GreatAmerica remittance rows that carry only a ContractID
+    (the customer-name column is typically blank on their statements). Looking
+    up by contract is the authoritative match — the contract IDs are immutable
+    where clinic names can vary in formatting between systems.
+    """
+    field_by_company = {
+        "GreatAmerica": "contract_greatamerica",
+        "OnePlace":     "contract_oneplace",
+        "NewLane":      "contract_newlane",
+    }
+    field = field_by_company.get(company)
+    if not field:
+        return {}
+    out: dict[str, str] = {}
+    for c in flex_clinics:
+        contract = (c.get(field) or "").strip()
+        qb_name = (c.get("qb_name") or "").strip()
+        if contract and qb_name:
+            out[contract] = qb_name
+    return out
+
+
 def process_remittance(
     df: pd.DataFrame,
     company: str,
@@ -160,11 +185,17 @@ def process_remittance(
     invoice_date,
     start_invoice_no: int,
     name_map: dict,
+    contract_qb_map: dict | None = None,
     split: str = "by_cents",
 ):
     """Turn a remittance into SaasAnt imports.
 
     split: 'by_cents' (NewLane: whole-dollar=scan, else flex), 'all_flex', or 'all_scan'.
+    contract_qb_map: optional ``{contract_id: qb_name}`` lookup. For GreatAmerica
+      the remittance carries only a ContractID column (no usable customer name),
+      so when this map is provided and the row's contract matches, we use the
+      mapped QB name directly. Falls through to name-based ``translate_name``
+      when no contract match is found.
     Returns dict: flex_payments, scan_invoices, scan_payments (DataFrames), plus summary + unmapped.
     Original columns are preserved; SaasAnt columns are appended.
     """
@@ -174,16 +205,39 @@ def process_remittance(
     if id_col and id_col in work.columns:
         work = work[work[id_col].notna()]
         work = work[work[id_col].astype(str).str.replace("\xa0", " ").str.strip().ne("")]
-    work = work[work[customer_col].notna()]
+    # Customer name may be blank for GreatAmerica (only ContractID is populated).
+    # When a contract_qb_map is supplied AND the contract resolves, we still
+    # accept the row; otherwise fall back to the historical "must have a name"
+    # filter so we don't silently keep rows that can't be mapped anywhere.
+    if contract_qb_map and id_col and id_col in work.columns:
+        keep_mask = work[customer_col].notna() | work[id_col].astype(str).str.strip().isin(contract_qb_map)
+        work = work[keep_mask]
+    else:
+        work = work[work[customer_col].notna()]
     work = work.reset_index(drop=True)
     amounts = work[amount_col].map(coerce_amount)
     work = work[amounts != 0].reset_index(drop=True)
     amounts = work[amount_col].map(coerce_amount)
 
+    # Resolve QB customer for each row. Contract-based map wins when both the
+    # contract and a name lookup exist — the contract → QB mapping is curated
+    # in flex_master.json and authoritative; the name_map is best-effort.
     qb_pairs = [translate_name(n, name_map) for n in work[customer_col]]
-    work["_qb_customer"] = [q for q, _ in qb_pairs]
-    unmapped = sorted({str(work[customer_col].iloc[i]).strip()
-                       for i, (_, found) in enumerate(qb_pairs) if not found})
+    qb_customers: list[str] = []
+    unmapped_set: set[str] = set()
+    for i, (qb_from_name, name_found) in enumerate(qb_pairs):
+        ident = str(work[id_col].iloc[i]).strip() if id_col and id_col in work else ""
+        qb_from_contract = (contract_qb_map or {}).get(ident) if ident else None
+        if qb_from_contract:
+            qb_customers.append(qb_from_contract)
+        else:
+            qb_customers.append(qb_from_name)
+            if not name_found:
+                # Report unmapped using whatever identifier the operator can act on.
+                raw_name = str(work[customer_col].iloc[i]).strip() if pd.notna(work[customer_col].iloc[i]) else ""
+                unmapped_set.add(raw_name or f"contract:{ident}")
+    work["_qb_customer"] = qb_customers
+    unmapped = sorted(unmapped_set)
 
     if split == "all_flex":
         kinds = ["flex"] * len(work)
