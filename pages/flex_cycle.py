@@ -919,11 +919,10 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             type="primary",
             key="cred_dl",
         )
-        st.caption(f"Next available reference number after this batch: {next_ref}")
-        st.info(
-            "**Quarter-end true-up:** Credit memos generated here reflect payments received this month. "
-            "Stage 3 reconciliation will absorb any unused balance into recognized revenue and bill any "
-            "overage — pre-paid credits do not carry past the quarter."
+        st.caption(
+            f"Next available reference number after this batch: {next_ref}  ·  "
+            f":gray[*Quarter-end true-up: unused balance and overage are reconciled in Stage 3 — "
+            f"pre-paid credits don't carry past the quarter.*]"
         )
 
         # ── Mark batch as generated: records to audit + ledger so re-runs are caught ──
@@ -1003,7 +1002,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     )
 
         # ── Legacy bootstrap mode ──────────────────────────────────────────────────
-        with st.expander("Legacy mode — active-list credit memos (bootstrap only)"):
+        with st.expander(":gray[Legacy mode — active-list credit memos (bootstrap only)]"):
             st.caption(
                 "Use only when the processed-payments ledger is empty for the target month "
                 "(e.g., first run after migration). This generates one credit memo per active clinic "
