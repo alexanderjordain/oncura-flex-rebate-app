@@ -45,10 +45,21 @@ SCAN_INVOICE_COLS = [
 
 
 def guess_columns(company: str, cols) -> dict:
-    """Best-effort {customer, amount, id} column names for a remittance.
+    """Best-effort {customer, amount, id, contract} column names for a remittance.
+
+    GreatAmerica statements carry TWO identifiers per row:
+      - Payment Invoice Number (8-digit numeric, e.g. 41983392) — used to build
+        the SaasAnt Ref No 'GA-41983392'
+      - ContractID (dashed format, e.g. 021-1995483-000) — used to look up the
+        clinic in flex_master.contract_greatamerica
+
+    `id` is the Ref-No source; `contract` is the lookup key. For non-GA
+    companies the two collapse: contract IS the ref source.
+
     Candidate-priority matching so specific names win over loose substrings
     (e.g. 'Customer Name' over 'Contract Vendor Customer Number'; 'PTB Received'
-    over 'Payments Received' which is a count, not dollars)."""
+    over 'Payments Received' which is a count, not dollars).
+    """
     low = [str(c).lower() for c in cols]
 
     def pick(cands, default=0):
@@ -58,13 +69,30 @@ def guess_columns(company: str, cols) -> dict:
                     return i
         return default
 
+    def maybe_pick(cands):
+        for k in cands:
+            for i, c in enumerate(low):
+                if k in c:
+                    return cols[i]
+        return None
+
     customer = pick(["customer_name", "customer name", "customer"])
     amount = pick(["payment_amount", "ptb received", "ptb", "paid", "amount"])
     if company == "GreatAmerica":
         ident = pick(["payment invoice", "invoice"])
+        # GA: contract lookup uses the dashed ContractID column (separate from
+        # Payment Invoice Number). Match 'contractid' before 'contract' to win
+        # against 'Contract Vendor Customer Number'.
+        contract = maybe_pick(["contractid", "contract id", "contract_id"])
     else:
         ident = pick(["contract_id", "contract #", "contract"])
-    return {"customer": cols[customer], "amount": cols[amount], "id": cols[ident]}
+        contract = None  # non-GA companies collapse the two
+    return {
+        "customer": cols[customer],
+        "amount": cols[amount],
+        "id": cols[ident],
+        "contract": contract,
+    }
 
 
 def is_whole_dollar(amount) -> bool:
@@ -203,6 +231,7 @@ def process_remittance(
     customer_col: str,
     amount_col: str,
     id_col: str | None,
+    contract_id_col: str | None = None,
     payment_date,
     invoice_date,
     start_invoice_no: int,
@@ -227,12 +256,15 @@ def process_remittance(
     if id_col and id_col in work.columns:
         work = work[work[id_col].notna()]
         work = work[work[id_col].astype(str).str.replace("\xa0", " ").str.strip().ne("")]
-    # Customer name may be blank for GreatAmerica (only ContractID is populated).
-    # When a contract_qb_map is supplied AND the contract resolves, we still
-    # accept the row; otherwise fall back to the historical "must have a name"
-    # filter so we don't silently keep rows that can't be mapped anywhere.
-    if contract_qb_map and id_col and id_col in work.columns:
-        keep_mask = work[customer_col].notna() | work[id_col].astype(str).str.strip().isin(contract_qb_map)
+    # Column used for QB-customer lookup. For GA this is the ContractID column
+    # (dashed format) — distinct from id_col which is Payment Invoice Number
+    # (used for the SaasAnt Ref No). For non-GA the two collapse.
+    lookup_col = contract_id_col or id_col
+    # Customer name may be blank for GreatAmerica. When a contract_qb_map is
+    # supplied AND the contract resolves, we still accept the row; otherwise
+    # fall back to the historical "must have a name" filter.
+    if contract_qb_map and lookup_col and lookup_col in work.columns:
+        keep_mask = work[customer_col].notna() | work[lookup_col].astype(str).str.strip().isin(contract_qb_map)
         work = work[keep_mask]
     else:
         work = work[work[customer_col].notna()]
@@ -253,8 +285,10 @@ def process_remittance(
     contract_primary = company in CONTRACT_PRIMARY_COMPANIES
     unmapped_contracts: dict[str, str] = {}  # {contract_id: remittance_legal_name}
     for i, (qb_from_name, name_found) in enumerate(qb_pairs):
-        ident = str(work[id_col].iloc[i]).strip() if id_col and id_col in work else ""
-        qb_from_contract = (contract_qb_map or {}).get(ident) if ident else None
+        # Contract lookup uses lookup_col (ContractID for GA, id_col for others).
+        lookup_id = (str(work[lookup_col].iloc[i]).strip()
+                     if lookup_col and lookup_col in work else "")
+        qb_from_contract = (contract_qb_map or {}).get(lookup_id) if lookup_id else None
         if qb_from_contract:
             qb_customers.append(qb_from_contract)
             continue
@@ -262,11 +296,11 @@ def process_remittance(
         if name_found and not contract_primary:
             continue
         raw_name = str(work[customer_col].iloc[i]).strip() if pd.notna(work[customer_col].iloc[i]) else ""
-        if contract_primary and ident:
+        if contract_primary and lookup_id:
             # GA + unresolved → record the contract; later UI maps it to QB name.
-            unmapped_contracts.setdefault(ident, raw_name)
+            unmapped_contracts.setdefault(lookup_id, raw_name)
         elif not name_found:
-            unmapped_set.add(raw_name or f"contract:{ident}")
+            unmapped_set.add(raw_name or f"contract:{lookup_id}")
     work["_qb_customer"] = qb_customers
     unmapped = sorted(unmapped_set)
 

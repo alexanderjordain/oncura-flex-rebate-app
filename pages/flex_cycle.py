@@ -362,19 +362,39 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                                 ("remit_id_col", g["id"])]:
                 if SS.get(k) not in cols:
                     SS[k] = fallback
+            # GA needs a SECOND id column — Payment Invoice Number is used for
+            # the SaasAnt Ref No, ContractID is used for QB-customer lookup.
+            if company == "GreatAmerica" and g.get("contract"):
+                if SS.get("remit_contract_col") not in cols:
+                    SS["remit_contract_col"] = g["contract"]
             # Tuck the override controls into a collapsed expander so non-tech-savvy users
-            # aren't overwhelmed by three extra dropdowns in the typical case where
+            # aren't overwhelmed by extra dropdowns in the typical case where
             # guess_columns picked the right ones.
+            mapping_summary = (
+                f"Customer = `{SS['remit_cust_col']}`, "
+                f"Amount = `{SS['remit_amt_col']}`, "
+                f"{id_label} = `{SS['remit_id_col']}`"
+            )
+            if company == "GreatAmerica" and g.get("contract"):
+                mapping_summary += f", ContractID = `{SS.get('remit_contract_col')}`"
             with st.expander(
-                f"Column mapping (auto-detected: Customer = `{SS['remit_cust_col']}`, "
-                f"Amount = `{SS['remit_amt_col']}`, {id_label} = `{SS['remit_id_col']}`) — "
-                "open if a column looks wrong",
+                f"Column mapping (auto-detected: {mapping_summary}) — open if a column looks wrong",
                 expanded=False,
             ):
-                mc1, mc2, mc3 = st.columns(3)
-                mc1.selectbox("Customer name column", cols, key="remit_cust_col")
-                mc2.selectbox("Amount column", cols, key="remit_amt_col")
-                mc3.selectbox(f"{id_label} column", cols, key="remit_id_col")
+                if company == "GreatAmerica" and g.get("contract"):
+                    mc1, mc2, mc3, mc4 = st.columns(4)
+                    mc1.selectbox("Customer name column", cols, key="remit_cust_col")
+                    mc2.selectbox("Amount column", cols, key="remit_amt_col")
+                    mc3.selectbox(f"{id_label} column", cols, key="remit_id_col",
+                                  help="Drives the SaasAnt Ref No (e.g. GA-41983392).")
+                    mc4.selectbox("ContractID column", cols, key="remit_contract_col",
+                                  help="The dashed-format Contract ID used to look up QB customer "
+                                       "names against flex_master and contract_qb_map.json.")
+                else:
+                    mc1, mc2, mc3 = st.columns(3)
+                    mc1.selectbox("Customer name column", cols, key="remit_cust_col")
+                    mc2.selectbox("Amount column", cols, key="remit_amt_col")
+                    mc3.selectbox(f"{id_label} column", cols, key="remit_id_col")
             customer_col = SS["remit_cust_col"]
             amount_col = SS["remit_amt_col"]
             id_col = SS["remit_id_col"]
@@ -390,9 +410,20 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             contract_qb_map = flex_finance.build_contract_qb_map(
                 flex_clinics, company, extras=extras,
             )
+            # GA: id_col is Payment Invoice Number (used to build the SaasAnt
+            # Ref No 'GA-{n}'). ContractID (dashed) is the separate lookup
+            # key for matching against flex_master.contract_greatamerica.
+            # User can override via the column-mapping expander above; falls
+            # back to None when the upload has no ContractID column at all.
+            ga_contract_col = (
+                SS.get("remit_contract_col")
+                if company == "GreatAmerica" and g.get("contract")
+                else None
+            )
             res = flex_finance.process_remittance(
                 raw, company,
                 customer_col=customer_col, amount_col=amount_col, id_col=id_col,
+                contract_id_col=ga_contract_col,
                 payment_date=pay_date, invoice_date=inv_date, start_invoice_no=start_inv,
                 name_map=nm, contract_qb_map=contract_qb_map, split=split,
             )
