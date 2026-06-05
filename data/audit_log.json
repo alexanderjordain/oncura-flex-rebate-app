@@ -382,6 +382,48 @@
       ],
       "note": "30 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "1bcd3672b02e11de92a59e0254ee3377fb22968e1d31a2352b6ed956801bd748"
+    },
+    {
+      "id": "aef010c4-01b3-4f39-a013-96c9cda6aef6",
+      "timestamp": "2026-06-05T17:23:08",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-05-14",
+        "invoice_date": "2026-05-14",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Copy of Consumable_2026-05-03_Remittance Advice.xlsx",
+        "sha256": "5eca532b3890c7aa7d4721b4967c1aad9d82919cf34c93f414df57cb0f1390b0",
+        "size_bytes": 11544
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "353cb3a7e8beed4c2d4f05f7b4613eb1568c40abf172d9394e907de22e7d72ef",
+          "row_count": 2,
+          "total": 1705.86
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "b62d598d251a5479c79b54ac158bbb23723f80882b9d58ddf29486f38258240e",
+          "row_count": 21,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "e4047be2b8051ad708a5ec8906f6877b07a701de0714b3d781c9d7d2768a3cfe",
+          "row_count": 21,
+          "total": 12445.0
+        }
+      ],
+      "note": "23 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "06dc689bb4eea963907b820619ac3ad5d65ab62ed52c9a40906dcad4b0dbfe30"
     }
   ]
 }
