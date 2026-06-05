@@ -604,16 +604,21 @@ elif step_key == "export":
             accounting_handoff.render_handoff(_subj, _body, key_prefix="rebate_email",
                                               attachments=[(fname, xlsx_bytes)])
 
-            # Download placed AFTER the handoff section so the operator sends the email
-            # first, then downloads the workbook to attach. Keeps the natural top-to-bottom
-            # flow: review → handoff → download → record to audit.
-            st.divider()
-            st.download_button(
-                "Download multi-tab rebate report (xlsx)",
-                xlsx_bytes,
-                file_name=fname,
-                type="primary",
-            )
+            # The xlsx already rides along as the .eml attachment, so the standalone
+            # download is just a backup for anyone who needs the file outside the email
+            # path. Tucked into a muted expander so it doesn't compete visually with
+            # the primary Download email draft button.
+            with st.expander(":gray[Backup: download the xlsx directly]"):
+                st.caption(
+                    "The xlsx is already attached to the email draft above — only use this "
+                    "if you need a standalone copy (e.g., to save to OneDrive or send manually)."
+                )
+                st.download_button(
+                    "Download multi-tab rebate report (xlsx)",
+                    xlsx_bytes,
+                    file_name=fname,
+                    key="rebate_xlsx_backup_dl",
+                )
 
             # ── Record to audit manifest ────────────────────────────────────────────
             st.divider()
