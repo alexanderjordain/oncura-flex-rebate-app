@@ -869,12 +869,58 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 pass
             st.rerun()
         if not payments:
-            st.warning(
-                f"**No FLEX payments recorded in the ledger for {mname} {year}.** "
-                f"Either Stage 1 hasn't been run for this month yet, or no remittances landed "
-                f"with kind=flex for that month. Hit ↻ Refresh ledger above if you just "
-                f"recorded payments. You can also run the **legacy active-list** mode below to bootstrap."
+            st.error(
+                f":material/inventory_2: **No FLEX payments in the ledger for {mname} {year}.**  \n"
+                f"Nothing to generate credit memos against. Likely causes:\n"
+                f"- Stage 1 hasn't been run for this month yet — record those finance "
+                f"payments first, then come back here.\n"
+                f"- You selected the wrong month — click **◀ Back to setup** above and "
+                f"pick a different month.\n"
+                f"- You just recorded Stage 1 payments and the page hasn't refreshed — "
+                f"click **↻ Refresh ledger** above.\n\n"
+                f"Bootstrap-only fallback (first run after migration) is available in the "
+                f"gray **Legacy mode** expander further down.",
+                icon=":material/warning:",
             )
+            # No payments → no credit memos → nothing else to render. Show the legacy
+            # bootstrap expander (in case this IS the first run after migration) and
+            # the bottom 'Set up new month' reset, then stop. Skips the empty df preview,
+            # SaasAnt instructions, initials card, and Mark button — all of which would
+            # otherwise render with zero rows.
+            with st.expander(":gray[Legacy mode — active-list credit memos (bootstrap only)]"):
+                st.caption(
+                    "Use only when the processed-payments ledger is empty for the target month "
+                    "(e.g., first run after migration). This generates one credit memo per active clinic "
+                    "regardless of payment status — the legacy behavior."
+                )
+                if st.checkbox("Show legacy active-list import", key="cred_legacy_show_nopay"):
+                    df_legacy, next_ref_legacy = flex_credits.build_import(
+                        flex_clinics, year, month, start_ref,
+                    )
+                    if df_legacy.empty:
+                        st.info("No active clinics with a non-zero monthly_credit.")
+                    else:
+                        st.dataframe(df_legacy, use_container_width=True, height=300)
+                        st.download_button(
+                            "Download legacy credit memos (xlsx)",
+                            saasant.to_xlsx_bytes(df_legacy, f"FlexCredits{mname}{year}Legacy"),
+                            file_name=f"FlexCredits_{mname}_{year}_Legacy.xlsx",
+                            key="cred_legacy_dl_nopay",
+                        )
+                        st.caption(f"Next available reference number after this batch: {next_ref_legacy}")
+            st.divider()
+            reset_col, _ = st.columns([1, 4])
+            if reset_col.button(
+                "◀ Set up new month",
+                key="cred_review_reset_nopay",
+                use_container_width=True,
+                help="Reset year/month/start-ref and start fresh.",
+            ):
+                for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
+                    SS.pop(k, None)
+                SS["cred_step"] = 0
+                st.rerun()
+            st.stop()
         else:
             # Per-clinic payment count (so multi-payment clinics show up clearly)
             from collections import Counter
