@@ -1,4 +1,47 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "195aeb0d-e661-4f01-b8a7-9b2a9a6519bf",
+      "timestamp": "2026-06-05T17:39:44",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-05-03",
+        "invoice_date": "2026-05-03",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Pass Thru Billing_April 2026.xlsx",
+        "sha256": "2c7c787412244115e719b4966922448819f20db4bf42f661462d0c34503b8415",
+        "size_bytes": 32735
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "b9537a9f5eb7f0f62b00f857cd9c7cea7574ae2761935c30c950690df14ca5e2",
+          "row_count": 29,
+          "total": 26469.3
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "cd6a811a825b2925930c4298b1d34f11ab3a133d3a4b3bf6483a6489502a1e5b",
+          "row_count": 29,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "36410f7df5e539a237f07664b0a9b86ccf246606dd8d6da9915db9f76cc185f6",
+          "row_count": 29,
+          "total": 9835.0
+        }
+      ],
+      "note": "58 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "86eb7a95cfcdd788345299315f7608b60e36438752b4007d2e1c1664ee85869a"
+    }
+  ]
 }
