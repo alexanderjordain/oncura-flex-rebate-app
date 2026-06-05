@@ -310,6 +310,48 @@
       ],
       "note": "Rebate cycle for April 2026 and May 2026",
       "entry_hash": "748be41ea486fb0725c39330adc955849470a1b98873d897922dbc220ba0ae7e"
+    },
+    {
+      "id": "dd6408a4-b2d4-4f1b-a2cd-0a22cc891cd3",
+      "timestamp": "2026-06-05T16:55:55",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-06-01",
+        "invoice_date": "2026-06-01",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Pass Thru Billing_April 2026.xlsx",
+        "sha256": "2c7c787412244115e719b4966922448819f20db4bf42f661462d0c34503b8415",
+        "size_bytes": 32735
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "4ff263ef049bfb7510b7cd5b544b79eb7c8b4eb3248207b44c0ed267169666f2",
+          "row_count": 29,
+          "total": 26469.3
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "4910261fcfaa217c092be6cf04a4322816f4e9dda63644eb34a8ac95e0a991c2",
+          "row_count": 29,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "8807dd3812b7c8f6c7c3b6fe232bca92f5f7caedf52d9396c08e03bc0175b9ae",
+          "row_count": 29,
+          "total": 9835.0
+        }
+      ],
+      "note": "58 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "6525390c3a014cf754784054abcc294f639107e1dbb22741ac5ef3122a88a0a3"
     }
   ]
 }
