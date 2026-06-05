@@ -493,10 +493,27 @@ elif step_key == "review":
         # a subset of all OPD clinics), so the count is normal noise, not a flag.
 
         # Sign-off gate: operator must tick this before the Next button enables.
+        # Wrapped in a prominent container so it doesn't get lost below the expanders —
+        # operators were missing it and wondering why the Next arrow wouldn't show up.
         if variance_rows or fuzzy_matches or rads_pending:
+            st.divider()
+            already_acked = SS.get("cycle_review_acked", False)
+            if already_acked:
+                st.success(
+                    ":material/check_circle: **Review acknowledged.** You can advance to the "
+                    "Export step using the **Next ▶** button at the bottom of the page."
+                )
+            else:
+                st.error(
+                    ":material/priority_high: **One more step — sign off on the flagged rows above "
+                    "before you can advance.**  \n"
+                    "The **Next ▶** button at the bottom of the page stays disabled until you tick "
+                    "the box below.",
+                    icon=":material/warning:",
+                )
             SS["cycle_review_acked"] = st.checkbox(
-                "I've reviewed the flagged rows above and they're acceptable.",
-                value=SS.get("cycle_review_acked", False),
+                "**I've reviewed the flagged rows above and they're acceptable.**",
+                value=already_acked,
                 key="cycle_review_ack_widget",
             )
         else:
@@ -670,8 +687,17 @@ if can_back:
         SS.cycle_step -= 1
         st.rerun()
 if next_blocked_reason:
-    nav_msg.caption(next_blocked_reason)
-if can_next and nav_n.button("Next ▶", key="cycle_next", type="primary",
-                              disabled=not can_next, use_container_width=True):
-    SS.cycle_step += 1
-    st.rerun()
+    # Use a visible warning (not a tiny caption) so the operator can see why
+    # Next is blocked. Previously this was easy to miss and the disabled Next
+    # button wasn't rendered at all — looked like the button had vanished.
+    nav_msg.warning(f":material/info: {next_blocked_reason}")
+# Always render the Next button so the operator can SEE it (disabled when
+# can_next is False). Previously the button only rendered when enabled, which
+# looked like the wizard had silently broken.
+if SS.cycle_step < total - 1:
+    if nav_n.button(
+        "Next ▶", key="cycle_next", type="primary",
+        disabled=not can_next, use_container_width=True,
+    ):
+        SS.cycle_step += 1
+        st.rerun()
