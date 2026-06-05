@@ -145,7 +145,7 @@ def render_handoff(
             _render_eml_path(subject, body, attachments, key_prefix)
 
         # Preview is always available
-        with st.expander("Preview / copy the full email body"):
+        with st.expander(":gray[Preview / copy the full email body]"):
             st.caption(f"To: {TO}  ·  Subject: {subject}")
             if attachments:
                 st.caption("Attached: " + ", ".join(f"**{n}** ({len(b):,} bytes)" for n, b in attachments))
@@ -290,7 +290,7 @@ def _render_eml_path(subject, body, attachments, key_prefix):
         mime="message/rfc822",
         key=f"{key_prefix}_eml",
     )
-    with st.expander("**How to use the downloaded `.eml` file** (read this if it's your first time)", expanded=False):
+    with st.expander(":gray[How to use the `.eml` file (first-time read)]", expanded=False):
         st.markdown(
             "1. Click **Download email draft (.eml)** above. Your browser saves it to your "
             "downloads folder.\n"
@@ -312,7 +312,7 @@ def _render_eml_path(subject, body, attachments, key_prefix):
             "see `docs/AZURE_AD_SETUP.md`. After that, every user gets a **Connect Outlook** "
             "button here that creates real drafts in their Drafts folder automatically."
         )
-    with st.expander("Last-resort: open a mailto link (no attachment)"):
+    with st.expander(":gray[Last-resort: mailto link (no attachment)]"):
         st.link_button("Open mailto link", mailto_link(subject, body))
         st.caption(
             "Opens a fresh email in your default mail client with To/Subject/Body filled in. "
