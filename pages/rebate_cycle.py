@@ -215,6 +215,20 @@ elif step_key == "review":
         months = sorted(SS["selected_months"])
         month_labels = [m.strftime("%B") for m in months]
 
+        # Invalidate stale cached results from before the fuzzy-match UI redesign.
+        # Old shape: fuzzy_matches was list[tuple]; new shape: list[dict].
+        # Detect once and force a recompute so the page doesn't 500 on dict-key access.
+        _cached = SS.get("cycle_results")
+        if _cached is not None:
+            _fm = _cached.get("fuzzy_matches") or []
+            if _fm and not isinstance(_fm[0], dict):
+                SS["cycle_results"] = None
+                SS.pop("rebate_fuzzy_decisions", None)
+                st.info(
+                    ":material/refresh: Cached results were in the old format and have been "
+                    "cleared. The numbers will recompute below."
+                )
+
         # (Re)compute if we don't have cached results for this upload yet
         if SS.get("cycle_results") is None:
             import io as _io
