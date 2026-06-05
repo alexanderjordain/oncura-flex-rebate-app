@@ -23,6 +23,14 @@
       "uploaded_at": "2026-06-05T17:40:53",
       "row_count": 2,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-05-12"
+    },
+    {
+      "sha256": "5cd80b91cae7bf1f05f5e5d4f9bf80316bece1cc3d588a2c4b6234de92202213",
+      "filename": "Remittance Detail Downloadable (11) 5-19.csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-05T17:41:32",
+      "row_count": 4,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-05-19"
     }
   ],
   "payments": [
@@ -905,6 +913,46 @@
       "payment_date": "2026-05-12",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:53"
+    },
+    {
+      "fingerprint": "0ed50cf96d44ef6c517a462f7330fafd57429ff81c5f317ce3a0c014820f1801",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732542",
+      "qb_customer": "TVC- Berkley Pet Hospital",
+      "payment_date": "2026-05-19",
+      "amount": 921.84,
+      "recorded_at": "2026-06-05T17:41:32"
+    },
+    {
+      "fingerprint": "66ebb37bdcb4fd2ecc72c0b0e58b6ca54c377fedc5407db1eb81f02a5f0c5651",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983392",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-05-19",
+      "amount": 939.08,
+      "recorded_at": "2026-06-05T17:41:32"
+    },
+    {
+      "fingerprint": "448e972c18ce177ed57a09660f383a5aa60fba292f969453f2c52bf59ec8f8e5",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983426",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-05-19",
+      "amount": 912.68,
+      "recorded_at": "2026-06-05T17:41:32"
+    },
+    {
+      "fingerprint": "c436acf74042f3ef6e325947e66eca12031d6802b5ff9c90c0ddc4c0ced8d321",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983601",
+      "qb_customer": "TVC- Berkley Pet Hospital",
+      "payment_date": "2026-05-19",
+      "amount": 921.84,
+      "recorded_at": "2026-06-05T17:41:32"
     }
   ]
 }
