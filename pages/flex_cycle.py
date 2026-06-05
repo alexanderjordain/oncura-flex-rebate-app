@@ -563,12 +563,11 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             )
 
             # Each row: bold download button on the LEFT (primary action), muted
-            # preview expander on the RIGHT (optional inspection). The button
-            # column is wider to telegraph priority — that's the file Stage 1
-            # produced, hitting download is the whole point.
+            # preview expander on the RIGHT (optional inspection). 50/50 split
+            # so the preview header isn't squeezed onto a second line.
             def _download_row(*, title: str, df, fname_stem: str, fname_date,
                               sheet_name: str, dl_key: str, height: int = 240):
-                col_dl, col_prev = st.columns([3, 2], gap="medium")
+                col_dl, col_prev = st.columns([1, 1], gap="medium")
                 with col_dl:
                     st.download_button(
                         f":material/download:  Download {sheet_name} (xlsx)",
