@@ -654,8 +654,6 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             )
             if ack_disabled:
                 st.info("Nothing new to record (all rows were already in the ledger).")
-            elif not stage1_initials:
-                st.caption(":material/edit_note: Add your initials above to enable the record button.")
             if not ack_disabled and st.button(
                 f"Mark {len(rows_to_record)} payment(s) as imported",
                 key="remit_mark_processed", type="primary",
@@ -966,8 +964,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     f"those rows to QBO again. (Future enhancement: filter them out of the download.)"
                 )
             stage2_initials = ui.initials_input("stage2_audit_initials")
-            if not stage2_initials:
-                st.caption(":material/edit_note: Add your initials above to enable the record button.")
             if st.button(
                 f"Mark {len(df)} credit memo(s) as generated",
                 key="cred_mark_processed", type="primary",
@@ -1342,8 +1338,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     icon=":material/warning:",
                 )
                 recap_initials = ui.initials_input("stage3_recap_audit_initials")
-                if not recap_initials:
-                    st.caption(":material/edit_note: Add your initials above to enable the record button.")
                 if st.button(
                     f"Mark {len(udf)} recapture invoice(s) as imported",
                     key="w_recap_mark_unused", type="primary",
@@ -1492,8 +1486,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         )
                     if not didf.empty:
                         direct_initials = ui.initials_input("stage3_direct_audit_initials")
-                        if not direct_initials:
-                            st.caption(":material/edit_note: Add your initials above to enable the record button.")
                     else:
                         direct_initials = ""
                     if not didf.empty and st.button(
@@ -1592,8 +1584,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         )
                     if not pdf.empty:
                         partner_initials = ui.initials_input("stage3_partner_audit_initials")
-                        if not partner_initials:
-                            st.caption(":material/edit_note: Add your initials above to enable the record button.")
                     else:
                         partner_initials = ""
                     if not pdf.empty and st.button(

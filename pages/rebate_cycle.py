@@ -644,8 +644,6 @@ elif step_key == "export":
                 "rebate_audit_initials",
                 disabled=already_recorded,
             )
-            if not initials and not already_recorded:
-                st.caption(":material/edit_note: Add your initials above to enable the record button.")
             if st.button(
                 "Record rebate cycle to audit manifest",
                 key="rebate_audit_mark",

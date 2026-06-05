@@ -285,35 +285,62 @@ def set_logo():
 
 
 def initials_input(audit_key: str, *, disabled: bool = False) -> str:
-    """Render a 'Your initials' input and return the cleaned initials.
+    """Render an 'Initials sign-off card' and return the cleaned initials.
+
+    Visually mirrors the bordered sign-off block used elsewhere on the wizard:
+    a colored status header (red 'INITIALS REQUIRED' / green 'Initials
+    captured'), a caption, and the text input itself — all grouped inside a
+    single ``st.container(border=True)`` so it reads as one sign-off unit.
 
     The audit manifest works like a paper sign-off sheet — each cycle should be
     initialed by the operator who ran it. This widget collects the initials
     once per session (persisted under ``SS['user_initials']``) and auto-fills
     on subsequent cycles.
 
-    Returns the uppercase initials, or ``""`` if none provided. Callers should
-    treat the empty-string return as "block the record button" and fall back
-    to ``auth.current_role()`` only when actually recording, e.g.::
+    Returns the uppercase initials, or ``""`` if none provided. Callers gate
+    their record button on truthiness::
 
         initials = ui.initials_input("stage1_audit_initials")
         if st.button("Mark...", disabled=not initials, ...):
             audit.record_cycle(approver=initials or auth.current_role(), ...)
-
-    The disable-when-blank gate naturally re-enables itself across cycles
-    because the persisted SS['user_initials'] pre-fills the text input.
     """
-    val = st.text_input(
-        "Your initials (for the audit log)",
-        value=st.session_state.get("user_initials", ""),
-        max_chars=4,
-        key=audit_key,
-        placeholder="e.g. AJ",
-        help="Recorded as the approver on the audit manifest, like initialing "
-             "a paper sign-off sheet. Persists across cycles in this session. "
-             "The record button stays disabled until you fill this in.",
-        disabled=disabled,
-    )
+    # Live state: SS[audit_key] holds the widget's current value (Streamlit
+    # updates it BEFORE the rerun script body runs), so the header reflects
+    # the click that just happened — no off-by-one.
+    live_val = (
+        st.session_state.get(audit_key)
+        or st.session_state.get("user_initials", "")
+        or ""
+    ).strip().upper()
+
+    with st.container(border=True):
+        if live_val:
+            st.markdown(
+                f"##### :green[:material/check_circle:&nbsp; Initials captured: {live_val}]"
+            )
+            st.caption(
+                "The **record button** below is now enabled. Initials persist for "
+                "the session so subsequent cycles auto-fill."
+            )
+        else:
+            st.markdown(
+                "##### :red[:material/priority_high:&nbsp; INITIALS REQUIRED]"
+            )
+            st.caption(
+                "Enter your initials below to enable the **record button** — "
+                "like initialing a paper sign-off sheet. Persists for the session."
+            )
+        val = st.text_input(
+            "Your initials (for the audit log)",
+            value=st.session_state.get("user_initials", ""),
+            max_chars=4,
+            key=audit_key,
+            placeholder="e.g. AJ",
+            help="Recorded as the approver on the audit manifest. "
+                 "Persists across cycles in this session.",
+            disabled=disabled,
+            label_visibility="collapsed",
+        )
     cleaned = (val or "").strip().upper()
     if cleaned:
         st.session_state["user_initials"] = cleaned
