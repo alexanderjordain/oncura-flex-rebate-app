@@ -284,6 +284,30 @@
       ],
       "note": "OnePlace partner submission emailed to accounting for May 2000",
       "entry_hash": "774ea54ef4f18c6b9f867d8e0da5adb6182ad77586fad90ebb2c90e56c245e5b"
+    },
+    {
+      "id": "d659aef2-67f4-4c63-99ca-1517dcf98bb8",
+      "timestamp": "2026-06-05T17:55:03",
+      "cycle_type": "stage3_overage",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "route": "direct_bill",
+        "clinic_count": 9,
+        "sent_to": "accounting@oncurapartners.com"
+      },
+      "source_file": null,
+      "outputs": [
+        {
+          "name": "overage_direct_invoices",
+          "sha256": "4b4bf43b9ffac6dd372a1bec0fecb4d0ac35a76415b16d57c2bb094597277742",
+          "row_count": 9,
+          "total": 33460.0
+        }
+      ],
+      "note": "Direct-bill overages emailed to accounting for May 2000",
+      "entry_hash": "795b8ad7338c7723b6513d8af6732fc961f2307d0403037086af1cae21677e33"
     }
   ]
 }
