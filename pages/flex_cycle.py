@@ -988,11 +988,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             type="primary",
             key="cred_dl",
         )
-        st.caption(
-            f"Next available reference number after this batch: {next_ref}  ·  "
-            f":gray[*Quarter-end true-up: unused balance and overage are reconciled in Stage 3 — "
-            f"pre-paid credits don't carry past the quarter.*]"
-        )
+        st.caption(":gray[*See SaasAnt Import Instructions below.*]")
 
         # ── Mark batch as generated: records to audit + ledger so re-runs are caught ──
         if not df.empty:
