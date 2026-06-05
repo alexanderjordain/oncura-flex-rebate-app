@@ -1309,10 +1309,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     1 for c in flex_clinics
                     if c.get("active") and flex_unused.is_quarter_end(c.get("calendar_spread"), rec_month)
                 )
-                pm1, pm2, pm3 = st.columns(3)
+                pm1, pm2 = st.columns(2)
                 pm1.metric("Source profile", pipe["profile"])
-                pm2.metric("Clinics with activity", len(pipe["activity"]))
-                pm3.metric(
+                pm2.metric(
                     "Qualifying for this month",
                     f"{len(rdf)} / {total_qualifying}",
                     help="Rows emitted (group anchors only) over all active clinics whose quarter ends this month. "
@@ -1322,11 +1321,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         elif step_key == "review":
             st.markdown("### Review activity")
             st.caption("What the app found in the uploaded export. Sanity-check before generating files.")
-            m1, m2, m3, m4 = st.columns(4)
+            m1, m2, m3 = st.columns(3)
             m1.metric("Source", pipe["profile"])
-            m2.metric("Clinics with activity", len(pipe["activity"]))
-            m3.metric("Unused (recapture)", f"${rdf['unused'].fillna(0).sum():,.2f}")
-            m4.metric("Overage (gross)", f"${rdf['overage'].fillna(0).sum():,.2f}")
+            m2.metric("Unused (recapture)", f"${rdf['unused'].fillna(0).sum():,.2f}")
+            m3.metric("Overage (gross)", f"${rdf['overage'].fillna(0).sum():,.2f}")
             if pipe["profile"] == "case_grid":
                 st.caption("Case-grid: activity = sum of priced services per case (no AdminFee, STAT +$125).")
             no_act = rdf[rdf["activity_match"] == "none"]
@@ -1615,14 +1613,25 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 pc2.metric("Total", f"${partner_total:,.2f}")
                 pc3.metric("Submit by", f"{cutoff:%b %d, %Y}")
                 pdf = flex_overage.build_partner_submission(annotated, rec_year, rec_month)
-                st.download_button(
-                    ":material/download:  Download partner submission list (xlsx)",
-                    saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission"),
-                    file_name=f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
-                    type="primary",
-                    use_container_width=True,
-                    key="w_recap_dl_partner",
-                )
+                xlsx_bytes_partner = saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission")
+                fname_partner = f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
+
+                # Email handoff — accounting@oncurapartners.com (Tanya) is the
+                # recipient. Tanya forwards / sends to OnePlace before cutoff.
+                if not pdf.empty:
+                    _subj, _body = accounting_handoff.partner_submission_email(
+                        year=rec_year, month=rec_month,
+                        clinic_count=partner_count,
+                        total=float(partner_total),
+                        cutoff_date=cutoff,
+                    )
+                    accounting_handoff.render_handoff(
+                        _subj, _body, key_prefix="recap_partner_email",
+                        attachments=[(fname_partner, xlsx_bytes_partner)],
+                    )
+                else:
+                    st.info("No partner-submission rows to send.")
+
                 # Dedup against ledger
                 partner_payments_for_ledger = []
                 already_partner: list[str] = []
@@ -1649,33 +1658,28 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     already_partner = ledger.check_payments_seen(partner_fps)
                     if already_partner:
                         st.warning(
-                            f"**{len(already_partner)} partner submission(s) already recorded for "
-                            f"this period.** Re-submitting will create a duplicate at OnePlace — "
-                            f"review before sending."
+                            f"**{len(already_partner)} partner submission(s) already sent for "
+                            f"this period.** Re-sending tells Tanya to forward these to OnePlace "
+                            f"twice — review before sending the email."
                         )
-
-                # Submission steps — inline as a numbered list.
-                st.divider()
-                st.markdown(
-                    "**Submission steps**\n"
-                    f"1. Email the downloaded file to **OnePlace before {cutoff:%B %d, %Y}**.\n"
-                    "2. Confirm OnePlace receipt.\n"
-                    "3. Track expected payment ~5–6 months out on the FLEX Master."
-                )
 
                 if not pdf.empty:
                     st.divider()
+                    st.caption(
+                        ":gray[Initial below **after** you've sent the email above. This logs "
+                        "the send to the audit manifest + dedup ledger.]"
+                    )
                     partner_initials = ui.initials_input("stage3_partner_audit_initials")
                 else:
                     partner_initials = ""
                 if not pdf.empty and ui.record_button(
-                    f"Mark {len(pdf)} partner-submission row(s) as submitted",
+                    f"Record {len(pdf)} partner-submission row(s) as sent to accounting",
                     key="w_recap_mark_partner",
                     disabled=not partner_initials,
                 ):
                     ok_l, added_l, _ = ledger.record_batch(
                         file_content=None,
-                        filename=f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx",
+                        filename=fname_partner,
                         company="INTERNAL",
                         payments=partner_payments_for_ledger,
                         note=f"Stage 3 partner submission / {dt.date(2000, rec_month, 1):%B} {rec_year}",
@@ -1689,6 +1693,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "partner": "OnePlace",
                             "cutoff": cutoff.isoformat(),
                             "clinic_count": partner_count,
+                            "sent_to": "accounting@oncurapartners.com",
                         },
                         outputs=[{
                             "name": "oneplace_overage_submission",
@@ -1696,7 +1701,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "row_count": len(pdf),
                             "total": round(float(partner_total), 2),
                         }],
-                        note=f"OnePlace overage submission for {dt.date(2000, rec_month, 1):%B %Y}",
+                        note=f"OnePlace partner submission emailed to accounting for {dt.date(2000, rec_month, 1):%B %Y}",
                     )
                     st.success(
                         f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest "

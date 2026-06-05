@@ -279,10 +279,6 @@ def _render_eml_path(subject, body, attachments, key_prefix):
     editable draft in the user's Drafts folder."""
     eml_bytes = _build_eml_bytes(subject, body, TO, attachments)
     safe_subj = "".join(c if c.isalnum() or c in "-_" else "_" for c in subject)[:60]
-    st.markdown(
-        "**Outlook integration isn't set up yet.** While that's pending, here's the "
-        "manual workaround:"
-    )
     st.download_button(
         "Download email draft (.eml)",
         eml_bytes,
@@ -293,24 +289,35 @@ def _render_eml_path(subject, body, attachments, key_prefix):
     with st.expander(":gray[How to use the `.eml` file (first-time read)]", expanded=False):
         st.markdown(
             "1. Click **Download email draft (.eml)** above. Your browser saves it to your "
-            "downloads folder.\n"
+            "**Downloads** folder.\n"
             "2. Open Windows File Explorer, go to **Downloads**, find the `.eml` file you "
             "just downloaded.\n"
-            "3. **Double-click** it. What happens next depends on which Outlook you have:\n"
-            "   - **Outlook desktop app (Classic or New):** opens an editable compose window "
-            "with To, Subject, body, and attachments pre-filled — just review and click **Send**.\n"
-            "   - **Outlook on the web (browser only):** opens as a *read-only message viewer* "
-            "(this is a Microsoft limitation of the browser client). To work around it:\n"
-            "     a. The download already happened — keep that file around.\n"
-            "     b. Open Outlook, click **New mail**.\n"
-            "     c. Set **To** = `accounting@oncurapartners.com`.\n"
-            "     d. Copy the **Subject** and **Body** from the preview below.\n"
-            "     e. Attach the file(s) by dragging from your downloads folder or clicking the "
-            "paperclip → Browse this computer.\n"
-            "     f. Click **Send**.\n\n"
-            "**The proper fix** (one-time setup by IT, ~15 min): configure Microsoft Graph — "
-            "see `docs/AZURE_AD_SETUP.md`. After that, every user gets a **Connect Outlook** "
-            "button here that creates real drafts in their Drafts folder automatically."
+            "3. **Double-click** it. What happens next depends on how you read your email:\n\n"
+            "**Outlook desktop app (Classic or New)** — easiest path  \n"
+            "The `.eml` opens in an editable compose window with the To address, Subject, body, "
+            "and attachments **already filled in**. Just glance over it and click **Send**. Done.\n\n"
+            "**Outlook on the web (browser tab)** — needs a quick workaround  \n"
+            "Microsoft only lets `.eml` files open in read-only view inside the browser, so you "
+            "can't send directly from the preview. About 30 seconds of copy-paste fixes it:\n\n"
+            "1. **Keep the `.eml` file you just downloaded** — you'll attach it to a new email "
+            "in a moment, so don't delete it.\n"
+            "2. In Outlook, click **New mail** (top-left, blue **+** icon).\n"
+            "3. In the **To** field, paste: `accounting@oncurapartners.com`\n"
+            "4. Open the **Preview / copy the full email body** expander on this page (below). "
+            "Copy the **Subject** and paste it into the Subject line of your new email; copy "
+            "the **Body** and paste it into the email body.\n"
+            "5. Attach the `.eml` file — either way works:\n"
+            "    - **Drag and drop:** open your Downloads folder in a separate window, drag the "
+            "`.eml` file straight into the body of the new Outlook email.\n"
+            "    - **Or click the paperclip icon** in Outlook's toolbar → **Browse this computer** "
+            "→ Downloads → select the `.eml`.\n"
+            "6. Double-check the **To** address is correct and the attachment appears at the bottom.\n"
+            "7. Click **Send**.\n\n"
+            "*Want to skip the copy-paste every time?* Ask IT to set the Outlook desktop app as "
+            "your default `.eml` handler. Right-click any `.eml` file → **Open with** → **Choose "
+            "another app** → pick **Outlook** (the classic blue-envelope desktop one) → tick "
+            "**Always use this app to open .eml files**. From then on, double-clicking goes "
+            "straight to the editable compose window."
         )
     with st.expander(":gray[Last-resort: mailto link (no attachment)]"):
         st.link_button("Open mailto link", mailto_link(subject, body))
@@ -450,6 +457,35 @@ def direct_bill_overage_email(*, year: int, month: int,
         "  4. When payment arrives, apply it to zero out the clinic's account.",
         "  5. No refunds on FLEX overpayments (SOP-12) — overpayment stays as",
         "     credit for future overages.",
+        "",
+        "Reply if anything looks off and I'll re-run the cycle.",
+    ]
+    return subj, "\n".join(parts)
+
+
+def partner_submission_email(*, year: int, month: int,
+                             clinic_count: int, total: float,
+                             cutoff_date) -> tuple[str, str]:
+    """OnePlace partner-overage submission handoff. Goes to accounting; Tanya
+    forwards (or sends) to OnePlace before the cutoff date.
+    """
+    month_name = dt.date(year, month, 1).strftime("%B")
+    subj = f"[Action Required] OnePlace Partner Submission — {month_name} {year}"
+    parts = [
+        "Hi Tanya,",
+        "",
+        f"OnePlace partner-overage submission for {month_name} {year} — "
+        f"{clinic_count} clinic(s) totalling ${total:,.2f}.",
+        "File attached.",
+        "",
+        f"Work order — must reach OnePlace BEFORE {cutoff_date:%B %d, %Y}:",
+        "  1. Forward the attached file to OnePlace (their submissions inbox).",
+        "  2. Confirm OnePlace receipt — keep their reply for the audit trail.",
+        "  3. Track expected payment ~5–6 months out on the FLEX Master.",
+        "",
+        "If the cutoff is missed, OnePlace won't process these and we have to",
+        "direct-bill the clinics ourselves. The app will catch that on the next",
+        "Stage 3 run and route a separate direct-bill email if needed.",
         "",
         "Reply if anything looks off and I'll re-run the cycle.",
     ]
