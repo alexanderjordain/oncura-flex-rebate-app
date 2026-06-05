@@ -1242,19 +1242,15 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             cs = ":green[**on time**]" if today_d <= new_cutoff else ":red[**cutoff missed**]"
             with bot_r:
                 with st.container(border=True):
+                    # Date range + qualifying-clinics count on one line (wraps to two
+                    # lines if it doesn't fit the column width).
                     st.markdown(
-                        ":material/calendar_month:&nbsp;&nbsp;:gray[**QUARTER WINDOW**]"
+                        f"**:blue[{new_win_s:%b %d} → {new_win_e:%b %d, %Y}]**"
+                        f"&nbsp;&nbsp;·&nbsp;&nbsp;**{len(new_group)}** qualifying clinics"
                     )
                     st.markdown(
-                        f"### :blue[{new_win_s:%b %d}&nbsp;&nbsp;→&nbsp;&nbsp;{new_win_e:%b %d, %Y}]"
-                    )
-                    c_qa, c_qb = st.columns(2)
-                    c_qa.markdown(
-                        f":gray[Qualifying clinics]  \n**{len(new_group)}**"
-                    )
-                    c_qb.markdown(
-                        f":gray[Partner cutoff]  \n"
-                        f"**{new_cutoff:%b %d, %Y}**  ·  {cs}"
+                        f":gray[Partner cutoff:]&nbsp;**{new_cutoff:%b %d, %Y}**"
+                        f"&nbsp;&nbsp;·&nbsp;&nbsp;{cs}"
                     )
 
         elif step_key == "upload":
@@ -1700,27 +1696,12 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         can_next = False
         next_blocked_reason = "Could not parse the uploaded file."
 
-    nav_b, nav_msg, nav_n = st.columns([1, 4, 1])
-    if can_back:
-        if nav_b.button("← Back", key=f"w_recap_back_{SS.recap_step}"):
-            SS.recap_step -= 1
-            st.rerun()
-    if not can_next and next_blocked_reason:
-        nav_msg.caption(f":orange[{next_blocked_reason}]")
-    if SS.recap_step < total - 1:
-        if nav_n.button("Next →", key=f"w_recap_next_{SS.recap_step}",
-                        type="primary", disabled=not can_next):
-            SS.recap_step += 1
-            st.rerun()
-    else:
-        nav_n.markdown("**Done ✓**")
-
-    # Bottom-of-page "Set up new cycle" — clears the file, credit offsets, and
-    # returns to the first wizard step. Use this between back-to-back monthly runs.
-    # Bottom-left narrow column to match the Back/Next nav pattern elsewhere.
+    # Single nav row: [◀ Set up new cycle]  [blocked reason]  [← Back]  [Next →]
+    # The reset, Back, and Next live on the same horizontal plane so the
+    # operator sees all available navigation actions at once.
     st.divider()
-    reset_col, _ = st.columns([1, 4])
-    if reset_col.button(
+    nav_reset, nav_msg, nav_b, nav_n = st.columns([1.6, 3.4, 1, 1])
+    if nav_reset.button(
         "◀ Set up new cycle",
         key="w_recap_reset_bottom",
         use_container_width=True,
@@ -1732,3 +1713,18 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             SS.pop(k, None)
         SS.recap_step = 0
         st.rerun()
+    if not can_next and next_blocked_reason:
+        nav_msg.caption(f":orange[{next_blocked_reason}]")
+    if can_back:
+        if nav_b.button("← Back", key=f"w_recap_back_{SS.recap_step}",
+                        use_container_width=True):
+            SS.recap_step -= 1
+            st.rerun()
+    if SS.recap_step < total - 1:
+        if nav_n.button("Next →", key=f"w_recap_next_{SS.recap_step}",
+                        type="primary", disabled=not can_next,
+                        use_container_width=True):
+            SS.recap_step += 1
+            st.rerun()
+    else:
+        nav_n.markdown("**Done ✓**")
