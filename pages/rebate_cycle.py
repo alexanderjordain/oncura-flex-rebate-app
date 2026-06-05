@@ -19,6 +19,31 @@ def safe_stage(label: str):
             st.code(traceback.format_exc())
 
 
+def _apply_fuzzy_decisions(per_bucket: dict, fuzzy_matches: list, decisions: dict) -> dict:
+    """Return a deep copy of per_bucket with REJECTED fuzzy amounts subtracted.
+
+    Confirmed and pending matches are left in (current behavior). Rejected ones
+    have the contributing OPD-month-amount triplet pulled out of their destination
+    clinic's monthly column. Anything else is untouched.
+
+    Decisions dict: key = "{opd_name}::{matched_master}", value ∈ {"confirm","reject"}.
+    """
+    import copy
+    if not decisions:
+        return per_bucket
+    eff = copy.deepcopy(per_bucket)
+    for fm in fuzzy_matches:
+        key = f"{fm['opd_name']}::{fm['matched_master']}"
+        if decisions.get(key) != "reject":
+            continue
+        fc = fm["finance_company"]
+        legal = fm["matched_legal"]
+        mlabel = fm["month_label"]
+        if fc in eff and legal in eff[fc] and mlabel in eff[fc][legal]:
+            eff[fc][legal][mlabel] = max(0.0, eff[fc][legal][mlabel] - fm["amount"])
+    return eff
+
+
 ui.header("Rebate Cycle",
           "Select the month(s), upload OPD detail, get a multi-tab rebate report.",
           kicker="Rebates · Cycle")
@@ -228,7 +253,7 @@ elif step_key == "review":
                 per_bucket.setdefault(bucket, {}).setdefault(legal, {lbl: 0.0 for lbl in month_labels})
 
             unmatched_total = set()
-            fuzzy_matches = []   # (month_label, clinic_name, matched_master_name, rebate_amt)
+            fuzzy_matches = []   # list of dicts (see schema below)
             variance_rows = []   # (month_label, clinic_name, rate_based, feed_based, variance)
             rads_pending = []    # (month_label, clinic_name) for self-funded clinics w/ unconfirmed rate
             cycle_has_feed = False  # True if ANY selected month carries OData feed columns
@@ -255,9 +280,17 @@ elif step_key == "review":
                     # match the same master record, their amounts must sum, not overwrite.
                     per_bucket[bucket][legal][label] = per_bucket[bucket][legal].get(label, 0.0) + amt
                     # Flag rows that need human review before sign-off.
+                    # Capture full context so a "reject" decision can subtract this exact
+                    # contribution from per_bucket downstream.
                     if r.get("match") == "fuzzy":
-                        fuzzy_matches.append((label, str(r.get("opd_clinic", "")),
-                                              clinic_name, round(amt, 2)))
+                        fuzzy_matches.append({
+                            "month_label":     label,
+                            "opd_name":        str(r.get("opd_clinic", "")),
+                            "matched_master":  clinic_name,
+                            "matched_legal":   legal,
+                            "finance_company": bucket,
+                            "amount":          round(amt, 2),
+                        })
                     # Variance check only has signal when the OPD export carried feed
                     # columns. For case_grid exports (the common one) feed_total is 0
                     # for everyone, so variance degenerates into rate_total and flags
@@ -344,42 +377,89 @@ elif step_key == "review":
                 st.dataframe(vdf, use_container_width=True, hide_index=True)
 
         if fuzzy_matches:
-            # Deduplicate across months: same (OPD name, matched master) pair shouldn't
-            # appear twice just because the cycle spans multiple months. Sum the rebate
-            # amount and list the months it appeared in for traceability.
+            # Aggregate by (opd, matched_master). Each pair appears once even if it
+            # showed up across multiple months — the months are listed in the row.
             fuzzy_agg: dict[tuple[str, str], dict] = {}
-            for label, opd, matched, amt in fuzzy_matches:
-                key = (opd, matched)
-                rec = fuzzy_agg.setdefault(key, {"months": [], "total": 0.0})
-                if label not in rec["months"]:
-                    rec["months"].append(label)
-                rec["total"] += float(amt)
-            n_unique = len(fuzzy_agg)
+            for fm in fuzzy_matches:
+                key = (fm["opd_name"], fm["matched_master"])
+                rec = fuzzy_agg.setdefault(key, {
+                    "months": [], "total": 0.0,
+                    "matched_legal": fm["matched_legal"],
+                    "finance_company": fm["finance_company"],
+                })
+                if fm["month_label"] not in rec["months"]:
+                    rec["months"].append(fm["month_label"])
+                rec["total"] += float(fm["amount"])
+
+            decisions = SS.setdefault("rebate_fuzzy_decisions", {})
+            n_confirmed = sum(
+                1 for k in fuzzy_agg
+                if decisions.get(f"{k[0]}::{k[1]}") == "confirm"
+            )
+            n_rejected = sum(
+                1 for k in fuzzy_agg
+                if decisions.get(f"{k[0]}::{k[1]}") == "reject"
+            )
+            n_pending = len(fuzzy_agg) - n_confirmed - n_rejected
+
             with st.expander(
-                f":material/info: **Fuzzy clinic matches** — {n_unique} clinic(s) matched non-exactly",
+                f":material/info: **Fuzzy clinic matches** — "
+                f"{len(fuzzy_agg)} clinic(s) · "
+                f"{n_confirmed} confirmed · {n_rejected} rejected · {n_pending} pending",
                 expanded=False,
             ):
                 st.caption(
                     "These OPD clinic names matched the master roster via fuzzy match — exact "
                     "match failed, but after stripping common boilerplate (animal / veterinary / "
-                    "hospital / LLC) the distinguishing tokens lined up at ≥ 92% similarity AND "
-                    "their first words also matched. Worth a quick confirm; a wrong match silently "
-                    "routes revenue to the wrong finance bucket."
+                    "LLC / DBA) the distinguishing tokens lined up at ≥ 92% similarity AND their "
+                    "first words also matched. Click **Match** to confirm; click **Not a match** "
+                    "to subtract the amount from the rebate export. Pending matches stay included "
+                    "by default."
                 )
-                fdf = pd.DataFrame(
-                    [
-                        {
-                            "OPD name": opd,
-                            "Matched master": matched,
-                            "Months matched": ", ".join(rec["months"]),
-                            "Rebate total ($)": round(rec["total"], 2),
-                        }
-                        for (opd, matched), rec in sorted(
-                            fuzzy_agg.items(), key=lambda kv: -kv[1]["total"]
-                        )
-                    ]
-                )
-                st.dataframe(fdf, use_container_width=True, hide_index=True)
+
+                # Header row
+                h = st.columns([3, 3, 1.6, 1.4, 1.2, 1.5])
+                h[0].caption("**OPD name**")
+                h[1].caption("**Matched master**")
+                h[2].caption("**Months**")
+                h[3].caption("**Total ($)**")
+                h[4].caption("**Decision**")
+                h[5].caption("**Action**")
+
+                for (opd, matched), rec in sorted(
+                    fuzzy_agg.items(), key=lambda kv: -kv[1]["total"]
+                ):
+                    key = f"{opd}::{matched}"
+                    decision = decisions.get(key, "pending")
+                    row = st.columns([3, 3, 1.6, 1.4, 1.2, 1.5])
+                    row[0].markdown(f"`{opd}`")
+                    row[1].write(matched)
+                    row[2].caption(", ".join(rec["months"]))
+                    row[3].write(f"${rec['total']:,.2f}")
+                    if decision == "confirm":
+                        row[4].markdown(":green[**✓ Match**]")
+                    elif decision == "reject":
+                        row[4].markdown(":red[**✗ Excluded**]")
+                    else:
+                        row[4].markdown(":gray[Pending]")
+                    btns = row[5].columns(2)
+                    safe_key = abs(hash(key))
+                    if btns[0].button(
+                        "✓", key=f"fm_match_{safe_key}",
+                        type="primary" if decision == "confirm" else "secondary",
+                        help="Confirm this is the right clinic — include in export",
+                        use_container_width=True,
+                    ):
+                        decisions[key] = "confirm"
+                        st.rerun()
+                    if btns[1].button(
+                        "✗", key=f"fm_reject_{safe_key}",
+                        type="primary" if decision == "reject" else "secondary",
+                        help="Not the right clinic — exclude from export",
+                        use_container_width=True,
+                    ):
+                        decisions[key] = "reject"
+                        st.rerun()
 
         if rads_pending:
             with st.expander(
@@ -408,11 +488,25 @@ elif step_key == "review":
         else:
             SS["cycle_review_acked"] = True  # nothing to flag, auto-pass
 
+        # Apply fuzzy decisions so the preview reflects what will actually export.
+        _decisions = SS.get("rebate_fuzzy_decisions", {})
+        effective_per_bucket = _apply_fuzzy_decisions(per_bucket, fuzzy_matches, _decisions)
+        n_rej = sum(1 for fm in fuzzy_matches
+                    if _decisions.get(f"{fm['opd_name']}::{fm['matched_master']}") == "reject")
+        if n_rej:
+            _rej_total = sum(fm["amount"] for fm in fuzzy_matches
+                             if _decisions.get(f"{fm['opd_name']}::{fm['matched_master']}") == "reject")
+            st.caption(
+                f":material/remove_circle: Preview reflects **{n_rej} rejected fuzzy match(es)** — "
+                f"${_rej_total:,.2f} excluded from the totals below."
+            )
+
         with st.expander("Preview a bucket"):
-            if per_bucket:
-                choice = st.selectbox("Bucket", list(per_bucket.keys()), key="cycle_preview_bucket")
+            if effective_per_bucket:
+                choice = st.selectbox("Bucket", list(effective_per_bucket.keys()),
+                                      key="cycle_preview_bucket")
                 rows = []
-                for legal, by_month in sorted(per_bucket[choice].items(), key=lambda kv: kv[0].lower()):
+                for legal, by_month in sorted(effective_per_bucket[choice].items(), key=lambda kv: kv[0].lower()):
                     r = {"Clinic/Hospital Name": legal}
                     for lbl in month_labels:
                         r[lbl] = round(by_month.get(lbl, 0.0), 2)
@@ -430,12 +524,23 @@ elif step_key == "export":
         else:
             months = sorted(SS["selected_months"])
             results = SS["cycle_results"]
-            per_bucket = results["per_bucket"]
-            grand      = results["grand"]
+            raw_per_bucket = results["per_bucket"]
+            fuzzy_matches  = results.get("fuzzy_matches", [])
+            _decisions     = SS.get("rebate_fuzzy_decisions", {})
+            # Apply fuzzy match decisions: rejected matches have their amount
+            # subtracted from the destination clinic's monthly column before export.
+            per_bucket = _apply_fuzzy_decisions(raw_per_bucket, fuzzy_matches, _decisions)
+            grand = sum(sum(d.values()) for clinics in per_bucket.values()
+                                            for d in clinics.values())
 
             xlsx_bytes = rebate_report.build(per_bucket, months)
             fname = f"Rebates_{rebate_report.short_period(months).replace(' ', '_').replace('&','and')}.xlsx"
-            st.caption(f"Grand total: **${grand:,.2f}** across {len(per_bucket)} bucket(s).")
+            n_rej = sum(1 for fm in fuzzy_matches
+                        if _decisions.get(f"{fm['opd_name']}::{fm['matched_master']}") == "reject")
+            cap = f"Grand total: **${grand:,.2f}** across {len(per_bucket)} bucket(s)."
+            if n_rej:
+                cap += f"  ·  {n_rej} rejected fuzzy match(es) excluded."
+            st.caption(cap)
 
             # Accounting handoff
             _period_label = rebate_report.long_period(months)
@@ -500,6 +605,10 @@ elif step_key == "export":
                         "n_clinics": n_clinics,
                         "per_bucket_totals": _per_bucket_totals,
                         "grand_total": round(float(grand), 2),
+                        "fuzzy_match_decisions": {
+                            "confirmed": sum(1 for v in _decisions.values() if v == "confirm"),
+                            "rejected":  sum(1 for v in _decisions.values() if v == "reject"),
+                        },
                     },
                     source_file={
                         "name": SS.get("cycle_uploaded_name", "unknown"),

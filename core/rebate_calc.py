@@ -13,6 +13,8 @@ Rules (from Rebate_Automation_Plan.md):
 """
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 
 try:
@@ -52,9 +54,20 @@ _BOILERPLATE_TOKENS = {
 }
 
 
+_PUNCT_PAD_RE = re.compile(r"\s*([\-/,&+])\s*")
+
+
 def _normalize(name: str) -> str:
-    """Lowercase + collapse whitespace. Same casefold rule used everywhere."""
-    return " ".join(str(name or "").casefold().split())
+    """Casefold + pad punctuation + collapse whitespace.
+
+    Pads hyphens / slashes / commas / ampersands / plus signs with spaces so
+    'NVA-Lake' and 'NVA - Lake' tokenize identically — both become
+    'nva - lake' after this step, which lets the exact-match branch catch
+    venue names that only differ in spacing around punctuation.
+    """
+    s = str(name or "").casefold()
+    s = _PUNCT_PAD_RE.sub(r" \1 ", s)
+    return " ".join(s.split())
 
 
 def _strip_boilerplate(name: str) -> str:
