@@ -1217,22 +1217,24 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         if step_key == "setup":
             st.markdown("### Cycle setup")
             st.caption(
-                "Pick the cycle period and starting reference number. Only clinics whose staggered "
-                "quarter ENDS in this month will be processed."
+                "Only clinics whose staggered quarter ENDS in this month will be processed."
             )
-            c1, c2 = st.columns(2)
-            SS.recap_year = int(c1.number_input(
-                "Recapture year", value=rec_year, step=1, key="w_recap_year"))
-            SS.recap_month = int(c2.selectbox(
+            # 2×2 layout — top row: Month + Year; bottom row: Starting Invoice # +
+            # live quarter-window summary scaled to fit the cell. Sales class is no
+            # longer editable (always '03-Telemedicine' — set via SS.setdefault above).
+            top_l, top_r = st.columns(2)
+            SS.recap_month = int(top_l.selectbox(
                 "Recapture month", list(range(1, 13)), index=rec_month - 1,
                 format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
                 key="w_recap_month",
             ))
-            c3, c4 = st.columns(2)
-            SS.recap_sales_class = c3.text_input(
-                "Sales class", value=sales_class, key="w_recap_class")
-            SS.recap_start_ref = int(c4.number_input(
-                "Starting Invoice No (QBO max + 1)", value=recap_start, step=1, key="w_recap_start_ref"))
+            SS.recap_year = int(top_r.number_input(
+                "Recapture year", value=rec_year, step=1, key="w_recap_year"))
+
+            bot_l, bot_r = st.columns(2)
+            SS.recap_start_ref = int(bot_l.number_input(
+                "Starting Invoice No (QBO max + 1)", value=recap_start, step=1,
+                key="w_recap_start_ref"))
 
             new_win_s, new_win_e = flex_unused.quarter_window(int(SS.recap_year), int(SS.recap_month))
             new_group = [c for c in flex_clinics
@@ -1241,12 +1243,15 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 int(SS.recap_year), int(SS.recap_month),
                 int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)),
             )
-            cs = "on time" if today_d <= new_cutoff else "cutoff missed"
-            st.info(
-                f"**Quarter window:** {new_win_s:%b %d, %Y} → {new_win_e:%b %d, %Y}  ·  "
-                f"**Qualifying clinics:** {len(new_group)}  ·  "
-                f"**Partner cutoff:** {new_cutoff:%b %d, %Y} ({cs})"
-            )
+            cs = ":green[on time]" if today_d <= new_cutoff else ":red[cutoff missed]"
+            with bot_r:
+                with st.container(border=True):
+                    st.markdown(
+                        f"**Quarter window**  \n"
+                        f"{new_win_s:%b %d} → {new_win_e:%b %d, %Y}  \n"
+                        f"**Qualifying clinics:** {len(new_group)}  \n"
+                        f"**Partner cutoff:** {new_cutoff:%b %d, %Y} ({cs})"
+                    )
 
         elif step_key == "upload":
             st.markdown("### Upload OPD activity")
