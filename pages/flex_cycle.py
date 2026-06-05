@@ -320,20 +320,12 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 f"**Start invoice #**<br>{start_inv if company != 'GreatAmerica' else '—'}",
                 unsafe_allow_html=True,
             )
-            b1, b2 = st.columns(2)
-            if b1.button("◀ Back to setup", key="remit_upload_back", use_container_width=True):
+            back_col, _ = st.columns([1, 3])
+            if back_col.button("◀ Back to setup", key="remit_upload_back", use_container_width=True):
                 SS["remit_step"] = 0
                 st.rerun()
-            if b2.button("Set up new import", key="remit_upload_reset",
-                         use_container_width=True,
-                         help="Clear the uploaded file and start fresh — use this between back-to-back remittances."):
-                # Reset everything for a fresh import
-                for k in ("remit_file", "remit_file_override",
-                          "remit_cust_col", "remit_amt_col", "remit_id_col",
-                          "remit_reissue_ack"):
-                    SS.pop(k, None)
-                SS["remit_step"] = 0
-                st.rerun()
+            # The 'Set up new import' reset is intentionally at the bottom of the
+            # page only — keeps the top of the upload step focused on the action.
 
         up = st.file_uploader("Remittance file (CSV/XLSX)", type=["csv", "xlsx", "xls"], key="remit_file")
         if up is None:
@@ -823,17 +815,12 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             r1.markdown(f"**Year**<br>{year}", unsafe_allow_html=True)
             r2.markdown(f"**Month**<br>{mname}", unsafe_allow_html=True)
             r3.markdown(f"**Start credit memo #**<br>{start_ref}", unsafe_allow_html=True)
-            b1, b2 = st.columns(2)
-            if b1.button("◀ Back to setup", key="cred_review_back", use_container_width=True):
+            back_col, _ = st.columns([1, 3])
+            if back_col.button("◀ Back to setup", key="cred_review_back", use_container_width=True):
                 SS["cred_step"] = 0
                 st.rerun()
-            if b2.button("Set up new month", key="cred_review_reset",
-                         use_container_width=True,
-                         help="Reset year/month/start-ref and start fresh — use this when moving on to the next month."):
-                for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
-                    SS.pop(k, None)
-                SS["cred_step"] = 0
-                st.rerun()
+            # The 'Set up new month' reset lives at the bottom of the page only —
+            # keeps the top of the review step focused on the action.
 
         # ── Pull ledger rows for the target month ──────────────────────────────────
         payments = ledger.flex_payments_for_month(year, month)
