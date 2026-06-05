@@ -43,6 +43,7 @@ pages = {
     ],
     "Admin": [
         st.Page("pages/settings.py", title="Settings"),
+        st.Page("pages/audit_log.py", title="Audit & Tracking"),
     ],
 }
 nav = st.navigation(pages, position="hidden")
@@ -61,6 +62,7 @@ with st.sidebar:
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
         st.page_link("pages/settings.py", label="Settings")
+        st.page_link("pages/audit_log.py", label="Audit & Tracking")
     st.markdown('</div>', unsafe_allow_html=True)
 
 auth.sidebar_footer()
