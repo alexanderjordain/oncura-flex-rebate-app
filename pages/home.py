@@ -4,7 +4,7 @@ import streamlit as st
 
 from core import audit, ledger, loaders, store, ui
 
-ui.header("FLEX, Pass-Through & Rebate Accounting",
+ui.header("Pass-Through & Rebate Programs Ledger",
           "Receive OPD activity and finance-company remittances, calculate, and produce audit-ready imports.",
           kicker="Oncura · Operations Ledger")
 
@@ -48,7 +48,7 @@ if missing:
     st.error(
         f":material/warning: **Stage 2 not yet run for: {months_str}.** "
         f"Recent flex payments are in the ledger but no monthly credit memos have been "
-        f"generated for these months. Open **FLEX & Pass-Through → Payment Cycle → Monthly Credit Memos** and run "
+        f"generated for these months. Open **Pass-Through Payments → Payment Cycle → Monthly Credit Memos** and run "
         f"Stage 2 for each month listed."
     )
 
@@ -63,7 +63,7 @@ st.divider()
 
 col_flex, col_rebate = st.columns(2)
 with col_flex:
-    st.subheader("FLEX & Pass-Through")
+    st.subheader("Pass-Through Payments")
     st.markdown(
         "Single **Payment Cycle** page handles **BOTH** FLEX (telemedicine financing) and "
         "scan-package (pass-through) payments together, end-to-end:\n"

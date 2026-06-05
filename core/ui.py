@@ -433,7 +433,7 @@ def sidebar_brand():
     if not placed and os.path.exists(LOGO_PATH):
         st.sidebar.image(LOGO_PATH, use_container_width=True)
     st.sidebar.markdown(
-        '<div class="oncura-mark-sub">Flex &middot; Rebate Ledger</div>'
+        '<div class="oncura-mark-sub">Pass-Through &middot; Rebate Ledger</div>'
         '<div class="oncura-rule"></div>',
         unsafe_allow_html=True,
     )

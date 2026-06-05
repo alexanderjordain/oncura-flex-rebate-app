@@ -1,6 +1,6 @@
 """Payment Cycle — one page that walks through the monthly process for BOTH
 FLEX and scan-package (pass-through) payments together. Surfaced in the
-sidebar under the "FLEX & Pass-Through" section.
+sidebar under the "Pass-Through Payments" section.
 
 Stage 1: Finance Company Payment Import (remittance -> SaasAnt flex/scan files)
 Stage 2: Monthly Credit Memos (credit-memo SaasAnt file)
@@ -39,7 +39,7 @@ def safe_stage(label: str):
 ui.header("Payment Cycle",
           "Handles FLEX and scan-package (pass-through) payments together. "
           "Generates SaasAnt files for QBO import — humans approve every QBO posting.",
-          kicker="FLEX & Pass-Through · Cycle")
+          kicker="Pass-Through Payments · Cycle")
 
 flex = loaders.flex_master()
 flex_clinics = flex.get("clinics", [])

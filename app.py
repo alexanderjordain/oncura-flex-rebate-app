@@ -1,7 +1,7 @@
-"""Oncura FLEX + Rebate Accounting — entry point.
+"""Oncura Pass-Through & Rebate Programs Ledger — entry point.
 
-Uses st.navigation for explicit section grouping (Rebates / FLEX) so individual page files
-don't carry auth/UI boilerplate.
+Uses st.navigation for explicit section grouping (Rebates / Pass-Through) so individual page
+files don't carry auth/UI boilerplate.
 
 Run locally:  streamlit run app.py
 Deploy:       Streamlit Cloud, app file = app.py. Set APP_PASSWORD (+ GITHUB_TOKEN) in secrets.
@@ -10,7 +10,7 @@ import streamlit as st
 
 from core import auth, ui, graph_email
 
-st.set_page_config(page_title="Oncura FLEX, Pass-Through & Rebate", page_icon="*", layout="wide")
+st.set_page_config(page_title="Pass Through & Rebate Programs Ledger", page_icon="*", layout="wide")
 
 # Auth + theme: gate is enforced first; theme CSS injected once per page run
 auth.require_login()
@@ -37,7 +37,7 @@ pages = {
         st.Page("pages/rebate_cycle.py", title="Rebate Cycle"),
         st.Page("pages/rebate_master.py", title="Rebate Program Controls"),
     ],
-    "FLEX & Pass-Through": [
+    "Pass-Through Payments": [
         st.Page("pages/flex_cycle.py", title="Payment Cycle"),
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
@@ -57,7 +57,7 @@ with st.sidebar:
     with st.expander("Rebates", expanded=False):
         st.page_link("pages/rebate_cycle.py", label="Rebate Cycle")
         st.page_link("pages/rebate_master.py", label="Rebate Program Controls")
-    with st.expander("FLEX & Pass-Through", expanded=False):
+    with st.expander("Pass-Through Payments", expanded=False):
         st.page_link("pages/flex_cycle.py", label="Payment Cycle")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
