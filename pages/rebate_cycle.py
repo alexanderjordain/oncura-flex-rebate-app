@@ -623,14 +623,25 @@ elif step_key == "export":
             # ── Record to audit manifest ────────────────────────────────────────────
             st.divider()
             n_clinics = sum(len(c) for c in per_bucket.values())
-            already_recorded = any(
-                e.get("outputs") and e["outputs"][0].get("sha256") == audit.output_hash_bytes(xlsx_bytes)
-                for e in audit.list_entries(cycle_type="rebate_report", limit=50)
+            # Two flag sources for "already recorded":
+            #   1. session-state set of hashes we recorded earlier in THIS session
+            #      (covers the immediate post-click render so the red banner
+            #      flips to green without needing GitHub round-trip)
+            #   2. the audit manifest itself (catches reruns across sessions)
+            output_hash = audit.output_hash_bytes(xlsx_bytes)
+            recorded_hashes = SS.setdefault("rebate_recorded_hashes", set())
+            already_recorded = (
+                output_hash in recorded_hashes
+                or any(
+                    e.get("outputs") and e["outputs"][0].get("sha256") == output_hash
+                    for e in audit.list_entries(cycle_type="rebate_report", limit=50)
+                )
             )
             if already_recorded:
                 st.success(
-                    ":material/check_circle: This exact rebate report (same bytes) is already in the audit manifest. "
-                    "Re-recording it would create a duplicate entry — skip the button below unless something changed."
+                    ":material/check_circle: This rebate report is recorded in the audit manifest. "
+                    "Re-recording would create a duplicate entry — skip the button below unless "
+                    "something changed."
                 )
             else:
                 st.error(
@@ -684,6 +695,10 @@ elif step_key == "export":
                     }],
                     note=f"Rebate cycle for {_period_label}",
                 )
+                # Mark THIS hash as recorded in the session so the red banner
+                # flips to green on the rerun below — no need to wait for the
+                # GitHub side to propagate before the UI catches up.
+                recorded_hashes.add(output_hash)
                 if ok:
                     st.success(f"Recorded to audit manifest. Entry ID: `{entry_id[:8]}…`  ·  {info}")
                 else:
