@@ -717,10 +717,17 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
 
             # Bottom-of-page "Set up new import" — same handler as the top-card button,
             # for operators who've scrolled all the way down and don't want to scroll back.
+            # Placed bottom-left in a narrow column to match the Back/Next nav pattern
+            # used on the wizard pages — keeps the reset action out of the visual
+            # foreground but easy to find when needed.
             st.divider()
-            if st.button("Set up new import", key="remit_upload_reset_bottom",
-                         use_container_width=True,
-                         help="Clear the uploaded file and start fresh — use this between back-to-back remittances."):
+            reset_col, _ = st.columns([1, 4])
+            if reset_col.button(
+                "◀ Set up new import",
+                key="remit_upload_reset_bottom",
+                use_container_width=True,
+                help="Clear the uploaded file and start fresh — use this between back-to-back remittances.",
+            ):
                 for k in ("remit_file", "remit_file_override",
                           "remit_cust_col", "remit_amt_col", "remit_id_col",
                           "remit_reissue_ack"):
@@ -1019,11 +1026,16 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         )
 
         # Bottom-of-page "Set up new month" — mirror of the top-card button so an
-        # operator who's scrolled down doesn't have to scroll back up.
+        # operator who's scrolled down doesn't have to scroll back up. Bottom-left
+        # narrow column to match the Back/Next nav pattern elsewhere.
         st.divider()
-        if st.button("Set up new month", key="cred_review_reset_bottom",
-                     use_container_width=True,
-                     help="Reset year/month/start-ref and start fresh — use this when moving on to the next month."):
+        reset_col, _ = st.columns([1, 4])
+        if reset_col.button(
+            "◀ Set up new month",
+            key="cred_review_reset_bottom",
+            use_container_width=True,
+            help="Reset year/month/start-ref and start fresh — use this when moving on to the next month.",
+        ):
             for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
                 SS.pop(k, None)
             SS["cred_step"] = 0
@@ -1619,10 +1631,15 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 
     # Bottom-of-page "Set up new cycle" — clears the file, credit offsets, and
     # returns to the first wizard step. Use this between back-to-back monthly runs.
+    # Bottom-left narrow column to match the Back/Next nav pattern elsewhere.
     st.divider()
-    if st.button("Set up new cycle", key="w_recap_reset_bottom",
-                 use_container_width=True,
-                 help="Clear the uploaded file + credit offsets and start fresh — use this between monthly Stage 3 runs."):
+    reset_col, _ = st.columns([1, 4])
+    if reset_col.button(
+        "◀ Set up new cycle",
+        key="w_recap_reset_bottom",
+        use_container_width=True,
+        help="Clear the uploaded file + credit offsets and start fresh — use this between monthly Stage 3 runs.",
+    ):
         for k in ("recap_uploaded_bytes", "recap_uploaded_name", "recap_credit_offsets",
                   "recap_pipe_error", "recap_pipe_traceback",
                   "w_recap_file", "w_recap_offsets_editor"):
