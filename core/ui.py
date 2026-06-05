@@ -284,6 +284,33 @@ def set_logo():
             pass
 
 
+def initials_input(audit_key: str, *, fallback: str = "", disabled: bool = False) -> str:
+    """Render a 'Your initials' input and return the approver string to use.
+
+    The audit manifest works like a paper sign-off sheet — each cycle should be
+    initialed by the operator who ran it. This widget collects the initials
+    once per session (persisted under ``SS['user_initials']``) and auto-fills
+    on subsequent cycles. Blank initials fall back to the ``fallback`` value
+    (typically ``auth.current_role()`` — keeps the manifest meaningful).
+
+    Returns the uppercase initials, or fallback if none provided.
+    """
+    val = st.text_input(
+        "Your initials (for the audit log)",
+        value=st.session_state.get("user_initials", ""),
+        max_chars=4,
+        key=audit_key,
+        placeholder="e.g. AJ",
+        help="Recorded as the approver on the audit manifest, like initialing "
+             "a paper sign-off sheet. Persists across cycles in this session.",
+        disabled=disabled,
+    )
+    cleaned = (val or "").strip().upper()
+    if cleaned:
+        st.session_state["user_initials"] = cleaned
+    return cleaned or fallback
+
+
 def scroll_top_on_step_change(wizard_key: str, current_step) -> None:
     """Scroll the page to the top whenever a wizard step changes.
 
