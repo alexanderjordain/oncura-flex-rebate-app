@@ -2239,6 +2239,96 @@
       "payment_date": "2026-05-01",
       "amount": 935.0,
       "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "1b2421dd86fb98e8db806936b4f581158e5da62720138c186fab08437b5e8922",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Crossroads Animal Hospital TX",
+      "qb_customer": "Crossroads Animal Hospital TX",
+      "payment_date": "05/31/2026",
+      "amount": 5565.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "f2534aff0686a96ef2b3119399402d1a76332d034f906de3899a0e228043de52",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Day Hollow Animal Hospital",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "05/31/2026",
+      "amount": 2680.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "cd19f26eacb64fe0bb2d25cb14214278e40c8b9c3ff2823ba885c88c73c9fe3f",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Goodfriends Veterinary Clinic",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "05/31/2026",
+      "amount": 1345.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "27681ecf18051d18326bd932e04f24418be8776cff63fa0753b3fef81ba82f14",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "La Canada Pet Clinic",
+      "qb_customer": "La Canada Pet Clinic",
+      "payment_date": "05/31/2026",
+      "amount": 2265.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "66908672115ecce05fd7a8c79bc5726bb08ee9743abcaa9d6b4b73f8788346db",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Mohnacky Animal Hospital of Carlsbad",
+      "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
+      "payment_date": "05/31/2026",
+      "amount": 8395.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "f14c5a9a502dffa231ce1daf49c7c356f0c9042ef32939a67f95fff6ec08c914",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Pine Tree Veterinary Hospital",
+      "qb_customer": "Pine Tree Veterinary Hospital",
+      "payment_date": "05/31/2026",
+      "amount": 3530.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "3a6e70c577c8c4bd62fb1e8d49a66b7b90d142597e480331d2b9123b2e1375a1",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Riverlin Animal Hospital",
+      "qb_customer": "Riverlin Animal Hospital",
+      "payment_date": "05/31/2026",
+      "amount": 6845.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "e9c65e1185da03b81b4d184c51dacfcd757cc5dc1843bb8fc155e96b67c87350",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "St. Michael Veterinary Clinic",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "05/31/2026",
+      "amount": 220.0,
+      "recorded_at": "2026-06-05T17:55:02"
+    },
+    {
+      "fingerprint": "56d3f528dc78379df60775ddb8eb718260f62d7df44810cf2560b6d204c967f4",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "SVP Lynn Animal Hospital",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "05/31/2026",
+      "amount": 2615.0,
+      "recorded_at": "2026-06-05T17:55:02"
     }
   ]
 }
