@@ -1252,9 +1252,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             st.markdown("### Upload OPD activity")
             st.caption(
                 f"Upload the OPD consult-grid export (or the OPD Invoices export) for the "
-                f"**{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** window — the full "
-                f"quarter that ends in {dt.date(rec_year, rec_month, 1):%B %Y}. Use those exact "
-                f"Finalized From / Finalized To dates when pulling the export."
+                f"**{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** window."
             )
             with st.expander(":material/help: **How to pull the OPD export**", expanded=False):
                 st.markdown(
