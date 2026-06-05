@@ -257,6 +257,29 @@ footer { visibility:hidden; }
 .oncura-mark .dot { color:var(--green); }
 .oncura-mark-sub { font-family:var(--mono); text-transform:uppercase; letter-spacing:.2em; font-size:.6rem; color:var(--muted); margin-top:.3rem; }
 .oncura-rule { height:1px; background:var(--line); margin:.7rem 0 1rem 0; }
+
+/* Mark / Record buttons — light green tint to signal 'commit to the
+ * audit + dedup ledger'. The button rendered by ui.record_button()
+ * places an invisible sentinel <div class="oncura-record-btn-anchor">
+ * immediately before itself; this :has() + sibling selector targets
+ * the next element-container's button without touching any other
+ * primary button in the app. */
+.element-container:has(.oncura-record-btn-anchor) + .element-container button[kind] {
+  background: #DFF5E1 !important;
+  color: #1B6E3A !important;
+  border: 1px solid #82C18C !important;
+}
+.element-container:has(.oncura-record-btn-anchor) + .element-container button[kind]:hover:not(:disabled) {
+  background: #C6EFCE !important;
+  border-color: #1B6E3A !important;
+}
+.element-container:has(.oncura-record-btn-anchor) + .element-container button[kind]:disabled {
+  background: #F2F8F3 !important;
+  color: #82C18C !important;
+  border-color: #C6E8C9 !important;
+  opacity: 0.7;
+}
+.oncura-record-btn-anchor { display: none; }
 </style>
 """
 
@@ -282,6 +305,28 @@ def set_logo():
             return True
         except Exception:
             pass
+
+
+def record_button(label: str, *, key: str, disabled: bool = False,
+                  use_container_width: bool = False, help: str | None = None) -> bool:
+    """Render a 'commit-to-the-ledger' button with a light green tint.
+
+    These buttons (Mark / Record …) are the load-bearing audit-manifest writes.
+    They get a visually distinct soft-green styling so an operator scanning the
+    page can find them at a glance even when the surrounding flow has lots of
+    other widgets.
+
+    The visual tint is applied by CSS in inject(): a sentinel
+    ``<div class="oncura-record-btn-anchor">`` is rendered immediately before
+    the button so the `:has()` + sibling selector can target this specific
+    button without touching any other primary button in the app.
+    """
+    st.markdown('<div class="oncura-record-btn-anchor"></div>',
+                unsafe_allow_html=True)
+    return st.button(
+        label, key=key, disabled=disabled,
+        use_container_width=use_container_width, help=help,
+    )
 
 
 def initials_input(audit_key: str, *, disabled: bool = False) -> str:

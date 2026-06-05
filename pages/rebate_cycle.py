@@ -644,10 +644,9 @@ elif step_key == "export":
                 "rebate_audit_initials",
                 disabled=already_recorded,
             )
-            if st.button(
+            if ui.record_button(
                 "Record rebate cycle to audit manifest",
                 key="rebate_audit_mark",
-                type="primary",
                 disabled=already_recorded or not initials,
             ):
                 src_bytes = SS.get("cycle_uploaded_bytes") or b""

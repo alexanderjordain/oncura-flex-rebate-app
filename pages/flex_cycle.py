@@ -666,9 +666,9 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             )
             if ack_disabled:
                 st.info("Nothing new to record (all rows were already in the ledger).")
-            if not ack_disabled and st.button(
+            if not ack_disabled and ui.record_button(
                 f"Mark {len(rows_to_record)} payment(s) as imported",
-                key="remit_mark_processed", type="primary",
+                key="remit_mark_processed",
                 disabled=not stage1_initials,
             ):
                 stage1_approver = stage1_initials or auth.current_role()
@@ -1020,9 +1020,9 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     f"those rows to QBO again. (Future enhancement: filter them out of the download.)"
                 )
             stage2_initials = ui.initials_input("stage2_audit_initials")
-            if st.button(
+            if ui.record_button(
                 f"Mark {len(df)} credit memo(s) as generated",
-                key="cred_mark_processed", type="primary",
+                key="cred_mark_processed",
                 disabled=not stage2_initials,
             ):
                 ok_ledger, added, _ = ledger.record_batch(
@@ -1186,14 +1186,19 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     partner_count = sum(1 for r in annotated if r["route"] == "partner" and r["net_overage"] > 0)
     flagged = [r for r in annotated if r.get("escalation_flag")]
 
-    # Dynamic step list — only include steps that have something to show
-    STEPS = [("setup", "Cycle setup"), ("upload", "Upload OPD activity")]  # handoff step removed — accountant runs the import directly
+    # Dynamic step list — only include steps that have something to show.
+    # Overage is split into two separate steps so OnePlace partner submission
+    # gets its own full-width page; previously it lived in a tab alongside
+    # direct-bill and was easy to miss.
+    STEPS = [("setup", "Cycle setup"), ("upload", "Upload OPD activity")]
     if pipe and not rdf.empty:
         STEPS.append(("review", "Review activity"))
         if not udf.empty:
             STEPS.append(("recapture", "Unused recapture"))
-        if overs:
-            STEPS.append(("overage", "Overage routing & bills"))
+        if direct_count:
+            STEPS.append(("direct_bill", "Direct-bill overages"))
+        if partner_count:
+            STEPS.append(("partner_submission", "OnePlace partner submission"))
     total = len(STEPS)
     SS.recap_step = max(0, min(SS.recap_step, total - 1))
     step_key, step_label = STEPS[SS.recap_step]
@@ -1404,9 +1409,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     )
                 st.divider()
                 recap_initials = ui.initials_input("stage3_recap_audit_initials")
-                if st.button(
+                if ui.record_button(
                     f"Mark {len(udf)} recapture invoice(s) as imported",
-                    key="w_recap_mark_unused", type="primary",
+                    key="w_recap_mark_unused",
                     disabled=not recap_initials,
                 ):
                     ok_l, added, _ = ledger.record_batch(
@@ -1443,62 +1448,56 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         f"Recorded {added} recapture invoice(s) in ledger + audit manifest."
                     )
 
-        elif step_key == "overage":
-            # ── Overview header ─────────────────────────────────────────────────
-            st.markdown(f"### Overage routing & bills — {len(overs)} clinic(s) over threshold")
-            st.caption(
-                "OnePlace handles overages submitted before the cutoff. Great America + "
-                "New Lane have opted out (direct-bill). Self-Financed: direct. Missed cutoff: direct."
-            )
-
-            # Credit-offset editor — affects both routing buckets, so it lives at the top.
-            with st.expander(":gray[Pre-existing credit offsets (optional)]"):
-                st.caption(
-                    "If an over-threshold clinic has an unapplied credit in QBO, enter it here — "
-                    "the app applies it to the overage and only bills the remainder."
-                )
-                offset_seed = pd.DataFrame([
-                    {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
-                     "Gross overage": round(float(o["overage"]), 2),
-                     "Pre-existing credit": float(
-                         SS.recap_credit_offsets.get(o.get("qb_name") or o.get("clinic_name"), 0) or 0
-                     )}
-                    for o in overs
-                ])
-                edited = st.data_editor(
-                    offset_seed, hide_index=True, use_container_width=True,
-                    disabled=["Clinic (QB)", "Gross overage"],
-                    key="w_recap_offsets_editor",
-                )
-                SS.recap_credit_offsets = {
-                    r["Clinic (QB)"]: float(r["Pre-existing credit"] or 0)
-                    for _, r in edited.iterrows()
-                }
-
-            # All overages at a glance — tucked into a gray expander since the
-            # actionable detail lives in the route tabs below.
-            adf = pd.DataFrame(annotated)[[
-                "clinic_name", "finance_company", "overage",
-                "credit_applied", "net_overage", "route", "escalation_flag",
-            ]]
-            with st.expander(f":gray[All overages · {len(adf)} clinic(s) · preview]"):
-                st.dataframe(adf, use_container_width=True, height=240)
-
-            if flagged:
-                names = ", ".join(r["clinic_name"] for r in flagged)
-                st.warning(
-                    f":material/priority_high: Escalation clinic(s): **{names}** — "
-                    f"communication may need to come from Marty / Accounting Manager (SOP-12).",
-                    icon=":material/priority_high:",
-                )
-
-            # ── Routing-bucket tabs ─────────────────────────────────────────────
-            # Only show tabs that have rows. If both exist → side-by-side tabs;
-            # if only one → render it inline (no point in a single-tab UI).
+        elif step_key in ("direct_bill", "partner_submission"):
+            # Shared totals + dataframe used by both overage steps.
             direct_total = sum(float(r["net_overage"]) for r in annotated
                                if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
             partner_total = sum(float(r["net_overage"]) for r in annotated
                                 if r["route"] == "partner" and r["net_overage"] > 0)
+            adf = pd.DataFrame(annotated)[[
+                "clinic_name", "finance_company", "overage",
+                "credit_applied", "net_overage", "route", "escalation_flag",
+            ]]
+
+            def _shared_overage_context(*, offsets_key: str):
+                """Render the bits common to both overage steps: routing-rules
+                caption, optional credit-offsets editor, all-overages preview,
+                and escalation warning."""
+                st.caption(
+                    "OnePlace handles overages submitted before the cutoff. Great America + "
+                    "New Lane have opted out (direct-bill). Self-Financed: direct. Missed cutoff: direct."
+                )
+                with st.expander(":gray[Pre-existing credit offsets (optional)]"):
+                    st.caption(
+                        "If an over-threshold clinic has an unapplied credit in QBO, enter it here — "
+                        "the app applies it to the overage and only bills the remainder."
+                    )
+                    offset_seed = pd.DataFrame([
+                        {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
+                         "Gross overage": round(float(o["overage"]), 2),
+                         "Pre-existing credit": float(
+                             SS.recap_credit_offsets.get(o.get("qb_name") or o.get("clinic_name"), 0) or 0
+                         )}
+                        for o in overs
+                    ])
+                    edited = st.data_editor(
+                        offset_seed, hide_index=True, use_container_width=True,
+                        disabled=["Clinic (QB)", "Gross overage"],
+                        key=offsets_key,
+                    )
+                    SS.recap_credit_offsets = {
+                        r["Clinic (QB)"]: float(r["Pre-existing credit"] or 0)
+                        for _, r in edited.iterrows()
+                    }
+                with st.expander(f":gray[All overages · {len(adf)} clinic(s) · preview]"):
+                    st.dataframe(adf, use_container_width=True, height=240)
+                if flagged:
+                    names = ", ".join(r["clinic_name"] for r in flagged)
+                    st.warning(
+                        f":material/priority_high: Escalation clinic(s): **{names}** — "
+                        f"communication may need to come from Marty / Accounting Manager (SOP-12).",
+                        icon=":material/priority_high:",
+                    )
 
             def _direct_block():
                 st.caption(
@@ -1572,9 +1571,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     direct_initials = ui.initials_input("stage3_direct_audit_initials")
                 else:
                     direct_initials = ""
-                if not didf.empty and st.button(
+                if not didf.empty and ui.record_button(
                     f"Record {len(didf)} direct-bill invoice(s) as sent to accounting",
-                    key="w_recap_mark_direct", type="primary",
+                    key="w_recap_mark_direct",
                     disabled=not direct_initials,
                 ):
                     ok_l, added_l, _ = ledger.record_batch(
@@ -1669,9 +1668,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     partner_initials = ui.initials_input("stage3_partner_audit_initials")
                 else:
                     partner_initials = ""
-                if not pdf.empty and st.button(
+                if not pdf.empty and ui.record_button(
                     f"Mark {len(pdf)} partner-submission row(s) as submitted",
-                    key="w_recap_mark_partner", type="primary",
+                    key="w_recap_mark_partner",
                     disabled=not partner_initials,
                 ):
                     ok_l, added_l, _ = ledger.record_batch(
@@ -1704,24 +1703,18 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         f"and {added_l} fingerprint(s) in the dedup ledger."
                     )
 
-            # Tab gate: render both as sub-tabs, only direct, only partner, or neither.
-            if direct_count and partner_count:
-                tab_direct, tab_partner = st.tabs([
-                    f"Direct-bill  ·  {direct_count}",
-                    f"Partner submission (OnePlace)  ·  {partner_count}",
-                ])
-                with tab_direct:
-                    _direct_block()
-                with tab_partner:
-                    _partner_block()
-            elif direct_count:
-                st.markdown("#### Direct-bill")
+            # ── Step dispatch ──────────────────────────────────────────────────
+            # Each overage route lives on its own wizard step so it gets the
+            # full page (and the OnePlace partner submission isn't half-hidden
+            # behind a tab next to direct-bill).
+            if step_key == "direct_bill":
+                st.markdown(f"### Direct-bill overages — {direct_count} clinic(s)")
+                _shared_overage_context(offsets_key="w_recap_offsets_editor_direct")
                 _direct_block()
-            elif partner_count:
-                st.markdown("#### Partner submission (OnePlace)")
+            elif step_key == "partner_submission":
+                st.markdown(f"### OnePlace partner submission — {partner_count} clinic(s)")
+                _shared_overage_context(offsets_key="w_recap_offsets_editor_partner")
                 _partner_block()
-            else:
-                st.info("No overages requiring action this cycle.")
 
     # ── Navigation ────────────────────────────────────────────────────────────
     can_back = SS.recap_step > 0
