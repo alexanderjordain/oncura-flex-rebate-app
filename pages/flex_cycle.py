@@ -681,10 +681,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                     )
 
             # Next-step reminder for Acct SOP-2: bank-feed matching in QBO.
+            # NOTE: `meta` is defined earlier in the upload-step branch but not here,
+            # so look it up locally from the company in scope on the review step.
+            sop2_meta = flex_finance.COMPANY_META.get(company, {})
             st.divider()
             st.info(
                 ":material/account_balance: **Next step — Acct SOP-2: Match the payments in the QBO bank feed.**  \n"
-                f"After the SaasAnt files above are imported to QBO, open the **{meta.get('bank_feed', 'bank feed')}** "
+                f"After the SaasAnt files above are imported to QBO, open the **{sop2_meta.get('bank_feed', 'bank feed')}** "
                 "in QBO and match the deposit against the receive payments you just created. "
                 "Confirm the deposit amount equals the **Total** shown on this page; if there's a mismatch, "
                 "stop and reconcile before posting the next remittance.",
