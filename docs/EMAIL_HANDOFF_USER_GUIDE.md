@@ -69,15 +69,17 @@ You'll see a **Download email draft (.eml)** button.
    downloaded.
 3. Double-click it. **What happens next depends on which Outlook you have:**
 
-   #### If you have classic Outlook desktop
+   #### If you have the Outlook desktop app (either Classic or New)
    - The `.eml` opens as an **editable compose window** with To, Subject,
      body, and attachment pre-filled. Review, edit if needed, click **Send**.
-     Done.
+     Done. (New Outlook desktop now handles `.eml` files the same way Classic
+     does — older Microsoft docs about read-only behavior referred to early
+     builds and the browser client.)
 
-   #### If you have new Outlook or Outlook on the web (OWA)
+   #### If you only have Outlook on the web (browser, OWA)
    - By default, double-clicking the `.eml` opens it as a **read-only message
      viewer** — you can read it but can't send. This is a Microsoft
-     limitation of the new Outlook, not the app's fault.
+     limitation of the browser client, not the app's fault.
    - You have two options. Pick whichever you prefer:
 
      ##### Option 1 — Route `.eml` files to classic Outlook *(recommended; one-time setup)*
