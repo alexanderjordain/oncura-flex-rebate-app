@@ -931,15 +931,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 by_qb[k] += 1
                 amount_by_qb[k] = amount_by_qb.get(k, 0.0) + float(p.get("amount") or 0)
             multi = {k: n for k, n in by_qb.items() if n > 1}
-            pm1, pm2, pm3 = st.columns(3)
-            pm1.metric("Payments received", len(payments))
-            pm2.metric("Distinct clinics", len(by_qb))
-            pm3.metric("Multi-payment clinics", len(multi))
-            if multi:
-                st.caption(
-                    "**Multi-payment clinics this month** (will receive one credit memo per payment): "
-                    + ", ".join(f"{k} ({n}×)" for k, n in sorted(multi.items()))
-                )
 
             # Clinics that ARE active but received NO payment this month
             paid_keys = {(p.get("qb_customer") or "").strip().lower() for p in payments} | \
@@ -954,8 +945,26 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 if qbn in paid_keys or any(cv and cv in paid_keys for cv in contracts):
                     continue
                 unpaid.append(c.get("qb_name") or c.get("clinic_name"))
-            if unpaid:
-                with st.expander(f"Active clinics with NO payment in {mname} ({len(unpaid)}) — no credit memo generated"):
+
+            # Source-payment metrics + unpaid list tucked into a gray expander.
+            # They're context for trusting the credit-memo batch below, not the
+            # action itself — keep the page focused on what the operator is here
+            # to do, not on stats they only sometimes need.
+            src_label = (f":gray[Source payments — {len(payments)} payment(s) across "
+                         f"{len(by_qb)} clinic(s) this month  ·  details]")
+            with st.expander(src_label, expanded=False):
+                pm1, pm2, pm3 = st.columns(3)
+                pm1.metric("Payments received", len(payments))
+                pm2.metric("Distinct clinics", len(by_qb))
+                pm3.metric("Multi-payment clinics", len(multi))
+                if multi:
+                    st.caption(
+                        "**Multi-payment clinics this month** (will receive one credit memo per payment): "
+                        + ", ".join(f"{k} ({n}×)" for k, n in sorted(multi.items()))
+                    )
+                if unpaid:
+                    st.divider()
+                    st.markdown(f"**Active clinics with NO payment in {mname} — no credit memo generated** ({len(unpaid)})")
                     st.caption("Either they paid ahead in a prior month, are between cycles, or their FLEX program ended.")
                     st.write(unpaid)
 
@@ -1079,11 +1088,18 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     key="cred_dl_legacy",
                 )
 
+        st.divider()
         st.markdown(
             """
-    **Upload to SaasAnt:** [transactions.saasant.com](https://transactions.saasant.com) →
-    **Bulk Upload** → **Credit Memo** → select the file → walk through the wizard.
-    """
+            **Uploading to SaasAnt**
+            1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
+            2. Click **Bulk Upload**.
+            3. Pick the import type: **Credit Memo**.
+            4. Select the **FlexCredits** xlsx you downloaded above.
+            5. Walk through the SaasAnt wizard. After it completes, come back here
+               and click **Mark credit memos as generated** so the audit + dedup
+               ledger records the batch.
+            """
         )
 
         # Bottom-of-page "Set up new month" — mirror of the top-card button so an
