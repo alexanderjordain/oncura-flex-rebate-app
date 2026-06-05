@@ -248,6 +248,22 @@
       ],
       "note": "16 new recapture invoice(s); 0 already in ledger",
       "entry_hash": "052a34927f6d549abb613e37ef2bb8c42bb37e777ecf22a401c22682a122a74e"
+    },
+    {
+      "id": "f450832e-92d9-446e-9d9b-359cc2cd08a3",
+      "timestamp": "2026-06-05T16:46:32",
+      "cycle_type": "settings_clear_ledger",
+      "approver": "admin",
+      "year": null,
+      "month": null,
+      "params": {
+        "prior_payments": 75,
+        "prior_files": 1
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "[unknown cycle_type 'settings_clear_ledger'] Wiped 75 payment fingerprint(s) and 1 file hash(es) from processed_payments.json.",
+      "entry_hash": "d0ceac6834f79ba06c6cadd122417fae0d0cd2ed661cd9a031aa65b04c3e5254"
     }
   ]
 }
