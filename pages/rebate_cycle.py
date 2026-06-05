@@ -344,8 +344,19 @@ elif step_key == "review":
                 st.dataframe(vdf, use_container_width=True, hide_index=True)
 
         if fuzzy_matches:
+            # Deduplicate across months: same (OPD name, matched master) pair shouldn't
+            # appear twice just because the cycle spans multiple months. Sum the rebate
+            # amount and list the months it appeared in for traceability.
+            fuzzy_agg: dict[tuple[str, str], dict] = {}
+            for label, opd, matched, amt in fuzzy_matches:
+                key = (opd, matched)
+                rec = fuzzy_agg.setdefault(key, {"months": [], "total": 0.0})
+                if label not in rec["months"]:
+                    rec["months"].append(label)
+                rec["total"] += float(amt)
+            n_unique = len(fuzzy_agg)
             with st.expander(
-                f":material/info: **Fuzzy clinic matches** — {len(fuzzy_matches)} row(s) matched non-exactly",
+                f":material/info: **Fuzzy clinic matches** — {n_unique} clinic(s) matched non-exactly",
                 expanded=False,
             ):
                 st.caption(
@@ -356,8 +367,17 @@ elif step_key == "review":
                     "routes revenue to the wrong finance bucket."
                 )
                 fdf = pd.DataFrame(
-                    fuzzy_matches,
-                    columns=["Month", "OPD name", "Matched master", "Rebate amount ($)"],
+                    [
+                        {
+                            "OPD name": opd,
+                            "Matched master": matched,
+                            "Months matched": ", ".join(rec["months"]),
+                            "Rebate total ($)": round(rec["total"], 2),
+                        }
+                        for (opd, matched), rec in sorted(
+                            fuzzy_agg.items(), key=lambda kv: -kv[1]["total"]
+                        )
+                    ]
                 )
                 st.dataframe(fdf, use_container_width=True, hide_index=True)
 
