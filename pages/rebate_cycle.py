@@ -497,35 +497,42 @@ elif step_key == "review":
         # several hundred clinics that aren't in the rebate program roster (rebate enrolls
         # a subset of all OPD clinics), so the count is normal noise, not a flag.
 
-        # Sign-off gate: operator must tick this before the Next button enables.
-        # Wrapped in a prominent container so it doesn't get lost below the expanders —
-        # operators were missing it and wondering why the Next arrow wouldn't show up.
+        # Sign-off gate: operator must tick the checkbox before Next enables.
+        # Wrapped in a bordered "sign-off card" so the checkbox visibly groups
+        # with its instruction text. Earlier versions had the checkbox above
+        # and a separate warning banner below — the connection was easy to
+        # miss, so operators were skipping right past the sign-off.
         if variance_rows or fuzzy_matches or rads_pending:
             st.divider()
-            # IMPORTANT: render the checkbox BEFORE the banner so the banner reads
-            # the live checked-state from the widget's return value. Reading from
-            # SS["cycle_review_acked"] beforehand would give the value from the
-            # PRIOR rerun (one click behind), which is why the banners appeared
-            # at the wrong times.
-            acked_now = st.checkbox(
-                "**I've reviewed the flagged rows above and they're acceptable.**",
-                value=SS.get("cycle_review_acked", False),
-                key="cycle_review_ack_widget",
+            # Read live state from the widget's own SS key so the heading
+            # reflects the click that just happened (not the prior rerun).
+            live_acked = SS.get(
+                "cycle_review_ack_widget",
+                SS.get("cycle_review_acked", False),
             )
-            SS["cycle_review_acked"] = acked_now
-            if acked_now:
-                st.success(
-                    ":material/check_circle: **Review acknowledged.** You can advance to the "
-                    "Export step using the **Next ▶** button at the bottom of the page."
+            with st.container(border=True):
+                if live_acked:
+                    st.markdown(
+                        "##### :green[:material/check_circle:&nbsp; Sign-off complete]"
+                    )
+                    st.caption(
+                        "**Next ▶** at the bottom of the page is now enabled."
+                    )
+                else:
+                    st.markdown(
+                        "##### :red[:material/priority_high:&nbsp; SIGN-OFF REQUIRED]"
+                    )
+                    st.caption(
+                        "Tick the checkbox below to acknowledge you've reviewed the "
+                        "flagged rows above. **Next ▶** at the bottom of the page "
+                        "stays disabled until you do."
+                    )
+                acked_now = st.checkbox(
+                    "**I've reviewed the flagged rows above and they're acceptable.**",
+                    value=SS.get("cycle_review_acked", False),
+                    key="cycle_review_ack_widget",
                 )
-            else:
-                st.error(
-                    ":material/priority_high: **One more step — sign off on the flagged rows above "
-                    "before you can advance.**  \n"
-                    "The **Next ▶** button at the bottom of the page stays disabled until you tick "
-                    "the box above.",
-                    icon=":material/warning:",
-                )
+                SS["cycle_review_acked"] = acked_now
         else:
             SS["cycle_review_acked"] = True  # nothing to flag, auto-pass
 
