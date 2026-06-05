@@ -72,7 +72,32 @@ def test_check_possible_reissues_empty_when_ledger_empty(monkeypatch):
     assert ledger.check_possible_reissues("OnePlace", incoming) == []
 
 
-def test_check_possible_reissues_flags_same_amount_different_date(monkeypatch):
+def test_check_possible_reissues_flags_same_month_different_date(monkeypatch):
+    """Same (contract, amount) + different date BUT same year-month — flag it.
+    This is the canonical reissue: small date correction within one cycle."""
+    existing_pay = {
+        "fingerprint": "abc",
+        "company": "OnePlace",
+        "kind": "flex",
+        "contract": "4001017",
+        "qb_customer": "Acme Vet",
+        "payment_date": "2026-05-01",
+        "amount": 100.0,
+    }
+    monkeypatch.setattr(ledger, "load", lambda: ({"files": [], "payments": [existing_pay]}, None))
+    incoming = [{"kind": "flex", "contract": "4001017",
+                 "payment_date": dt.date(2026, 5, 15), "amount": 100.0}]
+    out = ledger.check_possible_reissues("OnePlace", incoming)
+    assert len(out) == 1
+    assert out[0]["existing"][0]["payment_date"] == "2026-05-01"
+
+
+def test_check_possible_reissues_silent_for_different_month(monkeypatch):
+    """Same (contract, amount) but the incoming date is in a DIFFERENT month
+    from the prior ledger row → this is just the next cycle's recurring
+    payment, not a reissue. Used to false-fire on OnePlace monthly remittances
+    where every (contract, amount) matched a prior row but with the next
+    month's date."""
     existing_pay = {
         "fingerprint": "abc",
         "company": "OnePlace",
@@ -86,8 +111,7 @@ def test_check_possible_reissues_flags_same_amount_different_date(monkeypatch):
     incoming = [{"kind": "flex", "contract": "4001017",
                  "payment_date": dt.date(2026, 5, 1), "amount": 100.0}]
     out = ledger.check_possible_reissues("OnePlace", incoming)
-    assert len(out) == 1
-    assert out[0]["existing"][0]["payment_date"] == "2026-04-01"
+    assert out == []
 
 
 def test_check_possible_reissues_skips_exact_duplicates(monkeypatch):
@@ -107,13 +131,16 @@ def test_check_possible_reissues_skips_exact_duplicates(monkeypatch):
 
 def test_check_possible_reissues_normalizes_contract(monkeypatch):
     # Existing row stored with float artifact; incoming as clean string. Must match.
+    # Use same-month dates so the reissue check (which only fires within a cycle)
+    # surfaces the normalization match — the point of this test is to verify
+    # '40010172988.0' and '40010172988' resolve to the same contract.
     existing_pay = {
         "fingerprint": "abc", "company": "OnePlace", "kind": "flex",
         "contract": "40010172988.0", "qb_customer": "Acme Vet",
-        "payment_date": "2026-04-01", "amount": 100.0,
+        "payment_date": "2026-05-01", "amount": 100.0,
     }
     monkeypatch.setattr(ledger, "load", lambda: ({"files": [], "payments": [existing_pay]}, None))
     incoming = [{"kind": "flex", "contract": "40010172988",
-                 "payment_date": dt.date(2026, 5, 1), "amount": 100.0}]
+                 "payment_date": dt.date(2026, 5, 15), "amount": 100.0}]
     out = ledger.check_possible_reissues("OnePlace", incoming)
     assert len(out) == 1

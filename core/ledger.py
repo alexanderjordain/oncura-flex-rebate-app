@@ -169,7 +169,25 @@ def check_possible_reissues(company: str, payments: list[dict]) -> list[dict]:
         pk = partial_fingerprint(company, p["kind"], p.get("contract", ""), p["amount"])
         matches = by_partial.get(pk, [])
         incoming_iso = _date_iso(p["payment_date"])
-        date_diff = [m for m in matches if m.get("payment_date") != incoming_iso]
+        # Filter to ledger rows that share both a different date AND the same
+        # (year, month) as the incoming row. A reissue is, by definition, a
+        # small date correction within the same billing period — same contract
+        # + same amount + a date in an EARLIER MONTH is just the prior cycle's
+        # payment, not a reissue, and shouldn't surface here. Recurring monthly
+        # subscriptions (OnePlace) used to false-fire this check on every
+        # second-month upload because every (contract, amount) matched a prior
+        # row from a different month.
+        try:
+            inc_ym = tuple(int(x) for x in incoming_iso.split("-")[:2])
+        except (ValueError, AttributeError):
+            inc_ym = None
+        def _same_month(prior_iso: str) -> bool:
+            try:
+                return tuple(int(x) for x in str(prior_iso).split("-")[:2]) == inc_ym
+            except (ValueError, AttributeError):
+                return False
+        date_diff = [m for m in matches
+                     if m.get("payment_date") != incoming_iso and _same_month(m.get("payment_date", ""))]
         if date_diff:
             out.append({"incoming": p, "existing": date_diff})
     return out
