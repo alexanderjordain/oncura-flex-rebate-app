@@ -2169,6 +2169,76 @@
       "payment_date": "05/31/2026",
       "amount": 4235.0,
       "recorded_at": "2026-06-05T17:53:21"
+    },
+    {
+      "fingerprint": "ceadb7c5f9b20d51445676049da26851a2b3c80f3009f3a3b0f10b8e0c0b401e",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 3370.0,
+      "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "c476758d9c0f319aef0343718b36cf6f1c5df3cfac16bb8a816e842364e37b86",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 1930.0,
+      "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "8954456d01fda7ce4d57968c485201635d539f6d258b5ea24884689e522f44c8",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 6855.0,
+      "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "73bf4c1088a3cab18728a0fca7ea7f36fa36a8d3431ccb2a4a86d5308006b9d2",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 3225.0,
+      "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "1017aaaf8c3d20c4b8d0f0b6b9a12475ca17b78dfd9775c258cba2100db20974",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 4255.0,
+      "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "bef4caedc51b9dca62b3236922c938b1fc7f9bc0dce677a63d50f47363bf274c",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 2500.0,
+      "recorded_at": "2026-06-05T17:54:37"
+    },
+    {
+      "fingerprint": "005f75a75e57f2598da2ddfebd95592a36d74570b55f1869cd7fc87320fb48f0",
+      "company": "INTERNAL",
+      "kind": "partner_overage",
+      "contract": "OnePlace",
+      "qb_customer": "OnePlace",
+      "payment_date": "2026-05-01",
+      "amount": 935.0,
+      "recorded_at": "2026-06-05T17:54:37"
     }
   ]
 }
