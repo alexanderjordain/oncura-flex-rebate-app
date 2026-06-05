@@ -497,8 +497,18 @@ elif step_key == "review":
         # operators were missing it and wondering why the Next arrow wouldn't show up.
         if variance_rows or fuzzy_matches or rads_pending:
             st.divider()
-            already_acked = SS.get("cycle_review_acked", False)
-            if already_acked:
+            # IMPORTANT: render the checkbox BEFORE the banner so the banner reads
+            # the live checked-state from the widget's return value. Reading from
+            # SS["cycle_review_acked"] beforehand would give the value from the
+            # PRIOR rerun (one click behind), which is why the banners appeared
+            # at the wrong times.
+            acked_now = st.checkbox(
+                "**I've reviewed the flagged rows above and they're acceptable.**",
+                value=SS.get("cycle_review_acked", False),
+                key="cycle_review_ack_widget",
+            )
+            SS["cycle_review_acked"] = acked_now
+            if acked_now:
                 st.success(
                     ":material/check_circle: **Review acknowledged.** You can advance to the "
                     "Export step using the **Next ▶** button at the bottom of the page."
@@ -508,14 +518,9 @@ elif step_key == "review":
                     ":material/priority_high: **One more step — sign off on the flagged rows above "
                     "before you can advance.**  \n"
                     "The **Next ▶** button at the bottom of the page stays disabled until you tick "
-                    "the box below.",
+                    "the box above.",
                     icon=":material/warning:",
                 )
-            SS["cycle_review_acked"] = st.checkbox(
-                "**I've reviewed the flagged rows above and they're acceptable.**",
-                value=already_acked,
-                key="cycle_review_ack_widget",
-            )
         else:
             SS["cycle_review_acked"] = True  # nothing to flag, auto-pass
 
