@@ -203,6 +203,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
     SS.setdefault("remit_step", 0)
     SS["remit_step"] = max(0, min(SS["remit_step"], len(REMIT_STEPS) - 1))
     step_key, step_label = REMIT_STEPS[SS["remit_step"]]
+    ui.scroll_top_on_step_change("flex_stage1_remit", SS["remit_step"])
 
     st.markdown(f"**Step {SS['remit_step'] + 1} of {len(REMIT_STEPS)} — {step_label}**")
     st.progress((SS['remit_step'] + 1) / len(REMIT_STEPS))
@@ -721,6 +722,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
     SS.setdefault("cred_step", 0)
     SS["cred_step"] = max(0, min(SS["cred_step"], len(CRED_STEPS) - 1))
     step_key, step_label = CRED_STEPS[SS["cred_step"]]
+    ui.scroll_top_on_step_change("flex_stage2_cred", SS["cred_step"])
 
     st.markdown(f"**Step {SS['cred_step'] + 1} of {len(CRED_STEPS)} — {step_label}**")
     st.progress((SS['cred_step'] + 1) / len(CRED_STEPS))
@@ -1097,6 +1099,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     total = len(STEPS)
     SS.recap_step = max(0, min(SS.recap_step, total - 1))
     step_key, step_label = STEPS[SS.recap_step]
+    ui.scroll_top_on_step_change("flex_stage3_recap", SS.recap_step)
 
     # Stepper
     st.markdown(f"**Step {SS.recap_step + 1} of {total} — {step_label}**")

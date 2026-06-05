@@ -91,6 +91,11 @@ total = len(STEPS)
 SS.cycle_step = max(0, min(SS.cycle_step, total - 1))
 step_key, step_label = STEPS[SS.cycle_step]
 
+# Scroll the page to the top whenever the wizard step changes so the user
+# starts each new step with the instructions at top, not wherever they
+# happened to leave their scroll on the previous step.
+ui.scroll_top_on_step_change("rebate_cycle", SS.cycle_step)
+
 # Header strip
 st.markdown(f"**Step {SS.cycle_step + 1} of {total} — {step_label}**")
 st.progress((SS.cycle_step + 1) / total)

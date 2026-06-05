@@ -282,6 +282,43 @@ def set_logo():
             return True
         except Exception:
             pass
+
+
+def scroll_top_on_step_change(wizard_key: str, current_step) -> None:
+    """Scroll the page to the top whenever a wizard step changes.
+
+    Tracks the previous step under ``__scroll_prev_<wizard_key>`` in session_state
+    and compares to ``current_step`` on each render. When the values differ, injects
+    a 0-height ``components.html`` block whose script asks the parent window
+    (the actual Streamlit app, not the iframe) to scroll to top.
+
+    Call this at the top of any wizard page or stage block, AFTER the step value
+    has been read from session_state, e.g.:
+
+        ui.scroll_top_on_step_change("rebate_cycle", SS.cycle_step)
+
+    On the first render of a session there is no prior step recorded, so no
+    scroll happens — the page is already at top.
+    """
+    import streamlit.components.v1 as components
+
+    prev_key = f"__scroll_prev_{wizard_key}"
+    prev = st.session_state.get(prev_key)
+    st.session_state[prev_key] = current_step
+    if prev is None or prev == current_step:
+        return
+    components.html(
+        """
+        <script>
+            const w = window.parent || window.top;
+            if (w) {
+                try { w.scrollTo({top: 0, left: 0, behavior: 'instant'}); }
+                catch (e) { w.scrollTo(0, 0); }
+            }
+        </script>
+        """,
+        height=0,
+    )
     return False
 
 
