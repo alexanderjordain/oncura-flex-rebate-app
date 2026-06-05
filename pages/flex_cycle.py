@@ -636,14 +636,6 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
 
             # ── Mark batch processed: write to ledger so future re-uploads are caught ────
             st.divider()
-            st.error(
-                ":material/priority_high: **IMPORTANT — Confirm this batch has been imported to QBO.**  "
-                "Click the button below **only after** you've finished uploading the SaasAnt file(s) "
-                "above to QBO. This records the payments in the dedup ledger so re-uploading the same "
-                "remittance later can't double-post. Skipping this step means the next re-upload "
-                "won't be caught.",
-                icon=":material/warning:",
-            )
             rows_to_record = [
                 r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
             ]
@@ -928,14 +920,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         # ── Mark batch as generated: records to audit + ledger so re-runs are caught ──
         if not df.empty:
             st.divider()
-            st.error(
-                ":material/priority_high: **IMPORTANT — Confirm this batch has been imported to QBO.**  "
-                "Click the button below **only after** you've finished uploading the credit memos to "
-                "QBO via SaasAnt. This records the batch in the audit manifest and registers each "
-                "emitted credit memo in the dedup ledger so re-running Stage 2 for this month can't "
-                "double-post. Skipping this step means the next Stage 2 run won't be caught.",
-                icon=":material/warning:",
-            )
             # Use the SOURCE payment's fingerprint (immutable in the ledger) as the
             # contract-equivalent for credit-memo dedup. Previously we used the QB
             # Customer name, which is mutable — a typo fix or rename silently broke
@@ -1329,13 +1313,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         "Re-uploading those rows to QBO would duplicate them."
                     )
                 st.divider()
-                st.error(
-                    ":material/priority_high: **IMPORTANT — Confirm these recapture invoices have been imported to QBO.**  "
-                    "Click the button below **only after** you've finished uploading the recapture invoice "
-                    "file to QBO via SaasAnt. This records them in the dedup ledger so re-running Stage 3 "
-                    "for this quarter can't double-post.",
-                    icon=":material/warning:",
-                )
                 recap_initials = ui.initials_input("stage3_recap_audit_initials")
                 if st.button(
                     f"Mark {len(udf)} recapture invoice(s) as imported",
@@ -1476,14 +1453,11 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             )
                     if not didf.empty:
                         st.divider()
-                        st.error(
-                            ":material/priority_high: **IMPORTANT — Confirm these direct-bill invoices have been imported to QBO.**  "
-                            "Click the button below **only after** you've finished uploading the direct-bill "
-                            "invoice file to QBO via SaasAnt **AND** voided each invoice in QBO per SOP-6. "
-                            "This records them in the dedup ledger.",
-                            icon=":material/warning:",
+                        st.warning(
+                            ":material/edit_off:  **SOP-6 reminder:** after uploading to QBO via "
+                            "SaasAnt, **void each invoice in QBO** before initialing below.",
+                            icon=":material/edit_off:",
                         )
-                    if not didf.empty:
                         direct_initials = ui.initials_input("stage3_direct_audit_initials")
                     else:
                         direct_initials = ""
@@ -1574,14 +1548,11 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             )
                     if not pdf.empty:
                         st.divider()
-                        st.error(
-                            ":material/priority_high: **IMPORTANT — Confirm this submission has been sent to OnePlace.**  "
-                            "Click the button below **only after** you've emailed the partner-submission "
-                            "file to OnePlace (before the cutoff date). This records the submission in the "
-                            "dedup ledger.",
-                            icon=":material/warning:",
+                        st.warning(
+                            ":material/schedule:  **Reminder:** email the partner-submission file "
+                            "to OnePlace **before the cutoff date**, then initial below.",
+                            icon=":material/schedule:",
                         )
-                    if not pdf.empty:
                         partner_initials = ui.initials_input("stage3_partner_audit_initials")
                     else:
                         partner_initials = ""
