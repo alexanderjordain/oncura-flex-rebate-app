@@ -31,6 +31,14 @@
       "uploaded_at": "2026-06-05T17:41:32",
       "row_count": 4,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-05-19"
+    },
+    {
+      "sha256": "10fe8132fcd67df9935f44a9d1a4d52de5d23629bb67979360f09681353b1a60",
+      "filename": "Remittance Detail Downloadable (11) 5-26.csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-05T17:42:02",
+      "row_count": 8,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-05-26"
     }
   ],
   "payments": [
@@ -953,6 +961,86 @@
       "payment_date": "2026-05-19",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:41:32"
+    },
+    {
+      "fingerprint": "bcb1d777f130aa21745bfabb6e432f1682c5b14e2738bda5b68ed3d4afba1938",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41463840",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-05-26",
+      "amount": 935.08,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "7938f51b47e968eca8965625bae54187fe5910d41defcd6fa0fe154785326af6",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732375",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-05-26",
+      "amount": 935.08,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "b3203e3f76a5240997e48105a532c38f3437098ede2b1ba31caa9e3968fd1eb5",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732700",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-05-26",
+      "amount": 804.56,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "d4adda37385971ab2741f79d9cdc40ac45c16a693dda37b6127bf7c32ab4fb5d",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732851",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-05-26",
+      "amount": 921.84,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "3bd0d40117d39c49a3d3ead2565f6c7a4b2c3ba829b70c3be137d5c5b9a1a43b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983401",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-05-26",
+      "amount": 935.08,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "bb4a5b3794a585c0efd73f9582c8580e8cc62c0565179e221cf6435ded5de69c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983700",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-05-26",
+      "amount": 1843.67,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "d6b0168b2bffc4cfc00c6eeac01fbf0d03e0bdc22cc02d6274a15949054ebaf1",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983798",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-05-26",
+      "amount": 804.56,
+      "recorded_at": "2026-06-05T17:42:02"
+    },
+    {
+      "fingerprint": "0520ddffa86abcb015392abc7d2fbabc39f544e7fdc8101de8a368740031516f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983979",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-05-26",
+      "amount": 921.84,
+      "recorded_at": "2026-06-05T17:42:02"
     }
   ]
 }
