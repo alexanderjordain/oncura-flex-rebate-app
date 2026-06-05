@@ -627,17 +627,20 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
             ]
             ack_disabled = len(rows_to_record) == 0
-            stage1_approver = ui.initials_input(
+            stage1_initials = ui.initials_input(
                 "stage1_audit_initials",
-                fallback=auth.current_role(),
                 disabled=ack_disabled,
             )
             if ack_disabled:
                 st.info("Nothing new to record (all rows were already in the ledger).")
-            elif st.button(
+            elif not stage1_initials:
+                st.caption(":material/edit_note: Add your initials above to enable the record button.")
+            if not ack_disabled and st.button(
                 f"Mark {len(rows_to_record)} payment(s) as imported",
                 key="remit_mark_processed", type="primary",
+                disabled=not stage1_initials,
             ):
+                stage1_approver = stage1_initials or auth.current_role()
                 ok, added, msg = ledger.record_batch(
                     file_content=file_bytes,
                     filename=up.name,
@@ -941,12 +944,13 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     f"The download above still contains them with NEW Credit Memo Nos — DO NOT upload "
                     f"those rows to QBO again. (Future enhancement: filter them out of the download.)"
                 )
-            stage2_approver = ui.initials_input(
-                "stage2_audit_initials",
-                fallback=auth.current_role(),
-            )
+            stage2_initials = ui.initials_input("stage2_audit_initials")
+            if not stage2_initials:
+                st.caption(":material/edit_note: Add your initials above to enable the record button.")
             if st.button(
-                f"Mark {len(df)} credit memo(s) as generated", key="cred_mark_processed", type="primary",
+                f"Mark {len(df)} credit memo(s) as generated",
+                key="cred_mark_processed", type="primary",
+                disabled=not stage2_initials,
             ):
                 ok_ledger, added, _ = ledger.record_batch(
                     file_content=None,
@@ -957,7 +961,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 )
                 audit.record_cycle(
                     cycle_type="stage2_credit_memo",
-                    approver=stage2_approver,
+                    approver=stage2_initials or auth.current_role(),
                     year=year, month=month,
                     params={
                         "start_ref": start_ref, "next_ref": next_ref,
@@ -1316,13 +1320,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     "for this quarter can't double-post.",
                     icon=":material/warning:",
                 )
-                recap_approver = ui.initials_input(
-                    "stage3_recap_audit_initials",
-                    fallback=auth.current_role(),
-                )
+                recap_initials = ui.initials_input("stage3_recap_audit_initials")
+                if not recap_initials:
+                    st.caption(":material/edit_note: Add your initials above to enable the record button.")
                 if st.button(
                     f"Mark {len(udf)} recapture invoice(s) as imported",
                     key="w_recap_mark_unused", type="primary",
+                    disabled=not recap_initials,
                 ):
                     ok_l, added, _ = ledger.record_batch(
                         file_content=None,
@@ -1333,7 +1337,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     )
                     audit.record_cycle(
                         cycle_type="stage3_recapture",
-                        approver=recap_approver,
+                        approver=recap_initials or auth.current_role(),
                         year=rec_year, month=rec_month,
                         params={
                             "sales_class": sales_class,
@@ -1465,14 +1469,16 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "This records them in the dedup ledger.",
                             icon=":material/warning:",
                         )
-                    direct_approver = ui.initials_input(
-                        "stage3_direct_audit_initials",
-                        fallback=auth.current_role(),
-                        disabled=didf.empty,
-                    ) if not didf.empty else auth.current_role()
+                    if not didf.empty:
+                        direct_initials = ui.initials_input("stage3_direct_audit_initials")
+                        if not direct_initials:
+                            st.caption(":material/edit_note: Add your initials above to enable the record button.")
+                    else:
+                        direct_initials = ""
                     if not didf.empty and st.button(
                         f"Mark {len(didf)} direct-bill invoice(s) as imported",
                         key="w_recap_mark_direct", type="primary",
+                        disabled=not direct_initials,
                     ):
                         ok_l, added_l, _ = ledger.record_batch(
                             file_content=None,
@@ -1483,7 +1489,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         )
                         audit.record_cycle(
                             cycle_type="stage3_overage",
-                            approver=direct_approver,
+                            approver=direct_initials or auth.current_role(),
                             year=rec_year, month=rec_month,
                             params={
                                 "route": "direct_bill",
@@ -1563,14 +1569,16 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "dedup ledger.",
                             icon=":material/warning:",
                         )
-                    partner_approver = ui.initials_input(
-                        "stage3_partner_audit_initials",
-                        fallback=auth.current_role(),
-                        disabled=pdf.empty,
-                    ) if not pdf.empty else auth.current_role()
+                    if not pdf.empty:
+                        partner_initials = ui.initials_input("stage3_partner_audit_initials")
+                        if not partner_initials:
+                            st.caption(":material/edit_note: Add your initials above to enable the record button.")
+                    else:
+                        partner_initials = ""
                     if not pdf.empty and st.button(
                         f"Mark {len(pdf)} partner-submission row(s) as submitted",
                         key="w_recap_mark_partner", type="primary",
+                        disabled=not partner_initials,
                     ):
                         ok_l, added_l, _ = ledger.record_batch(
                             file_content=None,
@@ -1581,7 +1589,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         )
                         audit.record_cycle(
                             cycle_type="stage3_overage",
-                            approver=partner_approver,
+                            approver=partner_initials or auth.current_role(),
                             year=rec_year, month=rec_month,
                             params={
                                 "route": "partner_submission",

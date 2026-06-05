@@ -284,16 +284,24 @@ def set_logo():
             pass
 
 
-def initials_input(audit_key: str, *, fallback: str = "", disabled: bool = False) -> str:
-    """Render a 'Your initials' input and return the approver string to use.
+def initials_input(audit_key: str, *, disabled: bool = False) -> str:
+    """Render a 'Your initials' input and return the cleaned initials.
 
     The audit manifest works like a paper sign-off sheet — each cycle should be
     initialed by the operator who ran it. This widget collects the initials
     once per session (persisted under ``SS['user_initials']``) and auto-fills
-    on subsequent cycles. Blank initials fall back to the ``fallback`` value
-    (typically ``auth.current_role()`` — keeps the manifest meaningful).
+    on subsequent cycles.
 
-    Returns the uppercase initials, or fallback if none provided.
+    Returns the uppercase initials, or ``""`` if none provided. Callers should
+    treat the empty-string return as "block the record button" and fall back
+    to ``auth.current_role()`` only when actually recording, e.g.::
+
+        initials = ui.initials_input("stage1_audit_initials")
+        if st.button("Mark...", disabled=not initials, ...):
+            audit.record_cycle(approver=initials or auth.current_role(), ...)
+
+    The disable-when-blank gate naturally re-enables itself across cycles
+    because the persisted SS['user_initials'] pre-fills the text input.
     """
     val = st.text_input(
         "Your initials (for the audit log)",
@@ -302,13 +310,14 @@ def initials_input(audit_key: str, *, fallback: str = "", disabled: bool = False
         key=audit_key,
         placeholder="e.g. AJ",
         help="Recorded as the approver on the audit manifest, like initialing "
-             "a paper sign-off sheet. Persists across cycles in this session.",
+             "a paper sign-off sheet. Persists across cycles in this session. "
+             "The record button stays disabled until you fill this in.",
         disabled=disabled,
     )
     cleaned = (val or "").strip().upper()
     if cleaned:
         st.session_state["user_initials"] = cleaned
-    return cleaned or fallback
+    return cleaned
 
 
 def scroll_top_on_step_change(wizard_key: str, current_step) -> None:
@@ -316,11 +325,15 @@ def scroll_top_on_step_change(wizard_key: str, current_step) -> None:
 
     Tracks the previous step under ``__scroll_prev_<wizard_key>`` in session_state
     and compares to ``current_step`` on each render. When the values differ, injects
-    a 0-height ``components.html`` block whose script asks the parent window
-    (the actual Streamlit app, not the iframe) to scroll to top.
+    a 0-height ``components.html`` block whose script targets multiple candidate
+    scrollable containers in the parent document — Streamlit's actual scroll
+    surface varies by version (window vs main section vs block container), and
+    the browser's own scroll restoration tries to put the user back where they
+    were on a rerun. We disable that and scroll repeatedly with small delays so
+    the scroll lands AFTER the new DOM has rendered.
 
     Call this at the top of any wizard page or stage block, AFTER the step value
-    has been read from session_state, e.g.:
+    has been read from session_state, e.g.::
 
         ui.scroll_top_on_step_change("rebate_cycle", SS.cycle_step)
 
@@ -337,11 +350,50 @@ def scroll_top_on_step_change(wizard_key: str, current_step) -> None:
     components.html(
         """
         <script>
-            const w = window.parent || window.top;
-            if (w) {
-                try { w.scrollTo({top: 0, left: 0, behavior: 'instant'}); }
-                catch (e) { w.scrollTo(0, 0); }
-            }
+        (function() {
+            const targetWindow = (window.parent && window.parent !== window) ? window.parent : window.top;
+            if (!targetWindow) return;
+            // Stop the browser from restoring the prior scroll position on rerun.
+            try {
+                if (targetWindow.history && 'scrollRestoration' in targetWindow.history) {
+                    targetWindow.history.scrollRestoration = 'manual';
+                }
+            } catch (e) {}
+            const SELECTORS = [
+                'section[data-testid="stMain"]',
+                'div[data-testid="stAppViewContainer"]',
+                'div[data-testid="stAppViewBlockContainer"]',
+                'section.main',
+                'div.main',
+                'div.block-container',
+                'main',
+            ];
+            const doScroll = function() {
+                try {
+                    // Window-level scroll covers cases where the body is the scroll surface.
+                    targetWindow.scrollTo({top: 0, left: 0, behavior: 'auto'});
+                    const doc = targetWindow.document;
+                    if (doc && doc.documentElement) doc.documentElement.scrollTop = 0;
+                    if (doc && doc.body) doc.body.scrollTop = 0;
+                    // Streamlit's main scroll surface is usually an inner container.
+                    for (let i = 0; i < SELECTORS.length; i++) {
+                        const el = doc.querySelector(SELECTORS[i]);
+                        if (el) {
+                            if (typeof el.scrollTo === 'function') {
+                                el.scrollTo({top: 0, left: 0, behavior: 'auto'});
+                            }
+                            el.scrollTop = 0;
+                        }
+                    }
+                } catch (e) {}
+            };
+            // Fire now AND on a few delays so we catch the DOM after Streamlit's
+            // re-render has settled. Cheap; total cost < 1s of harmless scroll calls.
+            doScroll();
+            setTimeout(doScroll, 50);
+            setTimeout(doScroll, 150);
+            setTimeout(doScroll, 350);
+        })();
         </script>
         """,
         height=0,

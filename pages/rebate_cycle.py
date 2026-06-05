@@ -628,18 +628,20 @@ elif step_key == "export":
                     "totals, and who ran it — so any future question about this cycle has a paper trail.",
                     icon=":material/warning:",
                 )
-            approver_val = ui.initials_input(
+            initials = ui.initials_input(
                 "rebate_audit_initials",
-                fallback=auth.current_role(),
                 disabled=already_recorded,
             )
+            if not initials and not already_recorded:
+                st.caption(":material/edit_note: Add your initials above to enable the record button.")
             if st.button(
                 "Record rebate cycle to audit manifest",
                 key="rebate_audit_mark",
                 type="primary",
-                disabled=already_recorded,
+                disabled=already_recorded or not initials,
             ):
                 src_bytes = SS.get("cycle_uploaded_bytes") or b""
+                approver_val = initials or auth.current_role()
                 # Multi-month cycle — anchor year/month to the LATEST selected month
                 # so the audit table's year/month columns aren't empty. Full month
                 # list lives in params["months"] for the complete picture.
