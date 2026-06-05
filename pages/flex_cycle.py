@@ -10,6 +10,7 @@ Stage 3: Unused / Overage (quarter-end recapture + overage; runs every month
 import datetime as dt
 from contextlib import contextmanager
 
+import pandas as pd
 import streamlit as st
 
 from core import (
@@ -333,15 +334,46 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         else:
             file_bytes = up.getvalue()
             prior_file = ledger.check_file_seen(file_bytes)
-            if prior_file:
+            raw = opd_adapter.read_remittance(up)
+
+            # Month-based dedup — the real signal for protecting against
+            # double-posting. OnePlace files look structurally similar each
+            # month, so file-hash alone produces false positives. Find the
+            # Payment Date column, extract unique (year, month) tuples, and
+            # check whether ANY of those months already have payments for
+            # this company in the ledger. If yes → warn + require override.
+            _payment_date_candidates = [
+                c for c in raw.columns
+                if any(k in str(c).lower().replace("\n", " ").replace("_", " ")
+                       for k in ("payment date", "paymentdate"))
+            ]
+            already_processed_months: dict = {}
+            if _payment_date_candidates:
+                _pd_col = _payment_date_candidates[0]
+                _dates = pd.to_datetime(raw[_pd_col], errors="coerce").dropna()
+                _year_months = {(d.year, d.month) for d in _dates}
+                if _year_months:
+                    already_processed_months = ledger.check_payment_months_seen(
+                        company, _year_months,
+                    )
+
+            if already_processed_months:
+                _human_months = ", ".join(
+                    f"**{dt.date(y, m, 1):%B %Y}** ({n} payment(s))"
+                    for (y, m), n in sorted(already_processed_months.items())
+                )
+                _extra_hash_note = ""
+                if prior_file:
+                    _extra_hash_note = (
+                        f"  \nThis exact file was also previously processed on "
+                        f"{prior_file.get('uploaded_at', '?')[:10]} "
+                        f"(`{prior_file.get('filename', '?')}`)."
+                    )
                 st.error(
-                    f"**This exact file was already processed on "
-                    f"{prior_file.get('uploaded_at', '?')[:10]}** "
-                    f"({prior_file.get('row_count', '?')} rows, company "
-                    f"{prior_file.get('company', '?')}, filename "
-                    f"`{prior_file.get('filename', '?')}`). Re-uploading would risk "
-                    f"double-posting payments to QBO. Row-level dedup will still skip already-imported "
-                    f"payments below — but verify before downloading."
+                    f"**This file contains payments for a month that's already in the "
+                    f"ledger:** {_human_months}. Re-uploading would risk double-posting "
+                    f"to QBO. Row-level dedup will still skip already-imported payments "
+                    f"below — but verify before downloading.{_extra_hash_note}"
                 )
                 if not st.checkbox(
                     "I've verified this is intentional (e.g., recovering from a partial earlier import). "
@@ -349,8 +381,16 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                     key="remit_file_override",
                 ):
                     st.stop()
+            elif prior_file:
+                # Same bytes seen before but no month overlap in the ledger — this
+                # means the prior import was rolled back / cleared. Note quietly;
+                # row-level dedup will handle whatever the operator intends.
+                st.info(
+                    f":material/info: This file's bytes were uploaded before "
+                    f"({prior_file.get('uploaded_at', '?')[:10]}) but no payments "
+                    f"from its months are currently in the ledger — proceeding.",
+                )
 
-            raw = opd_adapter.read_remittance(up)
             cols = list(raw.columns)
             st.write(f"{len(raw):,} rows.")
             g = flex_finance.guess_columns(company, cols)

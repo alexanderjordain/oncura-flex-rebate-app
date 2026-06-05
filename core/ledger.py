@@ -114,6 +114,38 @@ def check_payments_seen(fingerprints: Iterable[str]) -> set:
     return {p["fingerprint"] for p in data.get("payments", []) if p.get("fingerprint") in fps}
 
 
+def check_payment_months_seen(company: str, year_months: Iterable) -> dict:
+    """For each (year, month) in ``year_months``, count how many ledger payments
+    for ``company`` already have a payment_date in that month.
+
+    Used by Stage 1 to flag re-uploads more precisely than file-hash matching:
+    OnePlace remittances look structurally similar every month, so 'same file'
+    is too weak a duplicate signal. 'Same MONTH already in the ledger' is the
+    real safety check — that's what blocks double-posting to QBO.
+
+    Returns ``{(year, month): count_of_payments_for_that_month}`` for months
+    that have any matches. Months with zero matches are omitted.
+    """
+    wanted = {(int(y), int(m)) for y, m in year_months}
+    if not wanted:
+        return {}
+    data, _ = load()
+    cmp_co = (company or "").lower()
+    out: dict[tuple[int, int], int] = {}
+    for p in data.get("payments", []):
+        if (p.get("company") or "").lower() != cmp_co:
+            continue
+        pd_str = str(p.get("payment_date", ""))
+        try:
+            y, m, *_ = pd_str.split("-")
+            key = (int(y), int(m))
+        except (ValueError, AttributeError):
+            continue
+        if key in wanted:
+            out[key] = out.get(key, 0) + 1
+    return out
+
+
 def check_possible_reissues(company: str, payments: list[dict]) -> list[dict]:
     """Find incoming payments that match an existing ledger row on
     (company, kind, contract, amount) but with a DIFFERENT payment_date.
