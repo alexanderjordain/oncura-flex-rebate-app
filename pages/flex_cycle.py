@@ -472,6 +472,35 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             s = res["summary"]
             unmapped = [u for u in res["unmapped"] if u and u.lower() != "nan"]
 
+            # If the ledger already contained every payment in this file, post-filter
+            # there are zero rows left to import. The yellow banner above already
+            # explains it — everything downstream (metric cards / Downloads /
+            # SaasAnt instructions / Mark button) would just show zeros. Show a
+            # clean 'nothing to import' message and skip to the bottom reset.
+            fully_deduped = bool(seen_fps) and s["total"] == 0 and (s["flex_count"] + s["scan_count"]) == 0
+            if fully_deduped:
+                st.success(
+                    ":material/check_circle: **All payments in this file are already in the "
+                    "ledger.** Nothing new to import — the prior batch covers this remittance. "
+                    "Use **◀ Set up new import** at the bottom of the page to upload a different "
+                    "file."
+                )
+                st.divider()
+                reset_col, _ = st.columns([1, 4])
+                if reset_col.button(
+                    "◀ Set up new import",
+                    key="remit_upload_reset_fullydeduped",
+                    use_container_width=True,
+                    help="Clear the uploaded file and start fresh — use this between back-to-back remittances.",
+                ):
+                    for k in ("remit_file", "remit_file_override",
+                              "remit_cust_col", "remit_amt_col", "remit_id_col",
+                              "remit_reissue_ack"):
+                        SS.pop(k, None)
+                    SS["remit_step"] = 0
+                    st.rerun()
+                st.stop()
+
             # ── Flex/scan crossover sanity check: NewLane and OnePlace split by cents
             #    (whole-dollar = scan, odd-cents = flex). A 100/0 or 0/100 ratio is
             #    almost always a sign of bad data or wrong split rule. GreatAmerica is
