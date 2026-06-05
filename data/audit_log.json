@@ -440,6 +440,48 @@
       "outputs": [],
       "note": "[unknown cycle_type 'settings_clear_ledger'] Wiped 111 payment fingerprint(s) and 3 file hash(es) from processed_payments.json.",
       "entry_hash": "952aed1409517c6e0b3540e2d6e06a05d34531b04dd38297cfd2ddd1071283e9"
+    },
+    {
+      "id": "aac65ae6-3aa3-4e42-8d89-3f6f173fc58e",
+      "timestamp": "2026-06-05T17:35:39",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-05-03",
+        "invoice_date": "2026-05-03",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Pass Thru Billing_April 2026.xlsx",
+        "sha256": "2c7c787412244115e719b4966922448819f20db4bf42f661462d0c34503b8415",
+        "size_bytes": 32735
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "b9537a9f5eb7f0f62b00f857cd9c7cea7574ae2761935c30c950690df14ca5e2",
+          "row_count": 29,
+          "total": 26469.3
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "cd6a811a825b2925930c4298b1d34f11ab3a133d3a4b3bf6483a6489502a1e5b",
+          "row_count": 29,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "36410f7df5e539a237f07664b0a9b86ccf246606dd8d6da9915db9f76cc185f6",
+          "row_count": 29,
+          "total": 9835.0
+        }
+      ],
+      "note": "58 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "312709289972367cd5cc3f4eae04ff99684904aedc134fcf21b8a99fad4da274"
     }
   ]
 }
