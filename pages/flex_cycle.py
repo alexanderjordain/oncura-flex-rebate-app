@@ -570,15 +570,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 "action — that's the file you upload to SaasAnt."
             )
 
-            # Each row: preview-expander on the left half, download button on the
-            # right half. Keeps the download button visible at-a-glance instead of
-            # hidden inside an expander.
+            # Each row: bold download button on the LEFT (primary action), muted
+            # preview expander on the RIGHT (optional inspection). The button
+            # column is wider to telegraph priority — that's the file Stage 1
+            # produced, hitting download is the whole point.
             def _download_row(*, title: str, df, fname_stem: str, fname_date,
                               sheet_name: str, dl_key: str, height: int = 240):
-                col_prev, col_dl = st.columns([1, 1], gap="medium")
-                with col_prev:
-                    with st.expander(f"{title}  ·  {len(df)} rows", expanded=False):
-                        st.dataframe(df, use_container_width=True, height=height)
+                col_dl, col_prev = st.columns([3, 2], gap="medium")
                 with col_dl:
                     st.download_button(
                         f":material/download:  Download {sheet_name} (xlsx)",
@@ -588,6 +586,10 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                         type="primary",
                         use_container_width=True,
                     )
+                with col_prev:
+                    with st.expander(f":gray[{title}  ·  {len(df)} rows  ·  preview]",
+                                     expanded=False):
+                        st.dataframe(df, use_container_width=True, height=height)
 
             if not res["flex_payments"].empty:
                 _download_row(
