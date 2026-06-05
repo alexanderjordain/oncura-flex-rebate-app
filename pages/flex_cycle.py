@@ -564,13 +564,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 st.success(
                     ":material/check_circle: **All payments in this file are already in the "
                     "ledger.** Nothing new to import — the prior batch covers this remittance. "
-                    "Use **◀ Set up new import** at the bottom of the page to upload a different "
+                    "Use **◀ Back to Setup** at the bottom of the page to upload a different "
                     "file."
                 )
                 st.divider()
                 reset_col, _ = st.columns([1, 4])
                 if reset_col.button(
-                    "◀ Set up new import",
+                    "◀ Back to Setup",
                     key="remit_upload_reset_fullydeduped",
                     use_container_width=True,
                     help="Clear the uploaded file and start fresh — use this between back-to-back remittances.",
@@ -879,10 +879,10 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             st.divider()
             reset_col, _ = st.columns([1, 4])
             if reset_col.button(
-                "◀ Set up new import",
+                "◀ Back to Setup",
                 key="remit_upload_reset_bottom",
                 use_container_width=True,
-                help="Clear the uploaded file and start fresh — use this between back-to-back remittances.",
+                help="Clear the uploaded file and return to the setup step — use this between back-to-back remittances.",
             ):
                 for k in ("remit_file", "remit_file_override",
                           "remit_cust_col", "remit_amt_col", "remit_id_col",
@@ -1050,10 +1050,10 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             st.divider()
             reset_col, _ = st.columns([1, 4])
             if reset_col.button(
-                "◀ Set up new month",
+                "◀ Back to Setup",
                 key="cred_review_reset_nopay",
                 use_container_width=True,
-                help="Reset year/month/start-ref and start fresh.",
+                help="Reset year/month/start-ref and return to the setup step.",
             ):
                 for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
                     SS.pop(k, None)
@@ -1243,10 +1243,10 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         st.divider()
         reset_col, _ = st.columns([1, 4])
         if reset_col.button(
-            "◀ Set up new month",
+            "◀ Back to Setup",
             key="cred_review_reset_bottom",
             use_container_width=True,
-            help="Reset year/month/start-ref and start fresh — use this when moving on to the next month.",
+            help="Reset year/month/start-ref and return to the setup step — use this when moving on to the next month.",
         ):
             for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
                 SS.pop(k, None)
@@ -1877,10 +1877,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     st.divider()
     nav_reset, nav_msg, nav_b, nav_n = st.columns([1.6, 3.4, 1, 1])
     if nav_reset.button(
-        "◀ Set up new cycle",
+        "◀ Back to Setup",
         key="w_recap_reset_bottom",
         use_container_width=True,
-        help="Clear the uploaded file + credit offsets and start fresh — use this between monthly Stage 3 runs.",
+        help="Clear the uploaded file + credit offsets and return to the setup step — use this between monthly Stage 3 runs.",
     ):
         for k in ("recap_uploaded_bytes", "recap_uploaded_name", "recap_credit_offsets",
                   "recap_pipe_error", "recap_pipe_traceback",
