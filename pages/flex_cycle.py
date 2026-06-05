@@ -887,7 +887,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             # the bottom 'Set up new month' reset, then stop. Skips the empty df preview,
             # SaasAnt instructions, initials card, and Mark button — all of which would
             # otherwise render with zero rows.
-            with st.expander(":gray[Legacy mode — active-list credit memos (bootstrap only)]"):
+            with st.expander(":gray[*legacy bootstrap (rarely used)*]"):
                 st.caption(
                     "Use only when the processed-payments ledger is empty for the target month "
                     "(e.g., first run after migration). This generates one credit memo per active clinic "
@@ -1054,7 +1054,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     )
 
         # ── Legacy bootstrap mode ──────────────────────────────────────────────────
-        with st.expander(":gray[Legacy mode — active-list credit memos (bootstrap only)]"):
+        with st.expander(":gray[*legacy bootstrap (rarely used)*]"):
             st.caption(
                 "Use only when the processed-payments ledger is empty for the target month "
                 "(e.g., first run after migration). This generates one credit memo per active clinic "
