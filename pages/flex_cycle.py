@@ -1239,7 +1239,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 int(SS.recap_year), int(SS.recap_month),
                 int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)),
             )
-            cs = ":green[**on time**]" if today_d <= new_cutoff else ":red[**cutoff missed**]"
             with bot_r:
                 with st.container(border=True):
                     # Date range + qualifying-clinics count on one line (wraps to two
@@ -1248,15 +1247,14 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         f"**:blue[{new_win_s:%b %d} → {new_win_e:%b %d, %Y}]**"
                         f"&nbsp;&nbsp;·&nbsp;&nbsp;**{len(new_group)}** qualifying clinics"
                     )
-                    st.markdown(
-                        f":gray[Partner cutoff:]&nbsp;**{new_cutoff:%b %d, %Y}**"
-                        f"&nbsp;&nbsp;·&nbsp;&nbsp;{cs}"
-                    )
 
         elif step_key == "upload":
             st.markdown("### Upload OPD activity")
             st.caption(
-                "Upload the OPD consult-grid export (or the OPD Invoices export) covering the quarter window."
+                f"Upload the OPD consult-grid export (or the OPD Invoices export) for the "
+                f"**{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** window — the full "
+                f"quarter that ends in {dt.date(rec_year, rec_month, 1):%B %Y}. Use those exact "
+                f"Finalized From / Finalized To dates when pulling the export."
             )
             with st.expander(":material/help: **How to pull the OPD export**", expanded=False):
                 st.markdown(
