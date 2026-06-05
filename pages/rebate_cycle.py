@@ -174,7 +174,7 @@ elif step_key == "upload":
                 "**How to pull the OPD export:**\n\n"
                 "1. [OPD](https://telehealth.oncurapartners.com) → **Consults** → **Completed**\n"
                 "2. **Department** dropdown — select **Cardiology**, **General Radiology**, "
-                "**Internal Medicine**, and **Ultrasound** (titles capitalized exactly as shown)\n"
+                "**Internal Medicine**, and **Ultrasound**\n"
                 "3. Set **Finalized From** and **Finalized To** dates to cover the selected months above\n"
                 "4. Click **Search**\n"
                 "5. Click **Export to Excel**\n"
