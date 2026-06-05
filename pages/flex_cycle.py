@@ -941,7 +941,10 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         ))
         start_ref_w = int(cc3.number_input(
             "Starting Credit Memo No (from QBO max + 1)",
-            value=int(SS["cred_start_ref"]), step=1, key="cred_start_ref_w"))
+            value=int(SS["cred_start_ref"]), step=1, key="cred_start_ref_w",
+            help="Numeric seed only — the SaasAnt export prepends 'CR' "
+                 "(e.g. 50000 → CR50000).",
+        ))
         SS["cred_year"] = year_w
         SS["cred_month"] = month_w
         SS["cred_start_ref"] = start_ref_w

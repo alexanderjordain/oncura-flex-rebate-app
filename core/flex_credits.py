@@ -103,7 +103,10 @@ def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
         else:
             customer = payment.get("qb_customer") or "(unmatched)"
         rows.append({
-            "Credit Memo No": ref,
+            # SaasAnt-side Credit Memo No: CR-prefixed so QBO ties imported memos
+            # to a 'CR' series distinct from invoice numbers. start_ref keeps
+            # advancing as an integer so the next batch picks up seamlessly.
+            "Credit Memo No": f"CR{ref}",
             "Customer": customer,
             "Credit Memo Date": date.strftime("%m/%d/%Y"),
             "Product/Service": ITEM,
@@ -144,7 +147,7 @@ def build_import(flex_clinics: list[dict], year: int, month: int, start_ref: int
         amt = round(float(c["monthly_credit"]), 2)
         rows.append(
             {
-                "Credit Memo No": ref,
+                "Credit Memo No": f"CR{ref}",
                 "Customer": c.get("qb_name") or c.get("clinic_name"),
                 "Credit Memo Date": date.strftime("%m/%d/%Y"),
                 "Product/Service": ITEM,
