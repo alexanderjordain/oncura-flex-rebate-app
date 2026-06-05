@@ -258,6 +258,32 @@
       ],
       "note": "16 new recapture invoice(s); 0 already in ledger",
       "entry_hash": "b9f23b816957efb7a915cb50496e13b5924d55dd121bcd5a7359189f2a80ac8e"
+    },
+    {
+      "id": "cc0d610f-7f33-4209-b4f7-6a2445ed506c",
+      "timestamp": "2026-06-05T17:54:38",
+      "cycle_type": "stage3_overage",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "route": "partner_submission",
+        "partner": "OnePlace",
+        "cutoff": "2026-06-05",
+        "clinic_count": 7,
+        "sent_to": "accounting@oncurapartners.com"
+      },
+      "source_file": null,
+      "outputs": [
+        {
+          "name": "oneplace_overage_submission",
+          "sha256": "e2ff161d3a71e1e9e272c5cf175667773d7cfad270b235e949af9dbedcf95296",
+          "row_count": 7,
+          "total": 23070.0
+        }
+      ],
+      "note": "OnePlace partner submission emailed to accounting for May 2000",
+      "entry_hash": "774ea54ef4f18c6b9f867d8e0da5adb6182ad77586fad90ebb2c90e56c245e5b"
     }
   ]
 }
