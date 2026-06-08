@@ -250,6 +250,31 @@
       ],
       "note": "Rebate cycle for April 2026 and May 2026",
       "entry_hash": "710aa2924662503e005eb6f443ad7ab033f1327240f12be5263a15a88c44d7c9"
+    },
+    {
+      "id": "39fac2be-778a-451a-953e-1b07a8252795",
+      "timestamp": "2026-06-08T18:46:49",
+      "cycle_type": "stage2_credit_memo",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "start_ref": 50000,
+        "next_ref": 50073,
+        "payment_count": 73,
+        "skipped_unmapped": 0
+      },
+      "source_file": null,
+      "outputs": [
+        {
+          "name": "credit_memo_import",
+          "sha256": "b8dca324b3c0e54f5508bd8b07fdf49e6b28e504545bc269bd5974e4a89ba5f3",
+          "row_count": 73,
+          "total": 67088.06
+        }
+      ],
+      "note": "73 new credit memo(s) recorded; 0 were already in ledger",
+      "entry_hash": "6154e384aa0e245cb298f5caf9d3804e813009f4596dd17ce734d9abc72ff370"
     }
   ]
 }
