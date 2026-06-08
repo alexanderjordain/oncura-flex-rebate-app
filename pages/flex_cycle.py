@@ -791,23 +791,23 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                     sheet_name="ScanPayments", dl_key="remit_dl_scan",
                     height=220,
                 )
-            st.markdown(
-                """
-    **Uploading to SaasAnt**
-    1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
-    2. Click **Bulk Upload**.
-    3. Pick the right import type for each file you downloaded above:
-       - Scan-package **invoices** → select **Invoice**
-       - Flex receive payments → select **Received Payments**
-       - Scan receive payments → select **Received Payments**
-    4. Walk through the SaasAnt wizard for each file.
+            with st.expander(":gray[Uploading to SaasAnt — reference]", expanded=False):
+                st.markdown(
+                    """
+1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
+2. Click **Bulk Upload**.
+3. Pick the right import type for each file you downloaded above:
+   - Scan-package **invoices** → select **Invoice**
+   - Flex receive payments → select **Received Payments**
+   - Scan receive payments → select **Received Payments**
+4. Walk through the SaasAnt wizard for each file.
 
-    **Order matters:** upload **scan invoices first**, then flex payments, then scan payments.
-    The scan payments reference the scan invoices by Invoice No, so the invoices must exist
-    in QBO first. Run **one SaasAnt job at a time** — wait for each to complete before starting
-    the next. After all uploads, the combined total should match the bank-feed deposit.
-    """
-            )
+**Order matters:** upload **scan invoices first**, then flex payments, then scan payments.
+The scan payments reference the scan invoices by Invoice No, so the invoices must exist
+in QBO first. Run **one SaasAnt job at a time** — wait for each to complete before starting
+the next. After all uploads, the combined total should match the bank-feed deposit.
+                    """
+                )
 
             # ── Mark batch processed: write to ledger so future re-uploads are caught ────
             st.divider()
@@ -1253,18 +1253,18 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 )
 
         st.divider()
-        st.markdown(
-            """
-            **Uploading to SaasAnt**
-            1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
-            2. Click **Bulk Upload**.
-            3. Pick the import type: **Credit Memo**.
-            4. Select the **FlexCredits** xlsx you downloaded above.
-            5. Walk through the SaasAnt wizard. After it completes, come back here
-               and click **Mark credit memos as generated** so the audit + dedup
-               ledger records the batch.
-            """
-        )
+        with st.expander(":gray[Uploading to SaasAnt — reference]", expanded=False):
+            st.markdown(
+                """
+1. Go to **[transactions.saasant.com](https://transactions.saasant.com)**.
+2. Click **Bulk Upload**.
+3. Pick the import type: **Credit Memo**.
+4. Select the **FlexCredits** xlsx you downloaded above.
+5. Walk through the SaasAnt wizard. After it completes, come back here
+   and click **Mark credit memos as generated** so the audit + dedup
+   ledger records the batch.
+                """
+            )
 
         # Bottom-of-page "Set up new month" — mirror of the top-card button so an
         # operator who's scrolled down doesn't have to scroll back up. Bottom-left
