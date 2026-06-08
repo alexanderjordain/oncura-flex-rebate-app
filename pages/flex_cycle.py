@@ -15,7 +15,7 @@ import streamlit as st
 
 from core import (
     accounting_handoff, audit, auth, flex_credits, flex_finance, flex_overage,
-    flex_unused, ledger, loaders, opd_adapter, saasant, store, ui,
+    flex_unused, ledger, loaders, opd_adapter, opd_api, saasant, store, ui,
 )
 
 
@@ -1270,6 +1270,15 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     SS.setdefault("recap_uploaded_bytes", None)
     SS.setdefault("recap_uploaded_name", "")
     SS.setdefault("recap_credit_offsets", {})
+    # Live OPD-OData source state. "opd_live" is the default; "file" only when
+    # the operator falls back to the manual upload expander.
+    SS.setdefault("recap_data_source", "opd_live")
+    SS.setdefault("recap_opd_activity", None)            # {clinic_lower: total_price}
+    SS.setdefault("recap_opd_raw_rows", None)            # list[dict] for audit/preview
+    SS.setdefault("recap_opd_fetched_at", None)          # UTC ISO timestamp
+    SS.setdefault("recap_opd_invoice_count", 0)
+    SS.setdefault("recap_opd_clinic_count", 0)
+    SS.setdefault("recap_opd_components_mismatch", 0)
 
     # Pull current state into locals
     rec_year = int(SS.recap_year)
@@ -1284,12 +1293,24 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     )
     today_d = dt.date.today()
 
-    # Compute the pipeline if a file is uploaded. Errors are captured into SS so the
-    # upload step can render them inline (with full traceback) instead of just a banner.
+    # Compute the pipeline. Two sources of activity, mutually exclusive per
+    # session: live OPD OData pull (default, preferred), or a manual file
+    # upload (fallback for offline use or when the OData credential is
+    # unavailable). Errors are captured into SS so the upload step can render
+    # them inline (with full traceback) instead of just a banner.
     pipe = None
     SS["recap_pipe_error"] = None
     SS["recap_pipe_traceback"] = None
-    if SS.recap_uploaded_bytes:
+    if SS.recap_data_source == "opd_live" and SS.recap_opd_activity is not None:
+        try:
+            activity = SS.recap_opd_activity
+            recap = flex_unused.compute_recapture(flex_clinics, activity, rec_year, rec_month)
+            pipe = {"profile": "opd_live", "activity": activity, "recap": recap}
+        except Exception as e:
+            import traceback as _tb
+            SS["recap_pipe_error"] = f"{type(e).__name__}: {e}"
+            SS["recap_pipe_traceback"] = _tb.format_exc()
+    elif SS.recap_uploaded_bytes:
         try:
             f = _io.BytesIO(SS.recap_uploaded_bytes)
             f.name = SS.recap_uploaded_name or "upload.xls"
@@ -1329,7 +1350,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     # Overage is split into two separate steps so OnePlace partner submission
     # gets its own full-width page; previously it lived in a tab alongside
     # direct-bill and was easy to miss.
-    STEPS = [("setup", "Cycle setup"), ("upload", "Upload OPD activity")]
+    STEPS = [("setup", "Cycle setup"), ("upload", "Fetch OPD activity")]
     if pipe and not rdf.empty:
         STEPS.append(("review", "Review activity"))
         if not udf.empty:
@@ -1393,63 +1414,151 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     )
 
         elif step_key == "upload":
-            st.markdown("### Upload OPD activity")
+            st.markdown("### Fetch OPD activity")
             st.caption(
-                f"Upload the OPD consult-grid export (or the OPD Invoices export) for the "
+                f"Pulls invoice-level data (net of credits) from OPD for the "
                 f"**{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** window."
             )
-            with st.expander(":material/help: **How to pull the OPD export**", expanded=False):
-                st.markdown(
-                    """
+
+            # ── Primary action: live OData fetch from telehealth.oncurapartners.com
+            def _do_opd_fetch():
+                with st.spinner(
+                    f"Fetching invoices for {win_start:%b %d} – {win_end:%b %d, %Y} "
+                    "from telehealth.oncurapartners.com…"
+                ):
+                    activity, raw_df = opd_api.flex_activity_for_quarter(rec_year, rec_month)
+                    SS.recap_data_source = "opd_live"
+                    SS.recap_opd_activity = activity
+                    # to_dict('records') so the audit manifest can serialize easily
+                    SS.recap_opd_raw_rows = raw_df.to_dict("records")
+                    SS.recap_opd_invoice_count = len(raw_df)
+                    SS.recap_opd_clinic_count = len(activity)
+                    SS.recap_opd_components_mismatch = (
+                        int((~raw_df["components_match"]).sum()) if not raw_df.empty else 0
+                    )
+                    SS.recap_opd_fetched_at = (
+                        dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+                    )
+                    # Clear any stale file-upload state so the two paths can't conflict
+                    SS.recap_uploaded_bytes = None
+                    SS.recap_uploaded_name = ""
+
+            live_loaded = (SS.recap_data_source == "opd_live"
+                           and SS.recap_opd_activity is not None)
+            btn_label = (":material/cloud_download:  Refresh from OPD"
+                         if live_loaded
+                         else ":material/cloud_download:  Fetch quarter from OPD")
+            if st.button(btn_label, type="primary", use_container_width=True,
+                         key="w_recap_fetch_opd"):
+                try:
+                    _do_opd_fetch()
+                    st.rerun()
+                except Exception as e:
+                    import traceback as _tb
+                    st.error(
+                        f"**OPD fetch failed:** `{type(e).__name__}: {e}`\n\n"
+                        "Check that OPD_ODATA_USER / OPD_ODATA_PASS are set in Streamlit "
+                        "secrets, then try again. If the issue persists, fall back to the "
+                        "manual upload expander below."
+                    )
+                    with st.expander("Full traceback"):
+                        st.code(_tb.format_exc(), language="text")
+
+            if live_loaded:
+                fetched_at = (SS.recap_opd_fetched_at or "")[:19].replace("T", " ")
+                st.success(
+                    f":material/check_circle: **Loaded {SS.recap_opd_invoice_count:,} "
+                    f"invoices across {SS.recap_opd_clinic_count} clinic(s)** — "
+                    f"fetched {fetched_at} UTC."
+                )
+                if SS.recap_opd_components_mismatch:
+                    st.caption(
+                        f":gray[{SS.recap_opd_components_mismatch} invoice(s) had a "
+                        "Subtotal/Credit/Admin reconciliation gap of ≥$1 — typically "
+                        "$4-AdminFee voids. `TotalPrice` is still used (authoritative).]"
+                    )
+
+            # ── Fallback: manual file upload (gray expander) ──────────────────
+            with st.expander(
+                ":gray[Or upload an OPD export manually (fallback)]",
+                expanded=not live_loaded and not SS.recap_uploaded_bytes,
+            ):
+                st.caption(
+                    "Use this if the live OPD fetch fails or you're working offline. "
+                    "Accepts the OPD consult-grid export or the OPD Invoices export "
+                    f"for the **{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** "
+                    "window."
+                )
+                with st.expander(":material/help: How to pull the OPD export manually",
+                                 expanded=False):
+                    st.markdown(
+                        """
 1. Go to **[telehealth.oncurapartners.com](https://telehealth.oncurapartners.com)**.
 2. Open **Consults → Completed**.
 3. Filter **Department**: select **Assistance**, **Cardiology**, **Ultrasound**, **General Radiology**, **Point of Care (GlobalFAST)**, and **Internal Medicine**.
 4. Adjust the date range to match the chosen month.
 5. Click **Search**, then **Export to Excel**.
 6. Upload the exported file below.
-                    """
+                        """
+                    )
+                rec_up = st.file_uploader(
+                    "OPD activity export",
+                    type=["csv", "xlsx", "xls"],
+                    key="w_recap_file",
                 )
-            rec_up = st.file_uploader(
-                "OPD activity export",
-                type=["csv", "xlsx", "xls"],
-                key="w_recap_file",
-            )
-            if rec_up is not None:
-                # The pipeline runs at the TOP of tab_recap, before this widget renders.
-                # If we capture bytes now and DON'T rerun, the pipeline saw empty bytes for
-                # this run and won't catch up until the next user interaction (which is why
-                # clicking X used to make it "work" — that was the extra rerun). Force the
-                # rerun immediately on a new upload so the pipeline picks it up right away.
-                is_new = (rec_up.name != SS.get("recap_uploaded_name")
-                          or SS.get("recap_uploaded_bytes") is None)
-                SS.recap_uploaded_bytes = rec_up.getvalue()
-                SS.recap_uploaded_name = rec_up.name
-                if is_new:
-                    st.rerun()
-                st.success(f"Uploaded: **{rec_up.name}**  ({len(SS.recap_uploaded_bytes) // 1024:,} KB)")
-            elif SS.recap_uploaded_bytes:
-                st.info(
-                    f"Previously uploaded: **{SS.recap_uploaded_name}**  — re-upload to replace, "
-                    "or click Next to continue."
-                )
-            else:
-                st.warning("Upload a file to continue.")
+                if rec_up is not None:
+                    # Force a rerun on new upload so the top-of-tab pipeline picks it up
+                    # immediately (otherwise the first render sees stale state).
+                    is_new = (rec_up.name != SS.get("recap_uploaded_name")
+                              or SS.get("recap_uploaded_bytes") is None)
+                    SS.recap_uploaded_bytes = rec_up.getvalue()
+                    SS.recap_uploaded_name = rec_up.name
+                    # File-upload path wins — clear any prior live-fetch state.
+                    SS.recap_data_source = "file"
+                    SS.recap_opd_activity = None
+                    SS.recap_opd_raw_rows = None
+                    if is_new:
+                        st.rerun()
+                    st.success(
+                        f"Uploaded: **{rec_up.name}**  "
+                        f"({len(SS.recap_uploaded_bytes) // 1024:,} KB)"
+                    )
+                elif SS.recap_uploaded_bytes:
+                    st.info(
+                        f"Previously uploaded: **{SS.recap_uploaded_name}** — "
+                        "re-upload to replace, or click Next to continue."
+                    )
+
+            # Error display for whichever path is in use
             if SS.get("recap_pipe_error"):
                 st.error(
-                    f"**Could not parse this file:**  `{SS['recap_pipe_error']}`\n\n"
-                    "Try re-uploading, or upload a different export (case-grid xls or "
-                    "Invoices xlsx)."
+                    f"**Could not process the source:**  `{SS['recap_pipe_error']}`\n\n"
+                    "If using OPD live, retry the fetch. If using a manual upload, "
+                    "try a different export file."
                 )
                 if SS.get("recap_pipe_traceback"):
                     with st.expander("Full traceback (share this if asking for help)"):
                         st.code(SS["recap_pipe_traceback"], language="text")
+
+            # Soft prompt when neither source is loaded
+            if not pipe and not SS.get("recap_pipe_error"):
+                st.warning(
+                    "Fetch the quarter from OPD (button above) or upload an export "
+                    "manually (expander below) to continue."
+                )
+
             if pipe:
                 total_qualifying = sum(
                     1 for c in flex_clinics
                     if c.get("active") and flex_unused.is_quarter_end(c.get("calendar_spread"), rec_month)
                 )
                 pm1, pm2 = st.columns(2)
-                pm1.metric("Source profile", pipe["profile"])
+                pm1.metric(
+                    "Source",
+                    {"opd_live": "OPD (live)", "case_grid": "case grid (file)",
+                     "odata": "OData invoices (file)", "generic": "generic (file)"}.get(
+                        pipe["profile"], pipe["profile"]),
+                )
                 pm2.metric(
                     "Qualifying for this month",
                     f"{len(rdf)} / {total_qualifying}",
@@ -1558,6 +1667,25 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         payments=recap_ledger_rows,
                         note=f"Stage 3 recapture / {rec_year}-{rec_month:02d}",
                     )
+                    # Audit-manifest source descriptor: capture which path was
+                    # used (live OPD pull vs manual upload) so future auditors
+                    # can trace exactly where the activity numbers came from.
+                    if SS.recap_data_source == "opd_live":
+                        _live_rows_df = pd.DataFrame(SS.recap_opd_raw_rows or [])
+                        _audit_source = {
+                            "name": "opd_odata_live",
+                            "sha256": audit.output_hash_df(_live_rows_df),
+                            "size_bytes": SS.recap_opd_invoice_count,
+                            "fetched_at": SS.recap_opd_fetched_at,
+                        }
+                    elif SS.recap_uploaded_bytes:
+                        _audit_source = {
+                            "name": SS.recap_uploaded_name,
+                            "sha256": ledger.file_hash(SS.recap_uploaded_bytes),
+                            "size_bytes": len(SS.recap_uploaded_bytes),
+                        }
+                    else:
+                        _audit_source = None
                     audit.record_cycle(
                         cycle_type="stage3_recapture",
                         approver=recap_initials or auth.current_role(),
@@ -1567,12 +1695,17 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "start_ref": recap_start,
                             "next_ref": next_ref,
                             "quarter_window": f"{win_start:%Y-%m-%d}..{win_end:%Y-%m-%d}",
+                            "source": SS.recap_data_source,
+                            "opd_invoice_count": (
+                                SS.recap_opd_invoice_count
+                                if SS.recap_data_source == "opd_live" else None
+                            ),
+                            "opd_components_mismatch": (
+                                SS.recap_opd_components_mismatch
+                                if SS.recap_data_source == "opd_live" else None
+                            ),
                         },
-                        source_file={
-                            "name": SS.recap_uploaded_name,
-                            "sha256": ledger.file_hash(SS.recap_uploaded_bytes),
-                            "size_bytes": len(SS.recap_uploaded_bytes),
-                        } if SS.recap_uploaded_bytes else None,
+                        source_file=_audit_source,
                         outputs=[{
                             "name": "unused_recapture_invoices",
                             "sha256": audit.output_hash_df(udf),
@@ -1864,12 +1997,14 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     can_back = SS.recap_step > 0
     can_next = SS.recap_step < total - 1
     next_blocked_reason = ""
-    if step_key == "upload" and not SS.recap_uploaded_bytes:
+    if step_key == "upload" and pipe is None:
         can_next = False
-        next_blocked_reason = "Upload a file before continuing."
-    elif step_key == "upload" and pipe is None:
-        can_next = False
-        next_blocked_reason = "Could not parse the uploaded file."
+        # Distinct messages so the operator knows whether they need to fetch
+        # vs. retry after a parse error.
+        if SS.get("recap_pipe_error"):
+            next_blocked_reason = "Source could not be processed — see error above."
+        else:
+            next_blocked_reason = "Fetch from OPD or upload a file before continuing."
 
     # Single nav row: [◀ Set up new cycle]  [blocked reason]  [← Back]  [Next →]
     # The reset, Back, and Next live on the same horizontal plane so the
@@ -1884,8 +2019,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     ):
         for k in ("recap_uploaded_bytes", "recap_uploaded_name", "recap_credit_offsets",
                   "recap_pipe_error", "recap_pipe_traceback",
-                  "w_recap_file", "w_recap_offsets_editor"):
+                  "w_recap_file", "w_recap_offsets_editor",
+                  "recap_opd_activity", "recap_opd_raw_rows", "recap_opd_fetched_at",
+                  "recap_opd_invoice_count", "recap_opd_clinic_count",
+                  "recap_opd_components_mismatch"):
             SS.pop(k, None)
+        # Default the next run back to the live-fetch path
+        SS.recap_data_source = "opd_live"
         SS.recap_step = 0
         st.rerun()
     if not can_next and next_blocked_reason:
