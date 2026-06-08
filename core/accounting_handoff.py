@@ -494,7 +494,7 @@ def direct_bill_overage_email(*, year: int, month: int,
         "",
         f"Please see the attached direct-bill overage billing file for "
         f"{month_name} {year} — {invoice_count} clinic(s) to bill, "
-        f"totalling ${invoice_total:,.2f}.",
+        f"totaling ${invoice_total:,.2f}.",
         "File attached (xlsx — your working reference for manual QBO entry).",
     ]
     return subj, "\n".join(parts)
@@ -517,7 +517,7 @@ def partner_submission_email(*, year: int, month: int,
         "Hi Tanya,",
         "",
         f"OnePlace partner-overage submission for {month_name} {year} — "
-        f"{clinic_count} clinic(s) totalling ${total:,.2f}.",
+        f"{clinic_count} clinic(s) totaling ${total:,.2f}.",
         "File attached.",
     ]
 

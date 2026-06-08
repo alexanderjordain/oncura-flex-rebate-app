@@ -615,8 +615,8 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 # against what the file says. The dollar signs are escaped so Streamlit's
                 # markdown doesn't interpret $...$ as inline LaTeX and mangle the numbers.
                 st.caption(
-                    f"File: {raw_nonzero} non-zero rows totalling **\\${raw_total:,.2f}**  ·  "
-                    f"App importing: {s['flex_count'] + s['scan_count']} rows totalling **\\${s['total']:,.2f}**  ·  "
+                    f"File: {raw_nonzero} non-zero rows totaling **\\${raw_total:,.2f}**  ·  "
+                    f"App importing: {s['flex_count'] + s['scan_count']} rows totaling **\\${s['total']:,.2f}**  ·  "
                     f"Δ **\\${diff:,.2f}** (of which ledger dedup accounts for \\${deduped_amount:,.2f})"
                 )
 
