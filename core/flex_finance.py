@@ -31,6 +31,11 @@ COMPANY_META = {
     "GreatAmerica": {"flex_label": "FlexGreat America", "scan_label": None, "bank_feed": "Accounting Services"},
     "OnePlace": {"flex_label": "FlexOnePlace", "scan_label": "FlexOnePlace", "bank_feed": "Origin Bank Midwest"},
     "NewLane": {"flex_label": "FlexNewLane", "scan_label": "NewLaneScan", "bank_feed": "New Lane"},
+    # FPLeasing ("Loan & Leasing Services" on remittances) is SCAN-ONLY. One row =
+    # one wire = one scan invoice + one received payment. No flex/credit-memo
+    # mechanism. The bank-feed label is a placeholder — confirm with Tanya what
+    # the actual feed reads as on the first live cycle.
+    "FPLeasing": {"flex_label": None, "scan_label": "FPLeasingScan", "bank_feed": "FP Leasing"},
 }
 
 RECEIVE_PAYMENT_COLS = [
@@ -77,14 +82,25 @@ def guess_columns(company: str, cols) -> dict:
         return None
 
     customer = pick(["customer_name", "customer name", "customer"])
-    amount = pick(["payment_amount", "ptb received", "ptb", "paid", "amount"])
-    if company == "GreatAmerica":
+    if company == "FPLeasing":
+        # FP Leasing remittances have AMOUNT (gross, before $5 service fee) and
+        # DUE TO ONCURA (net wire amount). DUE TO ONCURA matches the QBO bank
+        # feed and is the right value to invoice + receive payment against.
+        # Match it ahead of the generic "amount" so we don't pick up the gross.
+        amount = pick(["due to oncura", "due_to_oncura", "amount paid", "amount"])
+        # INVOICE # is FP Leasing's own reference (e.g., EQ42901) — unique per
+        # row, used to build the SaasAnt Ref No 'FPL-{invoice_number}'.
+        ident = pick(["invoice #", "invoice"])
+        contract = None
+    elif company == "GreatAmerica":
+        amount = pick(["payment_amount", "ptb received", "ptb", "paid", "amount"])
         ident = pick(["payment invoice", "invoice"])
         # GA: contract lookup uses the dashed ContractID column (separate from
         # Payment Invoice Number). Match 'contractid' before 'contract' to win
         # against 'Contract Vendor Customer Number'.
         contract = maybe_pick(["contractid", "contract id", "contract_id"])
     else:
+        amount = pick(["payment_amount", "ptb received", "ptb", "paid", "amount"])
         ident = pick(["contract_id", "contract #", "contract"])
         contract = None  # non-GA companies collapse the two
     return {
@@ -160,6 +176,10 @@ def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, 
         return f"OPC{c}"
     if company == "NewLane":
         return f"NewLaneScan - {seq}" if kind == "scan" else f"FlexNewLane - {seq}"
+    if company == "FPLeasing":
+        # FP Leasing's own invoice # (EQ42901, EQM43234, …) is the unique-per-row
+        # ref we tie our SaasAnt payment to. Falls back to seq if absent.
+        return f"FPL-{invoice_number or seq}"
     return f"{company}-{kind}-{invoice_number or contract or seq}"
 
 

@@ -235,7 +235,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             "appears on the next step once these are set."
         )
         mc1, mc2 = st.columns([1, 2])
-        company_options = ["NewLane", "OnePlace", "GreatAmerica"]
+        company_options = ["NewLane", "OnePlace", "GreatAmerica", "FPLeasing"]
         company = mc1.selectbox(
             "Finance company", company_options,
             index=company_options.index(SS["remit_company"]) if SS["remit_company"] in company_options else 0,
@@ -272,7 +272,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         st.write(f"Bank feed: **{meta.get('bank_feed','?')}**  ·  flex label: **{meta.get('flex_label')}**"
                  + (f"  ·  scan label: **{meta.get('scan_label')}**" if meta.get("scan_label") else ""))
 
-        if company != "GreatAmerica":
+        if company == "FPLeasing":
+            st.caption(
+                "FP Leasing is scan-only — every row becomes a scan invoice + receive payment. "
+                "Amount used is **DUE TO ONCURA** (net wire, after the $5 service fee), "
+                "matching what the bank feed will show."
+            )
+        elif company != "GreatAmerica":
             # OnePlace + NewLane: whole-dollar = scan, odd-cents = flex
             # (Confirmed against May OPC pass-through file: Easthaven $595.00 + Innovative
             # Animal Care $295.00 both have "04..." contracts but are scan packages —
@@ -298,6 +304,9 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         if company == "GreatAmerica":
             start_inv = 50000
             split = "all_flex"
+        elif company == "FPLeasing":
+            start_inv = int(SS.get("remit_start_inv", 50000))
+            split = "all_scan"
         else:
             start_inv = int(SS.get("remit_start_inv", 50000))
             split = "by_cents"
