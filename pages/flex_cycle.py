@@ -343,37 +343,29 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             # check whether ANY of those months already have payments for
             # this company in the ledger. If yes → warn + require override.
             #
-            # Match keywords cover the variants we've seen across NewLane /
-            # OnePlace / GreatAmerica remittances: "Payment Date",
-            # "PaymentDate", "Pay Date", "Date Paid", "Transaction Date".
-            # If none match, the month-level guard is silently skipped (the
-            # row-level fingerprint dedup still catches duplicates), but the
-            # operator gets a warning so a missing column doesn't disable
-            # the check unnoticed on a new remittance format.
+            # OnePlace remittances carry a per-row payment date (detected via
+            # these keywords). NewLane "Advice" and GreatAmerica files have
+            # one payment date for the whole batch — it's not in the file
+            # data, it's the `pay_date` the operator entered on the setup
+            # step. When no payment-date column is detected we fall back to
+            # that single operator-supplied date, which is the right semantic
+            # anyway (the file IS for one date).
             _payment_date_candidates = [
                 c for c in raw.columns
                 if any(k in str(c).lower().replace("\n", " ").replace("_", " ")
                        for k in ("payment date", "paymentdate", "pay date",
                                  "date paid", "transaction date"))
             ]
-            already_processed_months: dict = {}
             if _payment_date_candidates:
                 _pd_col = _payment_date_candidates[0]
                 _dates = pd.to_datetime(raw[_pd_col], errors="coerce").dropna()
                 _year_months = {(d.year, d.month) for d in _dates}
-                if _year_months:
-                    already_processed_months = ledger.check_payment_months_seen(
-                        company, _year_months,
-                    )
             else:
-                st.warning(
-                    ":material/warning: **No payment-date column detected** in "
-                    "this remittance — the month-level dedup check is being "
-                    "skipped. Row-level fingerprint dedup is still active. If "
-                    "this is a new file format, tell Alexander so the matcher "
-                    "can be extended.",
-                    icon=":material/warning:",
-                )
+                _year_months = {(pay_date.year, pay_date.month)}
+            already_processed_months: dict = (
+                ledger.check_payment_months_seen(company, _year_months)
+                if _year_months else {}
+            )
 
             if already_processed_months:
                 _human_months = ", ".join(
