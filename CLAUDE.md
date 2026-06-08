@@ -89,7 +89,7 @@ Source: `OneDrive\...\Oncura_Accounting_Master_Reference-5-28-26.docx` (CFO Mart
 - **OnePlace flex contracts strip the leading zero** in the Ref No / OPDAdd, but scan contracts keep all leading zeros — matches the SaasAnt templates.
 - **NewLane + OnePlace remittances split by cents** (whole-dollar = scan, non-round = flex). GA = all flex.
 - **Unique `Ref No (Receive Payment No)` per row is mandatory** — duplicate refs collapse all rows onto the first customer in SaasAnt (the GA bug). Every builder enforces this via `saasant.assert_unique_refs`.
-- **Direct-bill overage invoices get VOIDED after sending** (SOP-6). The app generates the invoice; voiding is a manual QBO step. The page surfaces this as coaching.
+- **Direct-bill overage invoices get VOIDED after sending** (SOP-6). The app generates the invoice; voiding is a manual QBO step. The page surfaces this as coaching. **Why we void is open**: OPD invoices do NOT push to QBO for FLEX clinics (confirmed by Alexander 2026-06-08), so the prior rationale "revenue already captured by the OPD invoices, leaving them open overstates AR" was incorrect. The rule itself stands per Marty's SOP doc; the operational reason is to be confirmed with Tanya/Marty and the rationale field updated.
 - **No refunds on FLEX overpayments** (SOP-12, Marty policy). Apply to future overages.
 - **The app generates files; humans approve and upload.** Third-party isolation. No direct QBO writes.
 

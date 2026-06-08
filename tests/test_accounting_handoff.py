@@ -46,19 +46,20 @@ def test_direct_bill_email_no_longer_mentions_saasant():
     assert "Bulk Upload" not in body
 
 
-def test_direct_bill_email_includes_manual_billing_steps():
-    """The new work order must mention manual invoice creation, Authorize.net,
-    voiding (SOP-6), and the no-refunds rule (SOP-12)."""
+def test_direct_bill_email_omits_work_order():
+    """Work-order instructions were removed — Tanya runs the billing per her
+    own SOP. The email surfaces the data only. Asserting the absence prevents
+    well-meaning future edits from re-introducing the procedural reminder."""
     _, body = accounting_handoff.direct_bill_overage_email(
         year=2026, month=5, invoice_count=1, invoice_total=3000.0,
         clinic_details=_sample_direct_details(),
     )
     lower = body.lower()
-    assert "manual" in lower
-    assert "authorize.net" in lower
-    assert "void" in lower
-    assert "sop-6" in lower
-    assert "sop-12" in lower
+    assert "authorize.net" not in lower
+    assert "void" not in lower
+    assert "sop-6" not in lower
+    assert "sop-12" not in lower
+    assert "work order" not in lower
 
 
 def test_direct_bill_email_renders_per_clinic_detail():
@@ -137,3 +138,50 @@ def test_partner_email_preserves_cutoff_warning():
     )
     assert "June 05, 2026" in body
     assert "BEFORE" in body
+
+
+# ── .eml structure: signature-placement fix ──────────────────────────────────
+
+
+def test_eml_body_is_multipart_with_html_part():
+    """The .eml must include an HTML body so Outlook places the user's
+    auto-inserted signature at the end of the body instead of welding it to
+    'Hi Tanya,' at the top. Tested by checking the .eml bytes contain both
+    text/plain and text/html parts."""
+    eml = accounting_handoff._build_eml_bytes(
+        "Subject", "Hi Tanya,\n\nLine two.", "to@example.com", attachments=None,
+    )
+    assert b"multipart/alternative" in eml
+    assert b"text/plain" in eml
+    assert b"text/html" in eml
+
+
+def test_eml_html_has_wordsection_wrapper():
+    """The HTML body uses Outlook's WordSection1 wrapper — that's the structure
+    that signals 'this is a real composed message, place the signature at the
+    natural end.' If this regresses, Outlook reverts to gluing the signature
+    to the top of the body."""
+    eml = accounting_handoff._build_eml_bytes(
+        "Subject", "Hi Tanya,", "to@example.com", attachments=None,
+    )
+    # decoded for human readability — quoted-printable in raw .eml encodes special chars
+    assert b"WordSection1" in eml
+
+
+def test_body_to_html_preserves_indented_bullet_lines():
+    """Per-clinic detail uses leading-space indentation (6 spaces for the
+    threshold/credit lines). HTML collapses whitespace by default; we convert
+    leading spaces to &nbsp; to preserve indentation."""
+    html = accounting_handoff._body_to_html(
+        "  - Riverlin Animal Hospital\n"
+        "      Threshold: $5,700.00",
+    )
+    # 2-space and 6-space indents both preserved
+    assert "&nbsp;&nbsp;- Riverlin Animal Hospital" in html
+    assert "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Threshold:" in html
+
+
+def test_body_to_html_escapes_special_characters():
+    """A clinic name with '&' or '<' must not break the HTML structure."""
+    html = accounting_handoff._body_to_html("Smith & Jones <vet>")
+    assert "Smith &amp; Jones &lt;vet&gt;" in html

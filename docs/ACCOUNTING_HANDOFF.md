@@ -88,8 +88,9 @@ body so totals are visible without opening the attachment.
 1. For each clinic on the worksheet, **manually** create a QBO invoice for the
    `Net Amount to Bill`. Use the `Suggested QBO Memo` so the line item reads consistently.
 2. Send an **Authorize.net payment link** to the clinic (preferred), or email the QBO invoice PDF.
-3. **VOID the QBO invoice immediately after sending.** Revenue was already captured by the OPD
-   invoices; leaving the invoice open overstates AR.
+3. **VOID the QBO invoice immediately after sending** (per SOP-6). Note: OPD invoices do NOT
+   sync to QBO for FLEX clinics, so voiding is an SOP-6 operational rule — not an
+   AR-double-count fix. Confirm the rationale with Marty if you need it explained.
 4. When payment arrives, apply it to zero out the clinic's flex account.
 5. **No refunds** (SOP-12). Apply any overpayment to future overages.
    Exceptions require **Marty's explicit approval**.

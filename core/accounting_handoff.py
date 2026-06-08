@@ -88,18 +88,64 @@ def _send_smtp(subject: str, body: str, to: str,
         return False, f"SMTP send failed: {e}"
 
 
+def _body_to_html(body: str) -> str:
+    """Convert the plain-text body to an Outlook-friendly HTML structure.
+
+    The body is wrapped in a single <div class="WordSection1"> with each line
+    as its own <div>. This is the structure Outlook for Windows produces for
+    new messages — when an .eml with this structure is opened in compose mode
+    (via X-Unsent:1), Outlook's auto-inserted signature lands at the END of
+    the WordSection1 container instead of being welded to the start of the
+    body. Plain-text .eml bodies don't get this treatment — Outlook inserts
+    the signature at position 0 with no separator, producing the well-known
+    'Best,\\nAlexander JordainHi Tanya,' glue.
+
+    Defensive: also lead with an empty <div> so if a given Outlook build still
+    inserts at the top, there's visual separation from the greeting.
+    """
+    import html
+    lines = body.split("\n")
+    rendered = []
+    for line in lines:
+        if line.strip() == "":
+            rendered.append("<div>&nbsp;</div>")
+        else:
+            # Preserve leading spaces (used for indented bullet lines) by
+            # converting them to &nbsp; sequences — HTML otherwise collapses
+            # runs of whitespace.
+            leading = len(line) - len(line.lstrip(" "))
+            text = html.escape(line.lstrip(" "))
+            prefix = "&nbsp;" * leading
+            rendered.append(f"<div>{prefix}{text}</div>")
+    inner = "\n".join(rendered)
+    return (
+        '<html><body>'
+        '<div class="WordSection1">'
+        '<div>&nbsp;</div>'  # defensive separator if Outlook still top-inserts
+        f'{inner}'
+        '<div>&nbsp;</div>'  # cursor-landing slot where signature ideally inserts
+        '</div></body></html>'
+    )
+
+
 def _build_eml_bytes(subject: str, body: str, to: str,
                      attachments: list[tuple[str, bytes]] | None) -> bytes:
     """Build an .eml file. Omits From/Date/Message-ID so the user's mail client
     fills From from their own account on open. Adds X-Unsent:1 — classic Outlook
     recognizes this and opens the file in compose mode rather than read mode.
     OWA / new Outlook still tends to open in reader (Microsoft limitation);
-    Microsoft Graph integration is the proper path for those clients."""
+    Microsoft Graph integration is the proper path for those clients.
+
+    Body is sent as multipart/alternative with both text/plain and text/html
+    parts. Outlook prefers the HTML part, which is structured to make the
+    user's auto-inserted signature land at the END of the body rather than
+    glued to "Hi Tanya," — see _body_to_html()."""
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["To"]      = to
     msg["X-Unsent"] = "1"
-    msg.set_content(body)
+    msg.set_content(body)                                   # text/plain part
+    msg.add_alternative(_body_to_html(body), subtype="html")  # text/html part
     for filename, blob in attachments or []:
         ctype, _ = mimetypes.guess_type(filename)
         maintype, subtype = (ctype.split("/", 1) if ctype else ("application", "octet-stream"))
@@ -434,14 +480,13 @@ def direct_bill_overage_email(*, year: int, month: int,
                               ) -> tuple[str, str]:
     """FLEX direct-bill overage handoff to accounting (Tanya).
 
-    Tanya bills these overages MANUALLY in QBO — the attached xlsx is her
-    working reference (clinic / threshold / activity / credit / net), not a
-    SaasAnt import. SaasAnt is not used for overages today.
+    The body intentionally contains NO work-order instructions — Tanya runs
+    the billing per her own SOP knowledge. The email surfaces the data she
+    needs (per-clinic threshold / activity / credit / net amount to bill)
+    so she can see totals without opening the attached worksheet.
 
     `clinic_details` is the rendered worksheet as a list of dicts (output of
-    flex_overage.build_direct_billing_worksheet().to_dict('records')). Used to
-    produce the inline per-clinic breakdown so Tanya can scan the totals
-    without opening the attachment.
+    flex_overage.build_direct_billing_worksheet().to_dict('records')).
     """
     month_name = dt.date(year, month, 1).strftime("%B")
     subj = f"[Action Required] FLEX Direct-Bill Overage — {month_name} {year}"
@@ -469,20 +514,6 @@ def direct_bill_overage_email(*, year: int, month: int,
             ]
 
     parts += [
-        "",
-        "Work order (SOP-6 / SOP-12) — manual QBO billing:",
-        "  1. For each clinic above, create a manual invoice in QBO for the"
-        " 'Amount to Bill' shown.",
-        "     Use the 'Suggested QBO Memo' from the worksheet so the line item",
-        "     reads consistently across the batch.",
-        "  2. Send each clinic an Authorize.net payment link (or the QBO",
-        "     invoice PDF) for the same amount.",
-        "  3. VOID each QBO invoice immediately after sending — revenue was",
-        "     already captured by the OPD invoices, so leaving them open",
-        "     overstates AR (SOP-6).",
-        "  4. When payment arrives, apply it to zero out the clinic's account.",
-        "  5. No refunds on FLEX overpayments (SOP-12) — overpayment stays as",
-        "     credit for future overages.",
         "",
         "Reply if any clinic looks off and I'll re-run the cycle.",
     ]
