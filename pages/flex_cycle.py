@@ -874,20 +874,21 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             sop2_meta = flex_finance.COMPANY_META.get(company, {})
             st.divider()
             _bank = sop2_meta.get("bank_feed", "the bank feed")
-            # st.container(border=True) instead of st.info — cleaner border-only
-            # look without the tinted-blue fade, and single material icon (no
-            # duplicate from a separate `icon=` parameter).
-            with st.container(border=True):
-                st.markdown(
-                    f":material/account_balance: **Next step — Acct SOP-2: match the bank feed in QBO.**  \n"
-                    f"After the SaasAnt files above are imported to QBO, open **the bank feed** in QBO "
-                    f"and match the deposit against the receive payments you just created. The deposit "
-                    f"shows up under the finance company's bank-feed label — for this batch: **{_bank}**. "
-                    f"Confirm the deposit amount equals the **Total** shown on this page; if there's a "
-                    f"mismatch, stop and reconcile before posting the next remittance.  \n"
-                    f":gray[Bank-feed labels: **Origin Bank Midwest** = OnePlace (flex + scan) · "
-                    f"**Accounting Services** = GreatAmerica · **New Lane** = New Lane]"
-                )
+            # st.warning gives the yellow call-to-action box appropriate for a
+            # "you still have work to do in QBO" reminder. The bank-feed-label
+            # crosswalk at the bottom uses :blue[] so the label names stand
+            # out from the body copy.
+            st.warning(
+                f"**Next step — Acct SOP-2: match the bank feed in QBO.**  \n"
+                f"After the SaasAnt files above are imported to QBO, open **the bank feed** in QBO "
+                f"and match the deposit against the receive payments you just created. The deposit "
+                f"shows up under the finance company's bank-feed label — for this batch: **{_bank}**. "
+                f"Confirm the deposit amount equals the **Total** shown on this page; if there's a "
+                f"mismatch, stop and reconcile before posting the next remittance.  \n"
+                f":blue[Bank-feed labels: **Origin Bank Midwest** = OnePlace (flex + scan) · "
+                f"**Accounting Services** = GreatAmerica · **New Lane** = New Lane]",
+                icon=":material/account_balance:",
+            )
 
             # Bottom-of-page "Set up new import" — same handler as the top-card button,
             # for operators who've scrolled all the way down and don't want to scroll back.
