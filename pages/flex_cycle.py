@@ -863,11 +863,14 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             st.divider()
             _bank = sop2_meta.get("bank_feed", "the bank feed")
             st.info(
-                f":material/account_balance: **Next step — Acct SOP-2: {_bank} in QBO.**  \n"
-                f"After the SaasAnt files above are imported to QBO, open **{_bank}** in QBO and "
-                f"match the deposit against the receive payments you just created. "
+                f":material/account_balance: **Next step — Acct SOP-2: match the bank feed in QBO.**  \n"
+                f"After the SaasAnt files above are imported to QBO, open **the bank feed** in QBO "
+                f"and match the deposit against the receive payments you just created. The deposit "
+                f"shows up under the finance company's bank-feed label — for this batch: **{_bank}**. "
                 f"Confirm the deposit amount equals the **Total** shown on this page; if there's a "
-                f"mismatch, stop and reconcile before posting the next remittance.",
+                f"mismatch, stop and reconcile before posting the next remittance.  \n"
+                f":gray[Bank-feed labels: **Origin Bank Midwest** = OnePlace (flex + scan) · "
+                f"**Accounting Services** = GreatAmerica · **New Lane** = New Lane]",
                 icon=":material/account_balance:",
             )
 
