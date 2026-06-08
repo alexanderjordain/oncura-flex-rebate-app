@@ -62,30 +62,25 @@ def test_direct_bill_email_omits_work_order():
     assert "work order" not in lower
 
 
-def test_direct_bill_email_renders_per_clinic_detail():
-    """Threshold + activity + credit + net owed must appear inline per clinic
-    so Tanya can scan totals without opening the attachment."""
+def test_direct_bill_email_is_minimal_body_only():
+    """The body is intentionally minimal: greeting + headline summary + file
+    attached line. All per-clinic detail lives in the attached worksheet —
+    if a per-clinic block reappears in the body, this test catches it."""
     _, body = accounting_handoff.direct_bill_overage_email(
-        year=2026, month=5, invoice_count=1, invoice_total=3000.0,
+        year=2026, month=5, invoice_count=15, invoice_total=47068.24,
         clinic_details=_sample_direct_details(),
     )
-    assert "Galloway Village Veterinary" in body
-    assert "GA-1234" in body
-    assert "$5,700.00" in body         # threshold
-    assert "$9,200.00" in body         # quarter activity
-    assert "$500.00" in body           # credit applied
-    assert "$3,000.00" in body         # NET to bill
-    assert "AMOUNT TO BILL" in body    # the line that highlights what she owes
-
-
-def test_direct_bill_email_marks_escalation_clinics():
-    details = _sample_direct_details()
-    details[0]["Escalation Flag"] = "YES"
-    _, body = accounting_handoff.direct_bill_overage_email(
-        year=2026, month=5, invoice_count=1, invoice_total=3000.0,
-        clinic_details=details,
-    )
-    assert "ESCALATION" in body
+    # Headline summary present
+    assert "May 2026" in body
+    assert "15 clinic(s)" in body
+    assert "$47,068.24" in body
+    assert "File attached" in body
+    # NO per-clinic detail anymore — clinic_details is ignored
+    assert "Galloway Village Veterinary" not in body
+    assert "GA-1234" not in body
+    assert "Per-clinic breakdown" not in body
+    assert "AMOUNT TO BILL" not in body
+    assert "ESCALATION" not in body
 
 
 def test_direct_bill_email_works_without_details_back_compat():

@@ -476,46 +476,26 @@ def recapture_email(*, year: int, month: int,
 
 def direct_bill_overage_email(*, year: int, month: int,
                               invoice_count: int, invoice_total: float,
-                              clinic_details: list[dict] | None = None
+                              clinic_details: list[dict] | None = None,  # noqa: ARG001
                               ) -> tuple[str, str]:
     """FLEX direct-bill overage handoff to accounting (Tanya).
 
-    The body intentionally contains NO work-order instructions — Tanya runs
-    the billing per her own SOP knowledge. The email surfaces the data she
-    needs (per-clinic threshold / activity / credit / net amount to bill)
-    so she can see totals without opening the attached worksheet.
+    Minimal body — just the headline summary; all per-clinic detail lives in
+    the attached worksheet (threshold / activity / credit / amount to bill /
+    escalation flag). Outlook adds the signature on open.
 
-    `clinic_details` is the rendered worksheet as a list of dicts (output of
-    flex_overage.build_direct_billing_worksheet().to_dict('records')).
+    `clinic_details` is accepted for back-compat with existing call sites but
+    is no longer rendered into the body. Safe to drop from new callers.
     """
     month_name = dt.date(year, month, 1).strftime("%B")
     subj = f"[Action Required] FLEX Direct-Bill Overage — {month_name} {year}"
     parts = [
         "Hi Tanya,",
         "",
-        f"Direct-bill overage billing worksheet for {month_name} {year} — "
-        f"{invoice_count} clinic(s) to bill, totalling ${invoice_total:,.2f}.",
+        f"Please see the attached direct-bill overage billing file for "
+        f"{month_name} {year} — {invoice_count} clinic(s) to bill, "
+        f"totalling ${invoice_total:,.2f}.",
         "File attached (xlsx — your working reference for manual QBO entry).",
-    ]
-
-    if clinic_details:
-        parts += ["", "Per-clinic breakdown:"]
-        for d in clinic_details:
-            parts += [
-                "",
-                f"  - {d.get('Clinic') or d.get('QB Customer')}"
-                f"   (Contract {d.get('Contract #') or '—'},"
-                f" {d.get('Finance Company') or 'No partner'})",
-                f"      Threshold: ${float(d.get('Quarterly Threshold') or 0):,.2f}"
-                f"   |   Quarter activity: ${float(d.get('Quarter Activity') or 0):,.2f}",
-                f"      Credit applied: ${float(d.get('Pre-existing Credit Applied') or 0):,.2f}"
-                f"   |   AMOUNT TO BILL: ${float(d.get('Net Amount to Bill') or 0):,.2f}"
-                + ("   [ESCALATION]" if d.get('Escalation Flag') else ""),
-            ]
-
-    parts += [
-        "",
-        "Please reply if any adjustments need to be made.",
     ]
     return subj, "\n".join(parts)
 
