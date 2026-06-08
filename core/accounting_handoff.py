@@ -495,7 +495,6 @@ def direct_bill_overage_email(*, year: int, month: int,
         f"Please see the attached direct-bill overage billing file for "
         f"{month_name} {year} — {invoice_count} clinic(s) to bill, "
         f"totaling ${invoice_total:,.2f}.",
-        "File attached (xlsx — your working reference for manual QBO entry).",
     ]
     return subj, "\n".join(parts)
 

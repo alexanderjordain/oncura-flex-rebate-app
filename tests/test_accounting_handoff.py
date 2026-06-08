@@ -74,7 +74,6 @@ def test_direct_bill_email_is_minimal_body_only():
     assert "May 2026" in body
     assert "15 clinic(s)" in body
     assert "$47,068.24" in body
-    assert "File attached" in body
     # NO per-clinic detail anymore — clinic_details is ignored
     assert "Galloway Village Veterinary" not in body
     assert "GA-1234" not in body
