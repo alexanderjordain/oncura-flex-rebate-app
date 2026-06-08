@@ -515,7 +515,7 @@ def direct_bill_overage_email(*, year: int, month: int,
 
     parts += [
         "",
-        "Reply if any adjustments need to be made.",
+        "Please reply if any adjustments need to be made.",
     ]
     return subj, "\n".join(parts)
 
@@ -564,7 +564,7 @@ def partner_submission_email(*, year: int, month: int,
         "direct-bill the clinics ourselves. The app will catch that on the next",
         "Stage 3 run and route a separate direct-bill email if needed.",
         "",
-        "Reply if any adjustments need to be made.",
+        "Please reply if any adjustments need to be made.",
     ]
     return subj, "\n".join(parts)
 
