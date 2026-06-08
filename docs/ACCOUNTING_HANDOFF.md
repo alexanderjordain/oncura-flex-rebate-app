@@ -97,20 +97,46 @@ body so totals are visible without opening the attachment.
 
 #### Future enhancement: SaasAnt for overages
 
-The `core.flex_overage.build_direct_invoice_import()` helper still exists and produces a
+`core.flex_overage.build_direct_invoice_import()` still exists and produces a
 SaasAnt-shaped invoice import (10 QBO-mappable columns, sequential Ref Nos, deduped via
 `saasant.assert_unique_refs`). It is **not** wired into the live workflow today because
 Tanya bills manually. When the team is ready to fold overages into SaasAnt:
 
-1. Swap the call in `pages/flex_cycle.py::_direct_block()` from
-   `flex_overage.build_direct_billing_worksheet(...)` to `flex_overage.build_direct_invoice_import(...)`.
-2. Restore the "Starting Invoice No" setup field (see `git log` for the prior wiring).
-3. Update `direct_bill_overage_email` step 1 back to the SaasAnt upload instructions.
-4. Keep the void-after-send step — that's a hard SOP-6 rule regardless of how the invoice
-   was created.
+1. In `pages/flex_cycle.py::_direct_block()`, replace
+   ```python
+   didf = flex_overage.build_direct_billing_worksheet(
+       annotated, rec_year, rec_month, cfg_all,
+   )
+   ```
+   with
+   ```python
+   didf, _next_ref = flex_overage.build_direct_invoice_import(
+       annotated, rec_year, rec_month,
+       start_ref=SS.recap_overage_start_ref,
+       sales_class="03-Telemedicine",
+       cfg=cfg_all,
+   )
+   ```
+   Note the signature change: `build_direct_invoice_import` requires `start_ref` (the QBO max + 1
+   seed for sequential SaasAnt refs) and `sales_class` (the QBO class column the invoice gets
+   booked against). Both are absent from `build_direct_billing_worksheet` because the worksheet
+   is a human-readable reference, not a QBO import.
+2. Add a "Starting Invoice No (QBO max + 1)" `st.number_input` to Stage 3's setup step,
+   following the pattern of the Stage 1 `remit_start_inv` field at `pages/flex_cycle.py:259-264`.
+   Store it in `SS.recap_overage_start_ref`.
+3. Update `direct_bill_overage_email` to swap the headline phrasing back to a SaasAnt
+   work-order ("Upload to SaasAnt → Bulk Upload → Invoice → walk the wizard") and re-add the
+   void-after-send step.
+4. Keep the void-after-send step regardless — it's a hard SOP-6 rule whether the invoice
+   was created via manual QBO entry or SaasAnt import.
+5. Update `pages/flex_cycle.py::_direct_block()`'s ledger-fingerprint loop to read the
+   SaasAnt schema's columns instead of the worksheet's:
+   - `row["Customer"]` instead of `row["QB Customer"]`
+   - `row["Product/Service Amount"]` instead of `row["Net Amount to Bill"]`
+   - `row["Invoice Date"]` instead of the hardcoded month-start date
 
-The math, routing, and ledger-dedup behavior stay identical between the two paths; only the
-xlsx shape and Tanya's import action differ.
+The math, routing, and ledger-dedup *behavior* stay identical between the two paths; only
+the xlsx column shape and Tanya's downstream import action differ.
 
 ### C. Finance-partner submission (SOP-12)
 1. Send `OnePlaceOverage_*.xlsx` to OnePlace **before the 5th of the following month**.

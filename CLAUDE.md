@@ -13,19 +13,22 @@ writes. The app's design driver is **audit-friendliness** (Marty's stated requir
 app.py                        # entry: auth + theme + st.navigation
 core/
   auth.py                     # password gate (single shared) + optional roles; hides sidebar on login screen
-  ui.py                       # theme/CSS, page header, sidebar logo
+  ui.py                       # theme/CSS, page header, sidebar logo, record_button, initials_input, persistence_warning
   loaders.py                  # cached loaders for the JSON masters
   store.py                    # JSON persistence (GitHub Contents API + local file)
   ledger.py                   # processed-payments ledger: fingerprint + dedup + persist
-  opd_adapter.py              # OPD ingest: 3 profiles (odata, case_grid, generic) + invoices
+  audit.py                    # per-cycle immutable audit manifest (entry_hash chain, GitHub-backed)
+  opd_adapter.py              # OPD file ingest: 3 profiles (odata, case_grid, generic) + invoices
+  opd_api.py                  # live OPD Mendix OData v3 client (Atom XML, DST-aware billing date)
   rebate_calc.py              # rate-based vs feed-based rebate calc w/ variance
   rebate_report.py            # multi-tab xlsx report builder for the cycle
   flex_credits.py             # payment-driven credit-memo import + legacy active-list fallback (SOP-5)
   flex_unused.py              # quarter-end recapture (SOP-5) + overage detection
-  flex_overage.py             # overage routing + direct-bill + partner submission (SOP-6, SOP-12)
+  flex_overage.py             # overage routing + direct-bill worksheet + partner submission (SOP-6, SOP-12)
   flex_finance.py             # finance-co remittance -> SaasAnt imports (SOP-9, SOP-10)
   saasant.py                  # shared SaasAnt helpers (unique refs, last-day, xlsx bytes)
   accounting_handoff.py       # per-workflow email-draft builders + render helpers
+  graph_email.py              # Microsoft Graph draft-creation (preferred over .eml when configured)
 data/
   rebate_master.json          # 87 rebate-program clinics + rates
   flex_master.json            # 82 FLEX clinics + thresholds + contract IDs + calendar group
@@ -38,12 +41,17 @@ pages/
   home.py                     # status dashboard + module-health panel
   rebate_master.py            # edit clinics + rates
   rebate_cycle.py             # multi-month cycle -> multi-tab xlsx report
-  flex_cycle.py               # 3-tab wizard wrapped in safe_stage() guards; ledger-aware Stage 1+2
+  flex_cycle.py               # 3-tab wizard wrapped in safe_stage() guards; live-OPD Stage 3
+  flex_tutorial.py            # operator-facing walkthrough of the FLEX program model
+  audit_log.py                # browse + verify the audit manifest (password-gated admin view)
   settings.py                 # config.json editor + backup/restore + ledger summary (admin-only)
-tests/                        # pytest suite — `python -m pytest tests/`
+tests/                        # pytest suite — `python -m pytest tests/` (165 tests, ~1s)
   test_ledger.py              # fingerprint stability + dedup
   test_flex_unused.py         # quarter math + multi-clinic group pooling
   test_flex_credits.py        # payment-driven builder + legacy fallback
+  test_flex_overage.py        # SOP-6/SOP-12 routing + worksheet schema (partner ledger contract)
+  test_opd_api.py             # Atom parsing, DST-aware billing-date, namespace drift, orphans
+  test_accounting_handoff.py  # minimal direct-bill email, multipart .eml, no SaasAnt step
 scripts/
   smoke_test.py               # pre-deploy static checker (syntax + cross-module references)
   build_rebate_master.py      # seed rebate_master.json from Rebate Accounts Copy.xlsx

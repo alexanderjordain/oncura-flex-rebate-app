@@ -342,10 +342,19 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             # Payment Date column, extract unique (year, month) tuples, and
             # check whether ANY of those months already have payments for
             # this company in the ledger. If yes → warn + require override.
+            #
+            # Match keywords cover the variants we've seen across NewLane /
+            # OnePlace / GreatAmerica remittances: "Payment Date",
+            # "PaymentDate", "Pay Date", "Date Paid", "Transaction Date".
+            # If none match, the month-level guard is silently skipped (the
+            # row-level fingerprint dedup still catches duplicates), but the
+            # operator gets a warning so a missing column doesn't disable
+            # the check unnoticed on a new remittance format.
             _payment_date_candidates = [
                 c for c in raw.columns
                 if any(k in str(c).lower().replace("\n", " ").replace("_", " ")
-                       for k in ("payment date", "paymentdate"))
+                       for k in ("payment date", "paymentdate", "pay date",
+                                 "date paid", "transaction date"))
             ]
             already_processed_months: dict = {}
             if _payment_date_candidates:
@@ -356,6 +365,15 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                     already_processed_months = ledger.check_payment_months_seen(
                         company, _year_months,
                     )
+            else:
+                st.warning(
+                    ":material/warning: **No payment-date column detected** in "
+                    "this remittance — the month-level dedup check is being "
+                    "skipped. Row-level fingerprint dedup is still active. If "
+                    "this is a new file format, tell Alexander so the matcher "
+                    "can be extended.",
+                    icon=":material/warning:",
+                )
 
             if already_processed_months:
                 _human_months = ", ".join(
@@ -1808,12 +1826,38 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     edited = st.data_editor(
                         offset_seed, hide_index=True, use_container_width=True,
                         disabled=["Clinic (QB)", "Gross overage"],
+                        column_config={
+                            "Pre-existing credit": st.column_config.NumberColumn(
+                                "Pre-existing credit",
+                                min_value=0.0,
+                                step=0.01,
+                                format="$%.2f",
+                                help="Unapplied credit balance in QBO. Applied to overage; "
+                                     "only the remainder is billed.",
+                            ),
+                        },
                         key=offsets_key,
                     )
+                    # Defensive parse: a NumberColumn keeps values numeric, but
+                    # if Streamlit ever returns a string (legacy clients, paste
+                    # edge cases), fall back to 0.0 + caption rather than
+                    # raising a ValueError into safe_stage.
+                    _bad_rows: list[str] = []
+                    def _parse_offset(raw, clinic):
+                        try:
+                            return float(raw or 0)
+                        except (TypeError, ValueError):
+                            _bad_rows.append(clinic)
+                            return 0.0
                     SS.recap_credit_offsets = {
-                        r["Clinic (QB)"]: float(r["Pre-existing credit"] or 0)
+                        r["Clinic (QB)"]: _parse_offset(r["Pre-existing credit"], r["Clinic (QB)"])
                         for _, r in edited.iterrows()
                     }
+                    if _bad_rows:
+                        st.caption(
+                            f":gray[Non-numeric credit value for {', '.join(_bad_rows)} "
+                            "— treated as $0.00 offset.]"
+                        )
                 with st.expander(f":gray[All overages · {len(adf)} clinic(s) · preview]"):
                     st.dataframe(adf, use_container_width=True, height=240)
                 if flagged:
