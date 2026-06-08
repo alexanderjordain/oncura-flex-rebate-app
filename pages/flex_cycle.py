@@ -1670,7 +1670,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     st.dataframe(fz, use_container_width=True, hide_index=True)
 
         elif step_key == "recapture":
-            st.markdown("### A. Unused recapture invoices")
+            st.markdown("### Unused recapture invoices")
             st.caption(
                 "These clinics fell short of their threshold. Recapture the unused portion of the credit "
                 "Oncura already issued so the P&L Flex Credits line nets down correctly."
