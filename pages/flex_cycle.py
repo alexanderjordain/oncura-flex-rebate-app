@@ -796,6 +796,8 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
             ]
             ack_disabled = len(rows_to_record) == 0
+            if not ack_disabled:
+                ui.persistence_warning()
             stage1_initials = ui.initials_input(
                 "stage1_audit_initials",
                 disabled=ack_disabled,
@@ -1164,6 +1166,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                     f"The download above still contains them with NEW Credit Memo Nos — DO NOT upload "
                     f"those rows to QBO again. (Future enhancement: filter them out of the download.)"
                 )
+            ui.persistence_warning()
             stage2_initials = ui.initials_input("stage2_audit_initials")
             if ui.record_button(
                 f"Mark {len(df)} credit memo(s) as generated",
@@ -1290,6 +1293,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     SS.setdefault("recap_opd_invoice_count", 0)
     SS.setdefault("recap_opd_clinic_count", 0)
     SS.setdefault("recap_opd_components_mismatch", 0)
+    SS.setdefault("recap_opd_orphans", {"count": 0, "total": 0.0, "fk_list": []})
 
     # Pull current state into locals
     rec_year = int(SS.recap_year)
@@ -1437,7 +1441,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     f"Fetching invoices for {win_start:%b %d} – {win_end:%b %d, %Y} "
                     "from telehealth.oncurapartners.com…"
                 ):
-                    activity, raw_df = opd_api.flex_activity_for_quarter(rec_year, rec_month)
+                    activity, raw_df, orphans = opd_api.flex_activity_for_quarter(
+                        rec_year, rec_month,
+                    )
                     SS.recap_data_source = "opd_live"
                     SS.recap_opd_activity = activity
                     # to_dict('records') so the audit manifest can serialize easily
@@ -1447,6 +1453,12 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     SS.recap_opd_components_mismatch = (
                         int((~raw_df["components_match"]).sum()) if not raw_df.empty else 0
                     )
+                    # Orphan invoices: Invoice_Clinic FK didn't resolve to a clinic
+                    # name. These are silently EXCLUDED from the activity dict —
+                    # surface count + dollar total so the operator can investigate
+                    # before committing the cycle (otherwise the affected clinic
+                    # gets billed for full threshold as 'unused', which is wrong).
+                    SS.recap_opd_orphans = orphans
                     SS.recap_opd_fetched_at = (
                         dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
                     )
@@ -1487,6 +1499,26 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         f":gray[{SS.recap_opd_components_mismatch} invoice(s) had a "
                         "Subtotal/Credit/Admin reconciliation gap of ≥$1 — typically "
                         "$4-AdminFee voids. `TotalPrice` is still used (authoritative).]"
+                    )
+                # Orphan-invoice warning: rows whose Invoice_Clinic FK didn't
+                # resolve. These are excluded from the activity dict, which
+                # means the affected clinic would otherwise be billed for the
+                # FULL threshold as unused credit (wrong). Surface loudly so
+                # the operator can investigate before generating any files.
+                _orphans = SS.get("recap_opd_orphans") or {"count": 0}
+                if _orphans.get("count"):
+                    fks = ", ".join(str(x) for x in _orphans.get("fk_list", [])[:5])
+                    more = "" if len(_orphans.get("fk_list", [])) <= 5 else f" (+ {len(_orphans['fk_list']) - 5} more)"
+                    st.warning(
+                        f":material/warning: **{_orphans['count']} invoice(s) totaling "
+                        f"${_orphans['total']:,.2f}** reference a clinic ID not in the "
+                        f"current OPD clinic index — these are **excluded from the "
+                        f"activity calc**. If the affected clinic should have been on "
+                        f"this quarter's roster, the recapture amount will be too high "
+                        f"(full threshold billed as unused) and the overage too low. "
+                        f"Orphaned Mendix clinic IDs: `{fks}`{more}. Investigate before "
+                        f"committing this cycle.",
+                        icon=":material/warning:",
                     )
 
             # ── Fallback: manual file upload (gray expander) ──────────────────
@@ -1668,6 +1700,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         "Re-uploading those rows to QBO would duplicate them."
                     )
                 st.divider()
+                ui.persistence_warning()
                 recap_initials = ui.initials_input("stage3_recap_audit_initials")
                 if ui.record_button(
                     f"Mark {len(udf)} recapture invoice(s) as imported",
@@ -1716,6 +1749,14 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             ),
                             "opd_components_mismatch": (
                                 SS.recap_opd_components_mismatch
+                                if SS.recap_data_source == "opd_live" else None
+                            ),
+                            "opd_orphan_count": (
+                                (SS.recap_opd_orphans or {}).get("count", 0)
+                                if SS.recap_data_source == "opd_live" else None
+                            ),
+                            "opd_orphan_total": (
+                                (SS.recap_opd_orphans or {}).get("total", 0.0)
                                 if SS.recap_data_source == "opd_live" else None
                             ),
                         },
@@ -1854,6 +1895,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         ":gray[Initial below **after** you've sent the email above. This logs "
                         "the send to the audit manifest + dedup ledger.]"
                     )
+                    ui.persistence_warning()
                     direct_initials = ui.initials_input("stage3_direct_audit_initials")
                 else:
                     direct_initials = ""
@@ -1921,21 +1963,23 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 else:
                     st.info("No partner-submission rows to send.")
 
-                # Dedup against ledger
+                # Dedup against ledger. build_partner_submission() owns the
+                # column schema — hardcode the column names instead of probing.
+                # Earlier code did `pdf.columns[0]` as a fallback, which silently
+                # resolved to "Finance Partner" (= "OnePlace" for every row),
+                # collapsing every clinic onto a single qb_customer value and
+                # creating fingerprint collisions whenever two clinics in the
+                # batch happened to share the same net overage.
                 partner_payments_for_ledger = []
                 already_partner: list[str] = []
                 if not pdf.empty:
-                    cust_col = "Customer" if "Customer" in pdf.columns else pdf.columns[0]
-                    amt_col = "Amount" if "Amount" in pdf.columns else next(
-                        (c for c in pdf.columns if "amount" in str(c).lower() or "net" in str(c).lower()), None
-                    )
                     partner_payments_for_ledger = [
                         {
                             "kind": "partner_overage",
-                            "contract": str(row[cust_col]),
-                            "qb_customer": str(row[cust_col]),
+                            "contract": str(row["QB Customer"]),
+                            "qb_customer": str(row["QB Customer"]),
                             "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
-                            "amount": float(row[amt_col]) if amt_col else 0.0,
+                            "amount": float(row["Net Overage to Submit"]),
                         }
                         for _, row in pdf.iterrows()
                     ]
@@ -1958,6 +2002,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         ":gray[Initial below **after** you've sent the email above. This logs "
                         "the send to the audit manifest + dedup ledger.]"
                     )
+                    ui.persistence_warning()
                     partner_initials = ui.initials_input("stage3_partner_audit_initials")
                 else:
                     partner_initials = ""
@@ -2039,7 +2084,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                   "w_recap_file", "w_recap_offsets_editor",
                   "recap_opd_activity", "recap_opd_raw_rows", "recap_opd_fetched_at",
                   "recap_opd_invoice_count", "recap_opd_clinic_count",
-                  "recap_opd_components_mismatch"):
+                  "recap_opd_components_mismatch", "recap_opd_orphans"):
             SS.pop(k, None)
         # Default the next run back to the live-fetch path
         SS.recap_data_source = "opd_live"

@@ -5,6 +5,7 @@ are inlined.
 from __future__ import annotations
 
 import datetime as dt
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -179,6 +180,74 @@ def test_components_match_fails_on_void_shell():
     sub, cr, oc, mc, ad, tot = 0.0, 0.0, 0.0, 0.0, 4.0, 0.0
     delta = round(tot - (sub - cr - max(oc, mc) + ad), 2)
     assert delta == -4.0
+
+
+# ── INVOICE_COLUMNS schema stability ────────────────────────────────────────
+# ── Namespace drift guard ──────────────────────────────────────────────────
+def test_namespace_validation_accepts_real_atom_feed():
+    """The canonical Mendix Atom shape must pass validation."""
+    opd_api._parse_atom_entries(_ATOM_SAMPLE)  # no raise
+
+
+def test_namespace_validation_rejects_unknown_root():
+    """If Mendix changes the namespace URI in a major upgrade, findall returns
+    zero entries and Stage 3 would silently bill every clinic the full
+    threshold as unused. Loud failure is much safer than silent zero."""
+    drifted = _ATOM_SAMPLE.replace(
+        'http://www.w3.org/2005/Atom',
+        'http://example.com/some-future-namespace',
+    )
+    with pytest.raises(RuntimeError, match="Unexpected OData response root"):
+        opd_api._parse_atom_entries(drifted)
+
+
+def test_namespace_validation_rejects_non_atom_response():
+    """A response that isn't an Atom feed at all (e.g. an HTML error page from
+    a misconfigured Mendix proxy) should fail loudly, not return zero rows."""
+    html_error = '<html><body>Service Unavailable</body></html>'
+    with pytest.raises((RuntimeError, ET.ParseError)):
+        opd_api._parse_atom_entries(html_error)
+
+
+# ── Orphan invoice tracking ──────────────────────────────────────────────────
+def _df_from(rows):
+    import pandas as pd
+    return pd.DataFrame(rows, columns=opd_api.INVOICE_COLUMNS)
+
+
+def test_split_activity_no_orphans():
+    df = _df_from([
+        {"clinic_name": "Abell", "invoice_clinic_fk": 1, "total_price": 100.0},
+        {"clinic_name": "Beta",  "invoice_clinic_fk": 2, "total_price": 200.0},
+    ])
+    activity, _, orphans = opd_api._split_activity_and_orphans(df)
+    assert activity == {"abell": 100.0, "beta": 200.0}
+    assert orphans == {"count": 0, "total": 0.0, "fk_list": []}
+
+
+def test_split_activity_with_orphans_surfaces_them():
+    """Rows whose Invoice_Clinic FK didn't resolve to a clinic_name should be
+    EXCLUDED from the activity dict (otherwise the unknown clinic key would
+    confuse downstream matching) AND reported in the orphans summary."""
+    df = _df_from([
+        {"clinic_name": "Abell", "invoice_clinic_fk": 1, "total_price": 100.0},
+        {"clinic_name": None,    "invoice_clinic_fk": 999, "total_price": 500.0},
+        {"clinic_name": None,    "invoice_clinic_fk": 888, "total_price": 50.0},
+        {"clinic_name": None,    "invoice_clinic_fk": 999, "total_price": 25.0},  # same FK twice
+    ])
+    activity, _, orphans = opd_api._split_activity_and_orphans(df)
+    assert activity == {"abell": 100.0}
+    assert orphans["count"] == 3
+    assert orphans["total"] == 575.0
+    assert orphans["fk_list"] == [888, 999]  # deduped + sorted
+
+
+def test_split_activity_empty_input():
+    import pandas as pd
+    df = pd.DataFrame(columns=opd_api.INVOICE_COLUMNS)
+    activity, _, orphans = opd_api._split_activity_and_orphans(df)
+    assert activity == {}
+    assert orphans == {"count": 0, "total": 0.0, "fk_list": []}
 
 
 # ── INVOICE_COLUMNS schema stability ────────────────────────────────────────

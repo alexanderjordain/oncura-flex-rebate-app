@@ -276,3 +276,49 @@ def test_billing_worksheet_excludes_zero_net_and_partner_routes():
 def test_billing_worksheet_columns_pinned():
     df = flex_overage.build_direct_billing_worksheet([], 2026, 6, CFG)
     assert list(df.columns) == flex_overage.DIRECT_BILLING_WORKSHEET_COLUMNS
+
+
+# ── build_partner_submission schema is the contract for ledger dedup ─────────
+#
+# Stage 3's _partner_block reads "QB Customer" and "Net Overage to Submit"
+# from this DataFrame to fingerprint partner-submission rows into the dedup
+# ledger. If either column name changes, every OnePlace clinic in a cycle
+# would collide on a single fingerprint — corrupting the audit trail and
+# silently allowing double-submission on a re-run.
+
+
+def test_partner_submission_has_qb_customer_column():
+    rows = [
+        {"finance_company": "OnePlace", "clinic_name": "Partner Vet",
+         "qb_name": "Partner Vet QB", "contract_oneplace": "OPC-1",
+         "quarterly_threshold": 5700.0, "quarter_activity": 6500.0,
+         "overage": 800.0},
+    ]
+    annotated = flex_overage.annotate_overages(
+        rows, 2026, 6, dt.date(2026, 7, 3), CFG,  # before cutoff → partner
+    )
+    df = flex_overage.build_partner_submission(annotated, 2026, 6)
+    assert "QB Customer" in df.columns
+    assert "Net Overage to Submit" in df.columns
+    assert df.iloc[0]["QB Customer"] == "Partner Vet QB"
+    assert df.iloc[0]["Net Overage to Submit"] == 800.0
+
+
+def test_partner_submission_first_column_is_finance_partner_not_customer():
+    """Regression-pin: the column ORDER matters because earlier ledger code
+    used `pdf.columns[0]` as a customer-name fallback. If "Customer" was ever
+    missing (which it always is — the column is "QB Customer"), the fallback
+    silently picked "Finance Partner", collapsing every clinic onto the
+    string "OnePlace". This test pins the order so future schema edits don't
+    bring that footgun back."""
+    rows = [
+        {"finance_company": "OnePlace", "clinic_name": "X",
+         "qb_name": "X QB", "contract_oneplace": "OPC-1",
+         "quarterly_threshold": 1.0, "quarter_activity": 10.0, "overage": 9.0},
+    ]
+    annotated = flex_overage.annotate_overages(rows, 2026, 6, dt.date(2026, 7, 3), CFG)
+    df = flex_overage.build_partner_submission(annotated, 2026, 6)
+    assert df.columns[0] == "Finance Partner"
+    # And "Customer" is NOT a column — so any code probing for it must fall
+    # back explicitly to "QB Customer", not to columns[0].
+    assert "Customer" not in df.columns

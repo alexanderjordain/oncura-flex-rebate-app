@@ -90,12 +90,35 @@ def auth_from_secrets() -> HTTPBasicAuth:
 
 
 # ── Atom XML parsing ───────────────────────────────────────────────────────────
+def _validate_namespaces(root: ET.Element) -> None:
+    """Raise if the response uses unexpected XML namespaces.
+
+    Without this, a Mendix upgrade that renames namespaces would cause
+    findall('a:entry', _ATOM_NS) to silently return zero entries — and
+    Stage 3 would bill every clinic for the full threshold as unused
+    credit (since activity = $0). Loud failure is much safer than a
+    silent multi-thousand-dollar wrong answer.
+    """
+    expected = f"{{{_ATOM_NS['a']}}}feed"
+    if root.tag != expected:
+        raise RuntimeError(
+            f"Unexpected OData response root: {root.tag!r}. Expected "
+            f"{expected!r} (Atom feed). Mendix may have changed the OData "
+            f"service schema or namespace URIs — _ATOM_NS in core/opd_api.py "
+            f"needs updating before this fetch can be trusted."
+        )
+
+
 def _parse_atom_entries(xml_text: str) -> list[dict]:
     """Extract property bags from an Atom feed. Each <entry> -> dict of its
     <m:properties> children. The entry's <id> URL is also captured under
     `_entry_id` so callers can pull internal Mendix IDs.
+
+    Validates the feed's namespaces against `_ATOM_NS` so a Mendix schema
+    drift produces a clear error rather than silently returning zero rows.
     """
     root = ET.fromstring(xml_text)
+    _validate_namespaces(root)
     out: list[dict] = []
     for entry in root.findall("a:entry", _ATOM_NS):
         props = entry.find("a:content/m:properties", _ATOM_NS)
@@ -352,14 +375,45 @@ def flex_activity_for_quarter(
     year: int, end_month: int,
     *,
     auth: HTTPBasicAuth | None = None,
-) -> tuple[dict[str, float], pd.DataFrame]:
+) -> tuple[dict[str, float], pd.DataFrame, dict]:
     """Pull the quarter's invoices live and return:
       - {clinic_lower: TotalPrice sum} (same shape as flex_activity_from_invoices)
-      - The raw DataFrame (for audit + UI display)
+      - The raw DataFrame (for audit + UI display) — INCLUDES orphan rows
+      - Orphan summary: {"count": N, "total": $X, "fk_list": [...]}
+
+    Orphan rows are invoices whose Invoice_Clinic FK doesn't resolve in the
+    clinic_index (e.g., clinic deleted from OPD but old invoices remain). They
+    used to be silently dropped from the activity dict, causing affected
+    clinics to be billed for the FULL quarterly threshold as "unused credit"
+    when in reality they consumed services. Now we keep them visible so the
+    operator can investigate before committing the cycle.
     """
     df = fetch_invoices_for_quarter(year, end_month, auth=auth)
+    return _split_activity_and_orphans(df)
+
+
+def _split_activity_and_orphans(df: pd.DataFrame) -> tuple[dict[str, float], pd.DataFrame, dict]:
+    """Internal: separate clinic-resolved activity from orphan rows.
+
+    Extracted from flex_activity_for_quarter so it's unit-testable without
+    a live HTTP fetch.
+    """
+    empty_orphans = {"count": 0, "total": 0.0, "fk_list": []}
     if df.empty:
-        return {}, df
+        return {}, df, empty_orphans
+
+    orphan_mask = df["clinic_name"].isna()
+    if orphan_mask.any():
+        orphans = {
+            "count": int(orphan_mask.sum()),
+            "total": round(float(df.loc[orphan_mask, "total_price"].sum()), 2),
+            "fk_list": sorted(set(
+                int(fk) for fk in df.loc[orphan_mask, "invoice_clinic_fk"].dropna()
+            )),
+        }
+    else:
+        orphans = empty_orphans
+
     by_clinic = (
         df.dropna(subset=["clinic_name"])
         .assign(_key=lambda d: d["clinic_name"].str.strip().str.lower())
@@ -368,4 +422,4 @@ def flex_activity_for_quarter(
         .round(2)
         .to_dict()
     )
-    return by_clinic, df
+    return by_clinic, df, orphans

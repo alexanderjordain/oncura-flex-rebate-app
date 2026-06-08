@@ -307,6 +307,32 @@ def set_logo():
             pass
 
 
+def persistence_warning() -> None:
+    """Render a warning ABOVE a record button if no GitHub token is configured.
+
+    Without a token, ``store.save_json`` falls back to the local filesystem.
+    On Streamlit Cloud that means the audit manifest + dedup ledger live only
+    in the current session — closing the browser tab loses the dedup state,
+    which can silently allow double-posting to QBO on a re-run.
+
+    The warning surfaces this BEFORE the operator clicks the record button so
+    they can abort and add ``GITHUB_TOKEN`` to Cloud Secrets. (Without this
+    pre-check, the warning only appears AFTER the click, by which time the
+    operator believes they're committed and may close the tab.)
+    """
+    from . import store  # local import to avoid circular dep at module load
+    if store._github_token():
+        return
+    st.warning(
+        ":material/warning: **No `GITHUB_TOKEN` configured** — the dedup "
+        "ledger + audit manifest will be saved to the local filesystem only. "
+        "On Streamlit Cloud this means closing the browser tab loses the "
+        "ledger, and a re-run could double-post to QBO. Add `GITHUB_TOKEN` "
+        "in App → Settings → Secrets before committing this cycle.",
+        icon=":material/warning:",
+    )
+
+
 def record_button(label: str, *, key: str, disabled: bool = False,
                   use_container_width: bool = False, help: str | None = None) -> bool:
     """Render a 'commit-to-the-ledger' button with a light green tint.
