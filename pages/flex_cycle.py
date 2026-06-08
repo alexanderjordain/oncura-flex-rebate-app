@@ -1484,9 +1484,12 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     )
 
             # ── Fallback: manual file upload (gray expander) ──────────────────
+            # Always default closed — the live fetch is the primary path, and an
+            # open fallback panel makes the page feel cluttered before the
+            # operator has clicked anything.
             with st.expander(
                 ":gray[Or upload an OPD export manually (fallback)]",
-                expanded=not live_loaded and not SS.recap_uploaded_bytes,
+                expanded=False,
             ):
                 st.caption(
                     "Use this if the live OPD fetch fails or you're working offline. "
