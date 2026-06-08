@@ -429,28 +429,54 @@ def recapture_email(*, year: int, month: int,
 
 
 def direct_bill_overage_email(*, year: int, month: int,
-                              invoice_count: int, invoice_total: float) -> tuple[str, str]:
-    """FLEX direct-bill overage handoff to accounting (Tanya). One file attached,
-    instructions in the body so the operator doesn't have to manually copy any of
-    this into a separate email.
+                              invoice_count: int, invoice_total: float,
+                              clinic_details: list[dict] | None = None
+                              ) -> tuple[str, str]:
+    """FLEX direct-bill overage handoff to accounting (Tanya).
 
-    The attached xlsx has NO 'Invoice No' column — Tanya generates the QBO invoice
-    numbers herself in SaasAnt during the import wizard.
+    Tanya bills these overages MANUALLY in QBO — the attached xlsx is her
+    working reference (clinic / threshold / activity / credit / net), not a
+    SaasAnt import. SaasAnt is not used for overages today.
+
+    `clinic_details` is the rendered worksheet as a list of dicts (output of
+    flex_overage.build_direct_billing_worksheet().to_dict('records')). Used to
+    produce the inline per-clinic breakdown so Tanya can scan the totals
+    without opening the attachment.
     """
     month_name = dt.date(year, month, 1).strftime("%B")
     subj = f"[Action Required] FLEX Direct-Bill Overage — {month_name} {year}"
     parts = [
         "Hi Tanya,",
         "",
-        f"Direct-bill overage invoices for {month_name} {year} — "
-        f"{invoice_count} invoice(s) totalling ${invoice_total:,.2f}. ",
-        "File attached.",
+        f"Direct-bill overage billing worksheet for {month_name} {year} — "
+        f"{invoice_count} clinic(s) to bill, totalling ${invoice_total:,.2f}.",
+        "File attached (xlsx — your working reference for manual QBO entry).",
+    ]
+
+    if clinic_details:
+        parts += ["", "Per-clinic breakdown:"]
+        for d in clinic_details:
+            parts += [
+                "",
+                f"  - {d.get('Clinic') or d.get('QB Customer')}"
+                f"   (Contract {d.get('Contract #') or '—'},"
+                f" {d.get('Finance Company') or 'No partner'})",
+                f"      Threshold: ${float(d.get('Quarterly Threshold') or 0):,.2f}"
+                f"   |   Quarter activity: ${float(d.get('Quarter Activity') or 0):,.2f}",
+                f"      Credit applied: ${float(d.get('Pre-existing Credit Applied') or 0):,.2f}"
+                f"   |   AMOUNT TO BILL: ${float(d.get('Net Amount to Bill') or 0):,.2f}"
+                + ("   [ESCALATION]" if d.get('Escalation Flag') else ""),
+            ]
+
+    parts += [
         "",
-        "Work order (SOP-6 / SOP-12):",
-        "  1. Upload the attached xlsx to SaasAnt → Bulk Upload → Invoice.",
-        "     The file does NOT contain Invoice Numbers — SaasAnt will assign them",
-        "     fresh from the next available number in QBO.",
-        "  2. Send each clinic an Authorize.net payment link (or QBO invoice PDF).",
+        "Work order (SOP-6 / SOP-12) — manual QBO billing:",
+        "  1. For each clinic above, create a manual invoice in QBO for the"
+        " 'Amount to Bill' shown.",
+        "     Use the 'Suggested QBO Memo' from the worksheet so the line item",
+        "     reads consistently across the batch.",
+        "  2. Send each clinic an Authorize.net payment link (or the QBO",
+        "     invoice PDF) for the same amount.",
         "  3. VOID each QBO invoice immediately after sending — revenue was",
         "     already captured by the OPD invoices, so leaving them open",
         "     overstates AR (SOP-6).",
@@ -458,16 +484,21 @@ def direct_bill_overage_email(*, year: int, month: int,
         "  5. No refunds on FLEX overpayments (SOP-12) — overpayment stays as",
         "     credit for future overages.",
         "",
-        "Reply if anything looks off and I'll re-run the cycle.",
+        "Reply if any clinic looks off and I'll re-run the cycle.",
     ]
     return subj, "\n".join(parts)
 
 
 def partner_submission_email(*, year: int, month: int,
                              clinic_count: int, total: float,
-                             cutoff_date) -> tuple[str, str]:
-    """OnePlace partner-overage submission handoff. Goes to accounting; Tanya
-    forwards (or sends) to OnePlace before the cutoff date.
+                             cutoff_date,
+                             clinic_details: list[dict] | None = None
+                             ) -> tuple[str, str]:
+    """OnePlace partner-overage submission handoff. Tanya forwards the file to
+    OnePlace before the cutoff. `clinic_details` is the rendered partner
+    submission as a list of dicts (output of
+    flex_overage.build_partner_submission().to_dict('records')); used to
+    render the inline per-clinic table.
     """
     month_name = dt.date(year, month, 1).strftime("%B")
     subj = f"[Action Required] OnePlace Partner Submission — {month_name} {year}"
@@ -477,6 +508,21 @@ def partner_submission_email(*, year: int, month: int,
         f"OnePlace partner-overage submission for {month_name} {year} — "
         f"{clinic_count} clinic(s) totalling ${total:,.2f}.",
         "File attached.",
+    ]
+
+    if clinic_details:
+        parts += ["", "Per-clinic breakdown:"]
+        for d in clinic_details:
+            parts += [
+                "",
+                f"  - {d.get('Clinic') or d.get('QB Customer')}"
+                f"   (Contract {d.get('Contract ID') or '—'})",
+                f"      Gross overage: ${float(d.get('Gross Overage') or 0):,.2f}"
+                f"   |   Credit applied: ${float(d.get('Credit Applied') or 0):,.2f}"
+                f"   |   NET TO SUBMIT: ${float(d.get('Net Overage to Submit') or 0):,.2f}",
+            ]
+
+    parts += [
         "",
         f"Work order — must reach OnePlace BEFORE {cutoff_date:%B %d, %Y}:",
         "  1. Forward the attached file to OnePlace (their submissions inbox).",

@@ -186,3 +186,93 @@ def test_build_direct_invoice_only_includes_direct_and_missed():
     assert len(df_post) == 3
     customers = set(df_post["Customer"])
     assert customers == {"Partner Vet", "Missed Vet", "Direct Vet"}
+
+
+# ── build_direct_billing_worksheet — the human-readable Tanya-facing flow ────
+
+
+def _make_annotated_for_worksheet():
+    """Annotated rows with the full threshold/activity/credit context the
+    worksheet surfaces. Mirrors what compute_recapture + annotate_overages
+    produce in Stage 3."""
+    rows = [
+        {"finance_company": "GreatAmerica", "clinic_name": "Direct Vet",
+         "qb_name": "Direct Vet QB", "contract_greatamerica": "GA-999",
+         "quarterly_threshold": 5700.0, "quarter_activity": 8000.0,
+         "overage": 2300.0},
+        {"finance_company": "OnePlace", "clinic_name": "Missed Vet",
+         "qb_name": "Missed Vet QB", "contract_oneplace": "OPC-12345",
+         "quarterly_threshold": 5100.0, "quarter_activity": 6000.0,
+         "overage": 900.0},
+    ]
+    # Post-cutoff: OnePlace -> missed_cutoff -> joins direct flow
+    return flex_overage.annotate_overages(rows, 2026, 6, dt.date(2026, 7, 10), CFG)
+
+
+def test_billing_worksheet_includes_threshold_activity_and_net_owed():
+    annotated = _make_annotated_for_worksheet()
+    df = flex_overage.build_direct_billing_worksheet(annotated, 2026, 6, CFG)
+    assert len(df) == 2
+    direct_row = df[df["Clinic"] == "Direct Vet"].iloc[0]
+    assert direct_row["Quarterly Threshold"] == 5700.0
+    assert direct_row["Quarter Activity"] == 8000.0
+    assert direct_row["Gross Overage"] == 2300.0
+    assert direct_row["Net Amount to Bill"] == 2300.0
+    assert direct_row["Contract #"] == "GA-999"
+    assert direct_row["QB Customer"] == "Direct Vet QB"
+
+
+def test_billing_worksheet_route_reason_distinguishes_missed_cutoff():
+    annotated = _make_annotated_for_worksheet()
+    df = flex_overage.build_direct_billing_worksheet(annotated, 2026, 6, CFG)
+    missed = df[df["Clinic"] == "Missed Vet"].iloc[0]
+    direct = df[df["Clinic"] == "Direct Vet"].iloc[0]
+    assert "missed cutoff" in missed["Route Reason"].lower()
+    assert "missed cutoff" not in direct["Route Reason"].lower()
+    assert "great" in direct["Route Reason"].lower() or "no partner" in direct["Route Reason"].lower()
+
+
+def test_billing_worksheet_applies_credit_offsets():
+    rows = [
+        {"finance_company": "GreatAmerica", "clinic_name": "Has Credit",
+         "qb_name": "Has Credit QB", "contract_greatamerica": "GA-1",
+         "quarterly_threshold": 5700.0, "quarter_activity": 7500.0,
+         "overage": 1800.0},
+    ]
+    annotated = flex_overage.annotate_overages(
+        rows, 2026, 6, dt.date(2026, 7, 10), CFG,
+        credit_offsets={"Has Credit QB": 500.0},
+    )
+    df = flex_overage.build_direct_billing_worksheet(annotated, 2026, 6, CFG)
+    r = df.iloc[0]
+    assert r["Gross Overage"] == 1800.0
+    assert r["Pre-existing Credit Applied"] == 500.0
+    assert r["Net Amount to Bill"] == 1300.0
+
+
+def test_billing_worksheet_excludes_zero_net_and_partner_routes():
+    rows = [
+        # Net is zero after credit -> dropped
+        {"finance_company": "GreatAmerica", "clinic_name": "Fully Credited",
+         "qb_name": "Fully Credited", "overage": 200.0,
+         "quarterly_threshold": 5700.0, "quarter_activity": 5900.0},
+        # OnePlace before cutoff -> partner -> excluded from direct worksheet
+        {"finance_company": "OnePlace", "clinic_name": "Partner Vet",
+         "qb_name": "Partner Vet", "overage": 100.0,
+         "quarterly_threshold": 5700.0, "quarter_activity": 5800.0},
+        # GreatAmerica -> direct -> kept
+        {"finance_company": "GreatAmerica", "clinic_name": "Real Bill",
+         "qb_name": "Real Bill", "overage": 300.0,
+         "quarterly_threshold": 5700.0, "quarter_activity": 6000.0},
+    ]
+    annotated = flex_overage.annotate_overages(
+        rows, 2026, 6, dt.date(2026, 7, 3), CFG,
+        credit_offsets={"Fully Credited": 200.0},  # zeros out
+    )
+    df = flex_overage.build_direct_billing_worksheet(annotated, 2026, 6, CFG)
+    assert list(df["Clinic"]) == ["Real Bill"]
+
+
+def test_billing_worksheet_columns_pinned():
+    df = flex_overage.build_direct_billing_worksheet([], 2026, 6, CFG)
+    assert list(df.columns) == flex_overage.DIRECT_BILLING_WORKSHEET_COLUMNS

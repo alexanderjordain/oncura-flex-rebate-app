@@ -40,6 +40,18 @@ DIRECT_INVOICE_COLUMNS = [
     "Product/Service Rate", "Product/Service Amount", "Product/Service Class", "Terms",
 ]
 
+# Human-readable billing worksheet used in the current operational workflow.
+# Tanya bills overages manually (one QBO invoice per clinic, voided after
+# sending per SOP-6) — this xlsx is her working document, NOT a SaasAnt import.
+# Columns are ordered for readability: identifying info first, then the math
+# trail (threshold -> activity -> credits -> net), then the operational hints.
+DIRECT_BILLING_WORKSHEET_COLUMNS = [
+    "Clinic", "QB Customer", "Finance Company", "Contract #",
+    "Quarter", "Quarterly Threshold", "Quarter Activity",
+    "Gross Overage", "Pre-existing Credit Applied", "Net Amount to Bill",
+    "Suggested QBO Memo", "Route Reason", "Escalation Flag",
+]
+
 
 def _overage_cfg(cfg: dict) -> dict:
     return (cfg.get("flex") or {}).get("overage") or {}
@@ -128,6 +140,61 @@ def build_direct_invoice_import(annotated_rows: list[dict], recap_year: int, rec
         saasant.assert_unique_refs(df["Invoice No"])
     next_ref = (refs[-1] + 1) if refs else start_ref
     return df, next_ref
+
+
+def build_direct_billing_worksheet(annotated_rows: list[dict], recap_year: int,
+                                   recap_month: int, cfg: dict) -> pd.DataFrame:
+    """Human-readable per-clinic billing worksheet for the direct-bill flow.
+
+    Tanya bills these overages manually — one QBO invoice per clinic, send an
+    Authorize.net payment link or PDF, void each QBO invoice immediately after
+    sending (SOP-6: the revenue was already captured by the OPD-side invoice).
+    This worksheet is her working reference; it is NOT a SaasAnt import.
+
+    `build_direct_invoice_import()` produces the SaasAnt-shaped version of the
+    same data and remains available for the day overages are folded into the
+    SaasAnt workflow.
+    """
+    over = _overage_cfg(cfg)
+    memo_template = over.get("direct_invoice_memo_template",
+                             "Telemedicine Overages — {quarter}")
+    quarter_label = f"{dt.date(recap_year, recap_month, 1).strftime('%b %Y')} quarter"
+    memo = memo_template.format(quarter=quarter_label)
+
+    direct = [r for r in annotated_rows
+              if r["route"] in (ROUTE_DIRECT, ROUTE_MISSED_CUTOFF)
+              and float(r["net_overage"]) > 0]
+
+    rows = []
+    for r in direct:
+        contract = (
+            r.get("contract_oneplace")
+            or r.get("contract_newlane")
+            or r.get("contract_greatamerica")
+        )
+        route_reason = (
+            "Partner missed cutoff — direct bill"
+            if r["route"] == ROUTE_MISSED_CUTOFF
+            else f"{r.get('finance_company') or 'No partner'} does not handle overages"
+        )
+        rows.append({
+            "Clinic": r.get("clinic_name") or "",
+            "QB Customer": r.get("qb_name") or r.get("clinic_name") or "",
+            "Finance Company": r.get("finance_company") or "",
+            # Empty string (not None) so DataFrame round-trip doesn't promote to NaN
+            # and render as 'nan' in the email body for clinics without a contract.
+            "Contract #": contract or "",
+            "Quarter": quarter_label,
+            "Quarterly Threshold": round(float(r.get("quarterly_threshold", 0.0) or 0.0), 2),
+            "Quarter Activity": round(float(r.get("quarter_activity", 0.0) or 0.0), 2),
+            "Gross Overage": round(float(r.get("overage", 0.0) or 0.0), 2),
+            "Pre-existing Credit Applied": round(float(r.get("credit_applied", 0.0) or 0.0), 2),
+            "Net Amount to Bill": round(float(r["net_overage"]), 2),
+            "Suggested QBO Memo": memo,
+            "Route Reason": route_reason,
+            "Escalation Flag": "YES" if r.get("escalation_flag") else "",
+        })
+    return pd.DataFrame(rows, columns=DIRECT_BILLING_WORKSHEET_COLUMNS)
 
 
 def build_partner_submission(annotated_rows: list[dict], recap_year: int, recap_month: int) -> pd.DataFrame:

@@ -1262,8 +1262,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 
     SS = st.session_state
     SS.setdefault("recap_step", 0)
-    SS.setdefault("recap_year", today.year)
-    SS.setdefault("recap_month", today.month)
+    # Stage 3 runs the month AFTER the recap month (you're closing out the
+    # month that just ended), so default to today minus one month — same
+    # pattern as Stage 2.
+    _recap_default_month = today.month - 1 or 12
+    _recap_default_year = today.year if today.month > 1 else today.year - 1
+    SS.setdefault("recap_year", _recap_default_year)
+    SS.setdefault("recap_month", _recap_default_month)
     SS.setdefault("recap_sales_class", "03-Telemedicine")
     SS.setdefault("recap_start_ref", 50000)
     SS.setdefault("recap_direct_start", 50000)
@@ -1771,32 +1776,34 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 
             def _direct_block():
                 st.caption(
-                    f"These overages go to **accounting@oncurapartners.com** for direct billing. "
-                    f"Tanya uploads the attached file to SaasAnt (generating fresh QBO invoice "
-                    f"numbers there), sends the invoices, and voids each per **SOP-6**."
+                    f"These overages go to **accounting@oncurapartners.com** for **manual** "
+                    f"billing in QBO. Tanya creates a QBO invoice per clinic, sends an "
+                    f"Authorize.net link / PDF, and voids each invoice immediately after "
+                    f"sending per **SOP-6**. The attached xlsx is her working reference — "
+                    f"NOT a SaasAnt import."
                 )
                 bc1, bc2 = st.columns(2)
-                bc1.metric("Invoices", direct_count)
+                bc1.metric("Clinics to bill", direct_count)
                 bc2.metric("Total", f"${direct_total:,.2f}")
-                # Build the xlsx and strip the Invoice No column — Tanya generates
-                # those in SaasAnt during her import, so the operator doesn't need
-                # to pick a starting reference. The flex_overage builder still
-                # wants a start_ref internally; pass a sentinel since we drop the
-                # column before sending.
-                didf_raw, _unused_next = flex_overage.build_direct_invoice_import(
-                    annotated, rec_year, rec_month, 1, sales_class, cfg_all,
+                # Human-readable billing worksheet (clinic / threshold / activity /
+                # credit / net). This replaces the SaasAnt-shaped invoice import
+                # because Tanya bills these manually today; the SaasAnt builder
+                # remains in flex_overage.py for future use.
+                didf = flex_overage.build_direct_billing_worksheet(
+                    annotated, rec_year, rec_month, cfg_all,
                 )
-                didf = didf_raw.drop(columns=["Invoice No"], errors="ignore")
-                xlsx_bytes = saasant.to_xlsx_bytes(didf, "OverageDirect")
+                xlsx_bytes = saasant.to_xlsx_bytes(didf, "OverageBilling")
                 fname = f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
 
-                # Email handoff to Tanya — file attached, SOP-6 instructions in
-                # the body so she can work the list without anything extra here.
+                # Email handoff to Tanya — worksheet attached, SOP-6 instructions
+                # AND per-clinic detail (threshold/activity/credit/net) in body so
+                # she can scan totals without opening the attachment.
                 if not didf.empty:
                     _subj, _body = accounting_handoff.direct_bill_overage_email(
                         year=rec_year, month=rec_month,
                         invoice_count=len(didf),
                         invoice_total=float(direct_total),
+                        clinic_details=didf.to_dict("records"),
                     )
                     accounting_handoff.render_handoff(
                         _subj, _body, key_prefix="recap_direct_email",
@@ -1812,10 +1819,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     direct_payments_for_ledger = [
                         {
                             "kind": "direct_overage",
-                            "contract": row["Customer"],
-                            "qb_customer": row["Customer"],
-                            "payment_date": row.get("Invoice Date") or f"{rec_year:04d}-{rec_month:02d}-01",
-                            "amount": float(row.get("Product/Service Amount") or row.get("Amount") or 0),
+                            "contract": row["QB Customer"],
+                            "qb_customer": row["QB Customer"],
+                            "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
+                            "amount": float(row.get("Net Amount to Bill") or 0),
                         }
                         for _, row in didf.iterrows()
                     ]
@@ -1896,6 +1903,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         clinic_count=partner_count,
                         total=float(partner_total),
                         cutoff_date=cutoff,
+                        clinic_details=pdf.to_dict("records"),
                     )
                     accounting_handoff.render_handoff(
                         _subj, _body, key_prefix="recap_partner_email",

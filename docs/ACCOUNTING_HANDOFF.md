@@ -60,9 +60,11 @@ Authoritative source for the underlying procedures: `Oncura_Accounting_Master_Re
 ## 3. FLEX — Unused Recapture + Overage Billing (Accounting SOP-5, SOP-6, SOP-12)
 
 **What the app produces** (for clinics whose quarter ENDS in the run-month):
-- **Unused recapture invoices** (file `UnusedFlex_*.xlsx`).
-- **Direct-bill overage invoices** (file `OverageDirect_*.xlsx`) — Great America, NewLane,
-  Self-Financed, and any OnePlace that missed the partner cutoff.
+- **Unused recapture invoices** (file `UnusedFlex_*.xlsx`) — SaasAnt invoice import.
+- **Direct-bill overage billing worksheet** (file `OverageDirect_*.xlsx`) — human-readable
+  per-clinic worksheet (threshold / activity / credit / net to bill). Great America, NewLane,
+  Self-Financed, and any OnePlace that missed the partner cutoff. **Not a SaasAnt import** —
+  Tanya bills these manually in QBO today; see §B.
 - **OnePlace partner submission list** (file `OnePlaceOverage_*.xlsx`) — clinics whose
   overage gets sent to OnePlace to bill on Oncura's behalf.
 
@@ -75,15 +77,39 @@ those produce ONE row per group on the anchor's QB customer.
 1. **SaasAnt → Bulk Upload → Invoice** → unused-flex file.
 2. Verify QBO P&L: Flex Credits line **nets DOWN** by the recapture amount (e.g. from –$69k to –$30k).
 
-### B. Direct-bill overages (SOP-6)
-1. **SaasAnt → Bulk Upload → Invoice** → direct-bill file.
-2. For each clinic invoice:
-   - Send an **Authorize.net payment link** to the clinic (preferred), or email the QBO invoice PDF.
-   - **VOID the QBO invoice immediately after sending.** Revenue was already captured by the OPD
-     invoices; leaving the invoice open overstates AR.
-3. When payment arrives, apply it to zero out the clinic's flex account.
-4. **No refunds** (SOP-12). Apply any overpayment to future overages.
+### B. Direct-bill overages (SOP-6) — manual billing today
+
+The attached `OverageDirect_*.xlsx` is Tanya's working reference, **not** a SaasAnt import. Each
+row shows: Clinic / QB Customer / Finance Company / Contract # / Quarterly Threshold /
+Quarter Activity / Gross Overage / Pre-existing Credit Applied / **Net Amount to Bill** /
+Suggested QBO Memo / Route Reason. The same per-clinic detail is rendered inline in the email
+body so totals are visible without opening the attachment.
+
+1. For each clinic on the worksheet, **manually** create a QBO invoice for the
+   `Net Amount to Bill`. Use the `Suggested QBO Memo` so the line item reads consistently.
+2. Send an **Authorize.net payment link** to the clinic (preferred), or email the QBO invoice PDF.
+3. **VOID the QBO invoice immediately after sending.** Revenue was already captured by the OPD
+   invoices; leaving the invoice open overstates AR.
+4. When payment arrives, apply it to zero out the clinic's flex account.
+5. **No refunds** (SOP-12). Apply any overpayment to future overages.
    Exceptions require **Marty's explicit approval**.
+
+#### Future enhancement: SaasAnt for overages
+
+The `core.flex_overage.build_direct_invoice_import()` helper still exists and produces a
+SaasAnt-shaped invoice import (10 QBO-mappable columns, sequential Ref Nos, deduped via
+`saasant.assert_unique_refs`). It is **not** wired into the live workflow today because
+Tanya bills manually. When the team is ready to fold overages into SaasAnt:
+
+1. Swap the call in `pages/flex_cycle.py::_direct_block()` from
+   `flex_overage.build_direct_billing_worksheet(...)` to `flex_overage.build_direct_invoice_import(...)`.
+2. Restore the "Starting Invoice No" setup field (see `git log` for the prior wiring).
+3. Update `direct_bill_overage_email` step 1 back to the SaasAnt upload instructions.
+4. Keep the void-after-send step — that's a hard SOP-6 rule regardless of how the invoice
+   was created.
+
+The math, routing, and ledger-dedup behavior stay identical between the two paths; only the
+xlsx shape and Tanya's import action differ.
 
 ### C. Finance-partner submission (SOP-12)
 1. Send `OnePlaceOverage_*.xlsx` to OnePlace **before the 5th of the following month**.
