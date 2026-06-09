@@ -367,6 +367,48 @@
       ],
       "note": "Rebate cycle for April 2026 and May 2026",
       "entry_hash": "d155bb8bbcccc282f4b50a7d08fa4a3fa3ecab866712892c78ba9dd7357f7f05"
+    },
+    {
+      "id": "5fb9f276-f052-4dd3-9f0d-1f29a14e64f3",
+      "timestamp": "2026-06-09T16:21:05",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-06-01",
+        "invoice_date": "2026-06-01",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "May 2026 Oncura Pass Thru Billing (1).xlsx",
+        "sha256": "771b6201c469d2cdfe8f418bc63fdff431f6faf0a2e7dd4ba2eb596ea6d9c71b",
+        "size_bytes": 33195
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "a9e19f8834b1f472e70771eb52a78c980bd2c2276dc2d12ba800e81195af9f41",
+          "row_count": 31,
+          "total": 28290.68
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "48fb0f11f3dd78b58595c1b613990b0e5541598fd9ad72a2fce51500220d0fc3",
+          "row_count": 29,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "77e199f2ecd185cd42422e2a0a5687c733d7e2cd778e1df11b1e24011114daa6",
+          "row_count": 29,
+          "total": 9835.0
+        }
+      ],
+      "note": "59 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "febc942d5bda657e856f7b54cefa748b5af9fc6d97480b7c963dfb5dd95fbbca"
     }
   ]
 }
