@@ -1490,8 +1490,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         elif step_key == "upload":
             st.markdown("### Fetch OPD activity")
             st.caption(
-                f"Pulls invoice-level data (net of credits) from OPD for the "
-                f"**{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** window."
+                f"Pulls invoice-level data (net of credits) directly from OPD for "
+                f"**{win_start:%B %d, %Y} – {win_end:%B %d, %Y}**. This is the only "
+                f"supported source — manual exports either price per consult "
+                f"(wrong totals) or ship a partial date range (missing months)."
             )
 
             # ── Primary action: live OData fetch from telehealth.oncurapartners.com
@@ -1540,8 +1542,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     st.error(
                         f"**OPD fetch failed:** `{type(e).__name__}: {e}`\n\n"
                         "Check that OPD_ODATA_USER / OPD_ODATA_PASS are set in Streamlit "
-                        "secrets, then try again. If the issue persists, fall back to the "
-                        "manual upload expander below."
+                        "Cloud secrets, then click the button again. If the OPD OData "
+                        "feed is unreachable, message Alexander — Stage 3 can't be run "
+                        "from any other source. Per-consult exports from the OPD "
+                        "Consults page produce wrong numbers (the local price table "
+                        "doesn't match real OPD billing), and per-month invoice "
+                        "exports almost always miss data from one or more months in "
+                        "the quarter."
                     )
                     with st.expander("Full traceback"):
                         st.code(_tb.format_exc(), language="text")
@@ -1580,76 +1587,39 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         icon=":material/warning:",
                     )
 
-            # ── Fallback: manual file upload (gray expander) ──────────────────
-            # Always default closed — the live fetch is the primary path, and an
-            # open fallback panel makes the page feel cluttered before the
-            # operator has clicked anything.
-            with st.expander(
-                ":gray[Or upload an OPD export manually (fallback)]",
-                expanded=False,
-            ):
-                st.caption(
-                    "Use this if the live OPD fetch fails or you're working offline. "
-                    "Accepts the OPD consult-grid export or the OPD Invoices export "
-                    f"for the **{win_start:%B %d, %Y}** through **{win_end:%B %d, %Y}** "
-                    "window."
-                )
-                with st.expander(":material/help: How to pull the OPD export manually",
-                                 expanded=False):
-                    st.markdown(
-                        """
-1. Go to **[telehealth.oncurapartners.com](https://telehealth.oncurapartners.com)**.
-2. Open **Consults → Completed**.
-3. Filter **Department**: select **Assistance**, **Cardiology**, **Ultrasound**, **General Radiology**, **Point of Care (GlobalFAST)**, and **Internal Medicine**.
-4. Adjust the date range to match the chosen month.
-5. Click **Search**, then **Export to Excel**.
-6. Upload the exported file below.
-                        """
-                    )
-                rec_up = st.file_uploader(
-                    "OPD activity export",
-                    type=["csv", "xlsx", "xls"],
-                    key="w_recap_file",
-                )
-                if rec_up is not None:
-                    # Force a rerun on new upload so the top-of-tab pipeline picks it up
-                    # immediately (otherwise the first render sees stale state).
-                    is_new = (rec_up.name != SS.get("recap_uploaded_name")
-                              or SS.get("recap_uploaded_bytes") is None)
-                    SS.recap_uploaded_bytes = rec_up.getvalue()
-                    SS.recap_uploaded_name = rec_up.name
-                    # File-upload path wins — clear any prior live-fetch state.
-                    SS.recap_data_source = "file"
-                    SS.recap_opd_activity = None
-                    SS.recap_opd_raw_rows = None
-                    if is_new:
-                        st.rerun()
-                    st.success(
-                        f"Uploaded: **{rec_up.name}**  "
-                        f"({len(SS.recap_uploaded_bytes) // 1024:,} KB)"
-                    )
-                elif SS.recap_uploaded_bytes:
-                    st.info(
-                        f"Previously uploaded: **{SS.recap_uploaded_name}** — "
-                        "re-upload to replace, or click Next to continue."
-                    )
+            # Manual-upload fallback intentionally removed (2026-06-09).
+            # The OPD Consults export is per-CONSULT and is priced via our
+            # local service_prices.json — which doesn't match real OPD billing,
+            # so Stage 3 numbers computed off that source are always wrong.
+            # The OPD Invoices export IS shape-compatible with what live OData
+            # returns, but the operator-applied date filter on the OPD UI is a
+            # reliable way to ship a partial-quarter file (that's exactly what
+            # caused JW's 2026-06-09 incident — a May-only file produced 35
+            # inflated unused-recapture invoices). Live OPD pull always reads
+            # the full quarter window directly via OData, so it's the only
+            # path Stage 3 supports. If the OData feed is unreachable, fix
+            # that upstream — don't paper over with a file upload.
 
-            # Error display for whichever path is in use
+            # Error display when the OPD fetch failed
             if SS.get("recap_pipe_error"):
                 st.error(
-                    f"**Could not process the source:**  `{SS['recap_pipe_error']}`\n\n"
-                    "If using OPD live, retry the fetch. If using a manual upload, "
-                    "try a different export file."
+                    f"**Could not process the OPD response:**  `{SS['recap_pipe_error']}`\n\n"
+                    "Click the fetch button again to retry. If the error persists, "
+                    "message Alexander — the OData feed or our integration may need "
+                    "attention."
                 )
                 if SS.get("recap_pipe_traceback"):
                     with st.expander("Full traceback (share this if asking for help)"):
                         st.code(SS["recap_pipe_traceback"], language="text")
 
-            # Soft prompt when neither source is loaded
+            # Soft prompt when the OPD pull hasn't been run yet
             if not pipe and not SS.get("recap_pipe_error"):
                 st.warning(
-                    "Fetch the quarter from OPD (button above) or upload an export "
-                    "manually (expander below) to continue."
+                    ":material/info: Click **Fetch quarter from OPD** above to load "
+                    "the full quarter window. Stage 3 only accepts data from the "
+                    "live OPD feed — per-consult exports and partial-month files "
+                    "produce wrong numbers and are not supported.",
+                    icon=":material/info:",
                 )
 
             if pipe:
@@ -1658,12 +1628,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     if c.get("active") and flex_unused.is_quarter_end(c.get("calendar_spread"), rec_month)
                 )
                 pm1, pm2 = st.columns(2)
-                pm1.metric(
-                    "Source",
-                    {"opd_live": "OPD (live)", "case_grid": "case grid (file)",
-                     "odata": "OData invoices (file)", "generic": "generic (file)"}.get(
-                        pipe["profile"], pipe["profile"]),
-                )
+                pm1.metric("Source", "OPD (live)")
                 pm2.metric(
                     "Qualifying for this month",
                     f"{len(rdf)} / {total_qualifying}",
@@ -2237,12 +2202,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     next_blocked_reason = ""
     if step_key == "upload" and pipe is None:
         can_next = False
-        # Distinct messages so the operator knows whether they need to fetch
-        # vs. retry after a parse error.
         if SS.get("recap_pipe_error"):
-            next_blocked_reason = "Source could not be processed — see error above."
+            next_blocked_reason = "OPD fetch failed — retry the button above."
         else:
-            next_blocked_reason = "Fetch from OPD or upload a file before continuing."
+            next_blocked_reason = "Fetch the quarter from OPD before continuing."
 
     # Single nav row: [◀ Set up new cycle]  [blocked reason]  [← Back]  [Next →]
     # The reset, Back, and Next live on the same horizontal plane so the
