@@ -552,6 +552,25 @@
       ],
       "note": "Rebate cycle for April 2026 and May 2026",
       "entry_hash": "037e889460d13fa79f78434d0824ed29ce2ae9dfc527cb0b5e8e4f5e6810837c"
+    },
+    {
+      "id": "ee875fc7-71c1-42f9-8dd0-a5c0cd8da5cc",
+      "timestamp": "2026-06-09T18:27:16",
+      "cycle_type": "settings_save",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "change": "supersede_stage3_recapture",
+        "superseded_entry_id": "5d4af8e8-9e57-4e25-b7a5-73eff5e95b31",
+        "reason": "Source file was a May-only export, not the full Mar-May quarter window Stage 3 requires. Each clinic's activity was undercounted by ~2/3 of its real quarter activity, producing inflated unused recapture invoices (35 rows, $150,027) and wholly missing the direct-bill overages for 14 clinics. Specific example: Abell Animal Hospital was billed $3,095 unused but actually had $278.29 overage.",
+        "ledger_rows_removed": 35,
+        "ledger_total_removed": 150027.0
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "Superseded stage3_recapture entry 5d4af8e8 (JW, 2026-06-09T18:55:43). Removed 35 unused_invoice ledger rows so the corrected re-run (via OData live, default path) is not blocked by dedup. Operator (Tanya) voids the 35 corresponding QBO invoices manually.",
+      "entry_hash": "948f3c6b7346b55938ee6f88850fb6633a9053cda74e7b8be5ce8f278a1c29d6"
     }
   ]
 }

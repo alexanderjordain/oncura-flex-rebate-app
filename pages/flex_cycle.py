@@ -1375,11 +1375,16 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 )
             else:
                 activity = opd_adapter.flex_activity_from_invoices(rec_raw, start=win_start, end=win_end)
+            # Coverage check — was the file actually exported for the full quarter
+            # window, or did the operator filter to a single month at the source?
+            # Stored in pipe so the Review step can warn loudly.
+            upload_coverage = opd_adapter.detect_upload_date_coverage(rec_raw, rec_profile)
             recap = flex_unused.compute_recapture(
                 flex_clinics, activity, rec_year, rec_month,
                 ledger_payments_for_quarter=ledger_payments_for_quarter,
             )
-            pipe = {"profile": rec_profile, "activity": activity, "recap": recap}
+            pipe = {"profile": rec_profile, "activity": activity, "recap": recap,
+                    "upload_coverage": upload_coverage}
         except Exception as e:
             import traceback as _tb
             SS["recap_pipe_error"] = f"{type(e).__name__}: {e}"
@@ -1669,6 +1674,46 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         elif step_key == "review":
             st.markdown("### Review activity")
             st.caption("What the app found in the uploaded export. Sanity-check before generating files.")
+
+            # Partial-upload guard — fires on the file-upload path when the
+            # file's date column doesn't span the full quarter. This is the
+            # exact failure mode that produced JW's 2026-06-09 incident:
+            # operator filtered to a single month at the OPD source, the
+            # file parsed cleanly, but every clinic's quarter activity was
+            # ~1/3 of reality → 35 inflated unused-recapture invoices +
+            # 14 missed overages, including Abell ($3,095 unused billed
+            # when actual was $278.29 overage).
+            _coverage = (pipe or {}).get("upload_coverage") or {}
+            if pipe and SS.recap_data_source != "opd_live" and _coverage.get("date_col"):
+                expected_months = set()
+                _cur = win_start
+                while _cur <= win_end:
+                    expected_months.add((_cur.year, _cur.month))
+                    _ny, _nm = (_cur.year + 1, 1) if _cur.month == 12 else (_cur.year, _cur.month + 1)
+                    _cur = dt.date(_ny, _nm, 1)
+                covered = _coverage.get("months_covered") or set()
+                missing = expected_months - covered
+                if missing:
+                    missing_labels = ", ".join(
+                        dt.date(y, m, 1).strftime("%b %Y")
+                        for y, m in sorted(missing)
+                    )
+                    obs_min = _coverage.get("min_date")
+                    obs_max = _coverage.get("max_date")
+                    st.error(
+                        f":material/priority_high: **Uploaded file appears to be a "
+                        f"partial-quarter export.** Stage 3 needs the full window "
+                        f"**{win_start:%b %d, %Y} – {win_end:%b %d, %Y}**, but the "
+                        f"file's `{_coverage['date_col']}` column only contains data "
+                        f"from **{obs_min:%b %d, %Y} – {obs_max:%b %d, %Y}**. "
+                        f"Missing month(s): **{missing_labels}**.  \n\n"
+                        f"Every clinic's quarter activity will be undercounted, "
+                        f"producing inflated unused-recapture invoices and hiding "
+                        f"legitimate overages. **Re-export with the date filter set "
+                        f"to the full quarter, or use the live OPD fetch button above** "
+                        f"(it always pulls the full window automatically).",
+                        icon=":material/priority_high:",
+                    )
 
             # Roster-vs-ledger mismatch warnings — surface BEFORE the metrics
             # so the operator sees them first. Two flavors:

@@ -400,6 +400,46 @@ _INVOICE_FIELDS = {
 }
 
 
+def detect_upload_date_coverage(df: pd.DataFrame, profile: str) -> dict:
+    """Inspect a parsed Stage 3 upload's date column and return its coverage.
+
+    Used by the Stage 3 file-upload path to flag the "operator filtered to one
+    month at the source" failure mode — the file was opened and parsed cleanly
+    but its date column only spans a partial quarter, which means every
+    clinic's quarter activity is undercounted. That undercounting silently
+    inflates the unused-recapture totals and hides legitimate overages.
+
+    Returns: {"min_date", "max_date", "months_covered" (set of (year,month)),
+              "span_days", "date_col"} or {"date_col": None} when no
+    recognized date column is present (skip the check rather than alarm).
+    """
+    candidates = {
+        "case_grid": ["Finalized Date", "Submitted", "Finalized"],
+        "odata": ["InvoiceDate", "Invoice Date", "invoice_date"],
+        "generic": ["InvoiceDate", "Invoice Date", "Date", "invoice_date", "Finalized Date"],
+    }.get(profile, ["Date", "InvoiceDate", "Finalized Date"])
+
+    date_col = next((c for c in candidates if c in df.columns), None)
+    if date_col is None:
+        return {"date_col": None}
+
+    dates = pd.to_datetime(df[date_col], errors="coerce").dropna()
+    if dates.empty:
+        return {"date_col": date_col, "min_date": None, "max_date": None,
+                "months_covered": set(), "span_days": 0}
+
+    min_d = dates.min().date()
+    max_d = dates.max().date()
+    months = {(d.year, d.month) for d in dates}
+    return {
+        "date_col": date_col,
+        "min_date": min_d,
+        "max_date": max_d,
+        "months_covered": months,
+        "span_days": (max_d - min_d).days + 1,
+    }
+
+
 def flex_activity_from_invoices(df: pd.DataFrame, start=None, end=None, flex_only=False) -> dict:
     """Total OPD telemedicine activity (Subtotal + Admin Fee) per clinic over [start, end].
 

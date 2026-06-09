@@ -133,3 +133,56 @@ def test_multi_case_aggregation_with_mixed_priorities():
     # 2 ultrasound rows + 1 STAT-fee row = 3 rows total
     assert len(out) == 3
     assert round(out["amount"].sum(), 2) == 135.0 + 135.0 + 125.0   # 395
+
+
+# ── detect_upload_date_coverage (Guardrail A) ────────────────────────────────
+
+
+def test_coverage_returns_none_when_no_date_column():
+    df = pd.DataFrame([{"Clinic": "X", "Amount": 100}])
+    out = opd_adapter.detect_upload_date_coverage(df, profile="odata")
+    assert out["date_col"] is None
+
+
+def test_coverage_full_quarter_invoice_export():
+    """A proper full-quarter OData Invoice export spans 3 calendar months."""
+    df = pd.DataFrame({
+        "InvoiceDate": ["2026-04-01T04:00:00Z",  # March bill (rollover)
+                        "2026-05-01T04:00:00Z",  # April bill
+                        "2026-06-01T04:00:00Z"], # May bill
+        "ClinicName": ["A", "B", "C"],
+    })
+    out = opd_adapter.detect_upload_date_coverage(df, profile="odata")
+    assert out["date_col"] == "InvoiceDate"
+    assert len(out["months_covered"]) == 3
+
+
+def test_coverage_may_only_upload_is_partial():
+    """The exact failure mode that caused JW's 2026-06-09 incident:
+    file contains only the May rollover (UTC dates land in June), so the
+    months_covered set has just one element instead of three."""
+    df = pd.DataFrame({
+        "InvoiceDate": ["2026-06-01T04:00:00Z", "2026-06-01T04:00:05Z"],
+        "ClinicName": ["A", "B"],
+    })
+    out = opd_adapter.detect_upload_date_coverage(df, profile="odata")
+    assert len(out["months_covered"]) == 1
+    assert out["span_days"] <= 1  # all on same day
+
+
+def test_coverage_case_grid_uses_finalized_date():
+    df = pd.DataFrame({
+        "Finalized Date": ["2026-03-15", "2026-04-20", "2026-05-30"],
+        "Clinic": ["A", "B", "C"],
+    })
+    out = opd_adapter.detect_upload_date_coverage(df, profile="case_grid")
+    assert out["date_col"] == "Finalized Date"
+    assert len(out["months_covered"]) == 3
+
+
+def test_coverage_handles_empty_dates_gracefully():
+    """All-NaN date column shouldn't crash — return an empty coverage report."""
+    df = pd.DataFrame({"InvoiceDate": [None, None, None], "ClinicName": ["A", "B", "C"]})
+    out = opd_adapter.detect_upload_date_coverage(df, profile="odata")
+    assert out["months_covered"] == set()
+    assert out["span_days"] == 0
