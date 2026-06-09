@@ -138,7 +138,7 @@ Run linearly. Each section ends with the file or area in the app it exercises. S
 
 ### 4.3 Variance gate
 - **Scenario:** OPD export has a `RadCash` feed column with values disagreeing with rate × `RadFin`.
-- **Setup:** OPD invoices export with a clinic whose self-funded rads rate is 2% but feed populates `RadCash` at e.g., 4% of `RadFin` (or just an off-by-$5 mismatch).
+- **Setup:** OPD invoices export with a clinic whose self-funded rads rate is 4% but feed populates `RadCash` at e.g., 5% of `RadFin` (or just an off-by-$5 mismatch).
 - **Action:** Step 3 review.
 - **Expected:** `Rate vs feed variance` expander listing month, clinic, rate-based, feed-based, variance (delta > $1). Review-ack required. `Next ▶` disabled.
 - **What it tests:** `rebate_calc.calculate` variance computation + surfacing.

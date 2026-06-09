@@ -1,9 +1,12 @@
 """Coverage for rebate_calc.calculate — the dollar engine.
 
-Every cycle's payout flows through this. The 2% self-funded rads decision
-(CLAUDE.md "Key decisions") has no regression test today. Exclusions
-(stat/assistance/non_ema/cancellation/overage) need to stay out of the
-rebatable base.
+Every cycle's payout flows through this. Tests are parametric — they pass
+explicit rates into _master() and verify the math, so they remain valid
+across rate-scheme changes. The current production scheme (2026-06-09):
+ultrasound 10% finance / 8% self-funded; rads 5% finance / 4% self-funded.
+
+Exclusions (stat/assistance/non_ema/cancellation/overage) need to stay
+out of the rebatable base — covered by the exclusion tests below.
 """
 import pandas as pd
 import pytest

@@ -2,10 +2,10 @@
   "version": 1,
   "source": "Rebate Accounts Copy.xlsx :: 'Rebate Names' tab",
   "rate_defaults": {
-    "ultrasound_self_funded": 0.05,
     "ultrasound_finance": 0.1,
-    "rads_self_funded": 0.02,
-    "rads_finance": 0.04
+    "ultrasound_self_funded": 0.08,
+    "rads_finance": 0.05,
+    "rads_self_funded": 0.04
   },
   "clinics": [
     {
@@ -14,7 +14,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -24,8 +24,8 @@
       "legal_name": "Abbott Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -35,8 +35,8 @@
       "legal_name": "Ableson Veterinary Services",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -47,7 +47,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -58,7 +58,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -68,8 +68,8 @@
       "legal_name": "All Kinds Veterinary Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -80,7 +80,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -91,7 +91,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -102,7 +102,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -113,7 +113,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -124,7 +124,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -135,7 +135,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -146,7 +146,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -156,8 +156,8 @@
       "legal_name": "Castle Rock Pet Doc Sun City",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -168,7 +168,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -178,8 +178,8 @@
       "legal_name": "CityVet Mid-Cities",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -189,8 +189,8 @@
       "legal_name": "Coast Equine Veterinary Services dba Coast Veterinary Services",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -201,7 +201,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -212,7 +212,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -222,8 +222,8 @@
       "legal_name": "Countryside Veterinary Clinic",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -234,7 +234,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -245,7 +245,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -256,7 +256,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -267,7 +267,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -277,8 +277,8 @@
       "legal_name": "El Paseo Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -289,7 +289,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -299,8 +299,8 @@
       "legal_name": "Family Friends Veterinary Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -311,7 +311,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -322,7 +322,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -332,8 +332,8 @@
       "legal_name": "Gardner Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -344,7 +344,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -355,7 +355,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -366,7 +366,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -376,8 +376,8 @@
       "legal_name": "Rohan & Harper PC DBA Harris Hill Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -388,7 +388,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -399,7 +399,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -409,8 +409,8 @@
       "legal_name": "HARTMANN VETERINARY SERVICES dba Klein Animal Clinic, Inc.",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -420,8 +420,8 @@
       "legal_name": "Tallman Animal Hospital DBA Lake Wissota Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -432,7 +432,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -443,7 +443,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -454,7 +454,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -465,7 +465,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -476,7 +476,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -486,8 +486,8 @@
       "legal_name": "Metro Vet",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -498,7 +498,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -509,7 +509,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -519,8 +519,8 @@
       "legal_name": "Morningside Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -531,7 +531,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -542,7 +542,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -553,7 +553,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -563,8 +563,8 @@
       "legal_name": "NVA - Lake Meridian Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -574,8 +574,8 @@
       "legal_name": "NVA- BridgeMill Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -586,7 +586,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -597,7 +597,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -608,7 +608,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -618,8 +618,8 @@
       "legal_name": "Olive Pet Med Inc. DBA Olive Tree Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -629,8 +629,8 @@
       "legal_name": "Pet Alliance Wellness Center dba Paw Center & Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -641,7 +641,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -652,7 +652,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -663,7 +663,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -674,7 +674,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -685,7 +685,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -695,8 +695,8 @@
       "legal_name": "Southwest Veterinary Clinic II, PLLC dba Southwest Veterinary Clinic",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -707,7 +707,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -718,7 +718,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -729,7 +729,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -740,7 +740,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -751,7 +751,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -762,7 +762,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -773,7 +773,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -784,7 +784,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -794,8 +794,8 @@
       "legal_name": "TLC For Pets",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -806,7 +806,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -816,8 +816,8 @@
       "legal_name": "TVC - Animal Hospital at Oakleaf Plantation",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -828,7 +828,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -839,7 +839,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -850,7 +850,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -861,7 +861,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -871,8 +871,8 @@
       "legal_name": "TVC-  Plain City Animal Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -883,7 +883,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -894,7 +894,7 @@
       "finance_company": "NewLane Financed",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -904,8 +904,8 @@
       "legal_name": "Valley Veterinary Services dba Valley Veterinary Hospital",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -915,8 +915,8 @@
       "legal_name": "Veterinarian Partners LLC dba Great Lakes Veterinary Clinic",
       "finance_company": "Self-Financed",
       "program_type": "self_funded",
-      "rate_ultrasound": 0.05,
-      "rate_rads": 0.02,
+      "rate_ultrasound": 0.08,
+      "rate_rads": 0.04,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -927,7 +927,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -938,7 +938,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -949,7 +949,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""
@@ -960,7 +960,7 @@
       "finance_company": "OnePlace Capital",
       "program_type": "finance",
       "rate_ultrasound": 0.1,
-      "rate_rads": 0.04,
+      "rate_rads": 0.05,
       "rads_rate_confirmed": true,
       "active": true,
       "notes": ""

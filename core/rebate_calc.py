@@ -4,12 +4,11 @@ Input: normalized OPD lines (see opd_adapter) + rebate master + config.
 Output: per-clinic rebate amounts grouped by finance bucket, matching the layout of the
 existing Rebate Accounts workbook (Self-Funded / OnePlace / NewLane tabs).
 
-Rules (from Rebate_Automation_Plan.md):
+Rules (current rate scheme, decision 2026-06-09):
   - Ultrasound scan reads are rebated at the clinic's ultrasound rate
-    (5% self_funded / 10% finance).
+    (8% self_funded / 10% finance).
   - Excluded from ultrasound: stat, assistance, non_ema, cancellation, overage.
-  - Rads rebated at 4% flat (no exclusions). Self-funded rads is an OPEN QUESTION
-    (Open Question 8) -> flagged per clinic via rads_pending.
+  - Rads rebated at 4% self_funded / 5% finance (no exclusions).
 """
 from __future__ import annotations
 

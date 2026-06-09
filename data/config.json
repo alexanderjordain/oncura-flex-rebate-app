@@ -11,10 +11,10 @@
     ],
     "rads_note": "Rads (radiographs) flat 4% across the board; no exclusions per SOP.",
     "rates": {
-      "ultrasound_self_funded": 0.05,
+      "ultrasound_self_funded": 0.08,
       "ultrasound_finance": 0.1,
-      "rads_self_funded": 0.02,
-      "rads_finance": 0.04
+      "rads_self_funded": 0.04,
+      "rads_finance": 0.05
     }
   },
   "flex": {

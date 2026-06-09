@@ -2,9 +2,12 @@
 the existing Rebate Accounts workbook.
 
 Program type + rates are inferred from the Finance Company column:
-  - 'Self-Financed'                  -> self_funded, ultrasound 5%
-  - 'OnePlace Capital' / 'NewLane*'  -> finance,     ultrasound 10%
-  - rads 4% across the board (self_funded rads is an OPEN QUESTION; flagged per clinic)
+  - 'Self-Financed'                  -> self_funded
+  - 'OnePlace Capital' / 'NewLane*'  -> finance
+
+Rate scheme (set 2026-06-09 by Alexander Jordain):
+  - Ultrasound: 10% finance / 8% self-funded
+  - Rads:       5% finance / 4% self-funded
 
 Usage:
   python scripts/build_rebate_master.py "<path to Rebate Accounts Copy.xlsx>"
@@ -21,10 +24,10 @@ from openpyxl import load_workbook
 DEFAULT_WB = r"C:\Users\AlexanderJordain\OneDrive - Oncura Partners\Rebate Accounts Copy.xlsx"
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "rebate_master.json")
 
-RATE_US_SELF = 0.05
+RATE_US_SELF = 0.08
 RATE_US_FINANCE = 0.10
-RATE_RADS_FINANCE = 0.04
-RATE_RADS_SELF = 0.02  # self-funded rads = half of finance, per OPD feed (decision 2026-05-26)
+RATE_RADS_FINANCE = 0.05
+RATE_RADS_SELF = 0.04
 
 
 def normalize_finance_company(raw: str) -> str:

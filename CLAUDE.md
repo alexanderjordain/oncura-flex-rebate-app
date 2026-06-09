@@ -91,7 +91,7 @@ Source: `OneDrive\...\Oncura_Accounting_Master_Reference-5-28-26.docx` (CFO Mart
 
 ## Key decisions (don't re-litigate without reading the rationale)
 
-- **Self-funded rads rebate = 2%** (matches OPD feed `RadCash = RadFin/2`). Decided 2026-05-26 by Alex. Per-clinic editable in Rebate Master.
+- **Rebate rate scheme (decision 2026-06-09 by Alexander Jordain)**: ultrasound 10% finance / 8% self-funded; rads 5% finance / 4% self-funded. Per-clinic overrides editable in Rebate Master. Previous scheme (2026-05-26 → 2026-06-09): ultrasound 10/5, rads 4/2; the prior "self-funded rads = half of finance, per OPD feed RadCash = RadFin/2" rationale no longer applies — the new rates were set by leadership, not derived from the feed.
 - **STAT priority adds an implicit $125** when no STAT service is in the case row. No admin fees.
 - **OPD prices are flat across all clinics** (no per-clinic discounts modeled). From comp-app's `STD_PRICES`.
 - **OnePlace flex contracts strip the leading zero** in the Ref No / OPDAdd, but scan contracts keep all leading zeros — matches the SaasAnt templates.

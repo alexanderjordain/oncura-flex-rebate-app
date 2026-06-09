@@ -99,15 +99,15 @@ new_us_fin = rc1.number_input(
     min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_us_fin",
 )
 new_us_sf = rc2.number_input(
-    "Ultrasound — self-funded", value=float(rates.get("ultrasound_self_funded", 0.05)),
+    "Ultrasound — self-funded", value=float(rates.get("ultrasound_self_funded", 0.08)),
     min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_us_sf",
 )
 new_rads_fin = rc3.number_input(
-    "Rads — finance", value=float(rates.get("rads_finance", 0.04)),
+    "Rads — finance", value=float(rates.get("rads_finance", 0.05)),
     min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_rads_fin",
 )
 new_rads_sf = rc4.number_input(
-    "Rads — self-funded", value=float(rates.get("rads_self_funded", 0.02)),
+    "Rads — self-funded", value=float(rates.get("rads_self_funded", 0.04)),
     min_value=0.0, max_value=1.0, step=0.005, format="%.4f", key="cfg_rads_sf",
 )
 

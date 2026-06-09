@@ -87,8 +87,8 @@ with tab_clinics:
         auth.require("admin")
 
     st.caption(
-        "Self-funded rads rate is set to 2% (half of the 4% finance rate, per the OPD feed). "
-        "Adjustable per clinic above; can be revisited later."
+        "Current rate scheme (set 2026-06-09): ultrasound 10% finance / 8% self-funded; "
+        "rads 5% finance / 4% self-funded. Per-clinic overrides editable above."
     )
 
 
@@ -118,8 +118,8 @@ with tab_prices:
     with st.expander("What the category field means"):
         st.markdown(
             """
-- **`ultrasound`** — counts toward the **ultrasound rebate** (10% finance / 5% self-funded by default).
-- **`rads`** — counts toward the **rads rebate** (4% finance / 2% self-funded by default).
+- **`ultrasound`** — counts toward the **ultrasound rebate** (10% finance / 8% self-funded by default).
+- **`rads`** — counts toward the **rads rebate** (5% finance / 4% self-funded by default).
 - **`stat`** — STAT priority fees. Not directly rebatable, but the implicit
   $125 STAT fee is added when STAT-priority cases have no STAT line.
 - **`assistance`** — case-prep / assist fees (e.g., abdominal assist). Excluded
