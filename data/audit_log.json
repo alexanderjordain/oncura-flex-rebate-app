@@ -506,6 +506,52 @@
       "outputs": [],
       "note": "Rebate rate scheme changed by Alexander Jordain (commit 0b62451). The 3 prior rebate_report entries listed in params.superseded_rebate_report_ids were calculated at the OLD scheme and are superseded — the rebate for Apr+May 2026 will be re-run at the new scheme. Prior entries remain in the log unmodified for the audit trail; this entry documents the supersession.",
       "entry_hash": "8197a4abcf8a2ef36c1d809a95676645501f9de91c595ae63ac7df231f5e3928"
+    },
+    {
+      "id": "b3d1e474-59f9-4544-894f-12d6c791a17b",
+      "timestamp": "2026-06-09T22:43:48",
+      "cycle_type": "rebate_report",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "months": [
+          "2026-04",
+          "2026-05"
+        ],
+        "period_label": "April 2026 and May 2026",
+        "buckets": [
+          "NewLane Financed",
+          "Self-Financed",
+          "OnePlace Capital"
+        ],
+        "n_clinics": 87,
+        "per_bucket_totals": {
+          "NewLane Financed": 1295.8,
+          "Self-Financed": 1455.5,
+          "OnePlace Capital": 4197.78
+        },
+        "grand_total": 6949.08,
+        "fuzzy_match_decisions": {
+          "confirmed": 1,
+          "rejected": 0
+        }
+      },
+      "source_file": {
+        "name": "export_grid_557a6b2e-0d83-4e41-9388-8ea47649bfbb.xls",
+        "sha256": "8d83bb3735ca109c702838adce22bffe51eff2e0ac17de9b883a25875f7513d1",
+        "size_bytes": 1564160
+      },
+      "outputs": [
+        {
+          "name": "Rebates_Apr_2026_and_May_2026.xlsx",
+          "sha256": "ce035cac2171cf271cfbe6b2faec5b49a737b2802321b1a864012929450e8739",
+          "row_count": 87,
+          "total": 6949.08
+        }
+      ],
+      "note": "Rebate cycle for April 2026 and May 2026",
+      "entry_hash": "037e889460d13fa79f78434d0824ed29ce2ae9dfc527cb0b5e8e4f5e6810837c"
     }
   ]
 }
