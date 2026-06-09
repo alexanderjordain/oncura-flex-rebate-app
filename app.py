@@ -39,6 +39,7 @@ pages = {
     ],
     "Pass-Through Payments": [
         st.Page("pages/flex_cycle.py", title="Payment Cycle"),
+        st.Page("pages/flex_master.py", title="Clinic Roster"),
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
@@ -59,6 +60,7 @@ with st.sidebar:
         st.page_link("pages/rebate_master.py", label="Rebate Program Controls")
     with st.expander("Pass-Through Payments", expanded=False):
         st.page_link("pages/flex_cycle.py", label="Payment Cycle")
+        st.page_link("pages/flex_master.py", label="Clinic Roster")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
         st.page_link("pages/settings.py", label="Settings")
