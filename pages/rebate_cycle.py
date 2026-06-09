@@ -696,17 +696,24 @@ elif step_key == "export":
                     note=f"Rebate cycle for {_period_label}",
                 )
                 # Mark THIS hash as recorded in the session so the red banner
-                # flips to green on the rerun below — no need to wait for the
-                # GitHub side to propagate before the UI catches up.
+                # flips to green on the NEXT natural rerun (any user interaction).
+                # We intentionally do NOT call st.rerun() here — a forced rerun
+                # would wipe the success/warning banner below before the user
+                # ever sees it (the bug that prompted this fix). Stage 1/2/3
+                # record buttons in pages/flex_cycle.py follow the same pattern.
                 recorded_hashes.add(output_hash)
                 if ok:
-                    st.success(f"Recorded to audit manifest. Entry ID: `{entry_id[:8]}…`  ·  {info}")
+                    st.success(
+                        f":material/check_circle: **Recorded to audit manifest.** "
+                        f"Entry ID: `{entry_id[:8]}…`  ·  {info}",
+                        icon=":material/check_circle:",
+                    )
                 else:
                     st.warning(
                         f"Recorded locally (no GitHub commit). Entry ID: `{entry_id[:8]}…`  ·  {info}  \n"
-                        "Set `GITHUB_TOKEN` in secrets for persistent audit history on Cloud."
+                        "Set `GITHUB_TOKEN` in secrets for persistent audit history on Cloud.",
+                        icon=":material/warning:",
                     )
-                st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Wizard navigation
