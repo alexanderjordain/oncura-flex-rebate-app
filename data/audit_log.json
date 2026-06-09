@@ -473,6 +473,39 @@
       ],
       "note": "35 new recapture invoice(s); 0 already in ledger",
       "entry_hash": "6c286920e90210f7d9ea7b191014f81c6a4d9f10470d681d367831a5f0b21458"
+    },
+    {
+      "id": "a08b8e57-22a0-465c-8f95-59ded3243a7f",
+      "timestamp": "2026-06-09T17:37:42",
+      "cycle_type": "settings_save",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "change": "rebate_rate_scheme",
+        "prior_scheme": {
+          "ultrasound_finance": 0.1,
+          "ultrasound_self_funded": 0.05,
+          "rads_finance": 0.04,
+          "rads_self_funded": 0.02
+        },
+        "new_scheme": {
+          "ultrasound_finance": 0.1,
+          "ultrasound_self_funded": 0.08,
+          "rads_finance": 0.05,
+          "rads_self_funded": 0.04
+        },
+        "superseded_rebate_report_ids": [
+          "2fe01997-2e19-4023-a8b4-1ea7d60780a7",
+          "1fd083c2-c524-4a62-81a9-d3a1c47b3e7d",
+          "a71230a1-f26c-499e-aab0-b66399b907f7"
+        ],
+        "code_commit": "0b62451"
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "Rebate rate scheme changed by Alexander Jordain (commit 0b62451). The 3 prior rebate_report entries listed in params.superseded_rebate_report_ids were calculated at the OLD scheme and are superseded — the rebate for Apr+May 2026 will be re-run at the new scheme. Prior entries remain in the log unmodified for the audit trail; this entry documents the supersession.",
+      "entry_hash": "8197a4abcf8a2ef36c1d809a95676645501f9de91c595ae63ac7df231f5e3928"
     }
   ]
 }
