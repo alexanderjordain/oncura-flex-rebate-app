@@ -439,6 +439,40 @@
       ],
       "note": "30 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "22bf26e0423834b81de4a3fc2e5f1075fe90b361070570fc2e3f64e1b324d50d"
+    },
+    {
+      "id": "5d4af8e8-9e57-4e25-b7a5-73eff5e95b31",
+      "timestamp": "2026-06-09T18:55:43",
+      "cycle_type": "stage3_recapture",
+      "approver": "JW",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "sales_class": "03-Telemedicine",
+        "start_ref": 50052,
+        "next_ref": 50087,
+        "quarter_window": "2026-03-01..2026-05-31",
+        "source": "file",
+        "opd_invoice_count": null,
+        "opd_components_mismatch": null,
+        "opd_orphan_count": null,
+        "opd_orphan_total": null
+      },
+      "source_file": {
+        "name": "export_grid_8259f46f-7454-4086-8cd7-eaaa22289f9e.xls",
+        "sha256": "62951729ae034f87cfab08164f788ca518c7d1c9f45b79887a16780e94bb29b2",
+        "size_bytes": 775680
+      },
+      "outputs": [
+        {
+          "name": "unused_recapture_invoices",
+          "sha256": "d0465eb373a31c49196800c6689fedcaee7da0268790c7790977221421ba2db3",
+          "row_count": 35,
+          "total": 150027.0
+        }
+      ],
+      "note": "35 new recapture invoice(s); 0 already in ledger",
+      "entry_hash": "6c286920e90210f7d9ea7b191014f81c6a4d9f10470d681d367831a5f0b21458"
     }
   ]
 }
