@@ -325,6 +325,13 @@ def _render_eml_path(subject, body, attachments, key_prefix):
     editable draft in the user's Drafts folder."""
     eml_bytes = _build_eml_bytes(subject, body, TO, attachments)
     safe_subj = "".join(c if c.isalnum() or c in "-_" else "_" for c in subject)[:60]
+    # Reuse the light-green commit-button styling from ui.record_button — the
+    # .eml download is the *primary action* in the no-Graph path (it's the
+    # thing the operator should actually click), so it gets the same green
+    # treatment as Mark-as-imported / Mark-as-generated buttons elsewhere.
+    # The CSS sentinel targets the immediately-following download button.
+    st.markdown('<div class="oncura-record-btn-anchor"></div>',
+                unsafe_allow_html=True)
     st.download_button(
         "Download email draft (.eml)",
         eml_bytes,
