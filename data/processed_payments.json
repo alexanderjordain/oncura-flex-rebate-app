@@ -55,6 +55,14 @@
       "uploaded_at": "2026-06-09T16:21:04",
       "row_count": 60,
       "note": "Stage 1 / OnePlace / pay_date=2026-06-01"
+    },
+    {
+      "sha256": "d67826e45163b2aeb2aaf20c68175fb759a7e3ee61d6603f0d16984e4ec87780",
+      "filename": "Remittance Detail Downloadable.csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-09T17:20:49",
+      "row_count": 30,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-06-01"
     }
   ],
   "payments": [
@@ -2607,6 +2615,306 @@
       "payment_date": "2026-06-01",
       "amount": 395.0,
       "recorded_at": "2026-06-09T16:21:04"
+    },
+    {
+      "fingerprint": "9de3359dfd2a1081e23ae94c86368d346ac93129de9b7de722fb45c6466b849b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732700",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-06-01",
+      "amount": -804.56,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "a1bbb9bac6da733762d3341ca52f7d283207b2773c70e17082f1f3b6f3261e3a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41966728",
+      "qb_customer": "Allen Veterinary Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "1e48bf1d5494de6facc69c86bcb14d0facf6ffcef0c8b1f0e55ecd9c8ddcdf63",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41968755",
+      "qb_customer": "Clinica Veterinaria Acuario",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "9186fb68ed6b3e8a796a11b94c4ab9c2ec5a0bac3c60e7c34ffb00a12a5d4eb8",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41975581",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "16523b4050535d7c0100110b31bd3e5066c06db2e848bc44b380df08c148f22a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41975988",
+      "qb_customer": "TVC - Harborside Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 928.64,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "e4f295e45ae25c0046eadddc03237e6ecfe67e9fe6d6cc73c8a2c83ba30d4ed1",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41976226",
+      "qb_customer": "Delmar Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 794.29,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "ba9e00553372f2d9979c053e72cce89ff0bc26e62bced7dbc1f092276ab0ee68",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41977835",
+      "qb_customer": "Galloway Village Veterinary",
+      "payment_date": "2026-06-01",
+      "amount": 896.98,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "2e450f31c2c8ea3d876116deebe0c33f364672cc4c065cb4400e787f174664ff",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41981977",
+      "qb_customer": "State Line Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 896.98,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "6948e6630b5767d31f09bad3de0938ec8f0f4e4df05c8cd2a4fb6b8a581e4743",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41982323",
+      "qb_customer": "TLC Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 896.98,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "6fdd6263c4d938aa37db6c2ff0048af422cdcef31c756b28227ed4f89e77c686",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983322",
+      "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
+      "payment_date": "2026-06-01",
+      "amount": 1000.69,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "e73b226557552eb110da17379ade3910cd7531959a5d16dd6097a8b332fb2ec6",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983360",
+      "qb_customer": "West Charleston Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 1235.08,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "b2091fd6ea195f9f9337d438dcfdcf2d92ff0c0daaf1e72f8a13da24ebd59f1a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983385",
+      "qb_customer": "Crossroads Animal Hospital TX",
+      "payment_date": "2026-06-01",
+      "amount": 939.08,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "f6fc7029c53ed3bba71ec449bc03f5d1fb1372df522cd8c95026db45d3a3e528",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983429",
+      "qb_customer": "CityVet Preston Forest",
+      "payment_date": "2026-06-01",
+      "amount": 784.1,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "8466b1a14485bab5462085432c6639eccf34ee3796a60969616b4cfccb565dbf",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983440",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "2026-06-01",
+      "amount": 935.08,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "660b2dc3fc5bac9bc980904adc43ecf6bf096071cf06c1162e4096aa653bbe6c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983477",
+      "qb_customer": "CityVet Whiterock",
+      "payment_date": "2026-06-01",
+      "amount": 621.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "2c56e679e9772a080c795a7ac1088e6f83464efb863b9d50fdf661eb60d14a9f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983585",
+      "qb_customer": "Hospital Veterinario Condado",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "ec3c9a4be746dd6b7db3067d4d92bc47e55c6696fe2dd3f3ac61a497e2a1bd18",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983586",
+      "qb_customer": "Clinica Veterinaria Gardenville",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "93bfba028f9ef3ad45e536a53231d4133c5c8a8e9dba675dec7957d9d4462f6c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983587",
+      "qb_customer": "Northwest Animal Hospital - Grapevine",
+      "payment_date": "2026-06-01",
+      "amount": 928.64,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "4d243114092b7d6b00f15e9cb78a964a860dfa70990190fe4cbd1ea192d71083",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983617",
+      "qb_customer": "Clinica Veterinaria Diaz Umpierre",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "48e5165e51390a936303d7453c5abca5e3ddd7052995a12dd696d66ef65ec74b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983618",
+      "qb_customer": "Doctor Pet Puerto Nuevo",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "3243796a6830ee4f7028ff4f7cd06c55601277cddf853667b25c51ffdb0a4849",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983678",
+      "qb_customer": "The Animal Hospital of Telluride",
+      "payment_date": "2026-06-01",
+      "amount": 896.98,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "14307c5cb552b4144e4cefb7ebf09b5018c69d24f739fd616a43303779be77be",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983697",
+      "qb_customer": "Riverdale Integrative Veterinary Care",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "4ed25140ead885eb7aae6fbd3addb4bdbefc0233cc274965c6a22ae510f74be1",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983785",
+      "qb_customer": "Riverlin Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "6d02de6551b05bbd75f337711873f3ee2d9685337fd626299c23a36b266d7fcf",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983792",
+      "qb_customer": "Cedar Veterinary Clinic",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "fa5be1afb4406773b65c739021b7825107a0b9dfa300132165c2780ad8ce3187",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983798",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-06-01",
+      "amount": -804.56,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "5a90915f74346df3b7b19070f0bcf98e5ed0ae418d4545ccc9d05497c5498caf",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983883",
+      "qb_customer": "Orchard Lake Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 896.98,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "95fe8e415ec6a5fb0d428ed780f9b3ca7dfee9a8b21cdb27bef4635e311e5f39",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983936",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 896.98,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "25a46859e6a18d8213da48d1e256f4f7c10ae1a39b892e4dead48efc40af848a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983950",
+      "qb_customer": "La Canada Pet Clinic",
+      "payment_date": "2026-06-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "83f0bd45848a0459b11b72a05a09ad9d33d59c19fc25fd5f1fa0d872a236a5a9",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983966",
+      "qb_customer": "Ridgeview Animal Clinic",
+      "payment_date": "2026-06-01",
+      "amount": 920.8,
+      "recorded_at": "2026-06-09T17:20:49"
+    },
+    {
+      "fingerprint": "1607021148953fbe879a31b76fd4e79e6485f1af1a725574ceed0d406513b33b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983981",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "2026-06-01",
+      "amount": 920.8,
+      "recorded_at": "2026-06-09T17:20:49"
     }
   ]
 }
