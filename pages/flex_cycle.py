@@ -1336,10 +1336,28 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     pipe = None
     SS["recap_pipe_error"] = None
     SS["recap_pipe_traceback"] = None
+    # Pull the quarter's positive FLEX payments from the ledger — drives the
+    # "is this clinic actually on the program this quarter?" gate inside
+    # compute_recapture, and feeds find_orphan_payments for the inverse
+    # ("payments exist but no roster config") warning. If the ledger query
+    # fails for any reason, fall back to None which preserves the legacy
+    # active-flag-only behavior — safer than skipping clinics on a ledger glitch.
+    try:
+        ledger_payments_for_quarter = ledger.flex_payments_in_window(win_start, win_end)
+    except Exception:
+        ledger_payments_for_quarter = None
+    orphan_payments = (
+        flex_unused.find_orphan_payments(flex_clinics, ledger_payments_for_quarter)
+        if ledger_payments_for_quarter else []
+    )
+
     if SS.recap_data_source == "opd_live" and SS.recap_opd_activity is not None:
         try:
             activity = SS.recap_opd_activity
-            recap = flex_unused.compute_recapture(flex_clinics, activity, rec_year, rec_month)
+            recap = flex_unused.compute_recapture(
+                flex_clinics, activity, rec_year, rec_month,
+                ledger_payments_for_quarter=ledger_payments_for_quarter,
+            )
             pipe = {"profile": "opd_live", "activity": activity, "recap": recap}
         except Exception as e:
             import traceback as _tb
@@ -1357,7 +1375,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 )
             else:
                 activity = opd_adapter.flex_activity_from_invoices(rec_raw, start=win_start, end=win_end)
-            recap = flex_unused.compute_recapture(flex_clinics, activity, rec_year, rec_month)
+            recap = flex_unused.compute_recapture(
+                flex_clinics, activity, rec_year, rec_month,
+                ledger_payments_for_quarter=ledger_payments_for_quarter,
+            )
             pipe = {"profile": rec_profile, "activity": activity, "recap": recap}
         except Exception as e:
             import traceback as _tb
@@ -1365,13 +1386,26 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             SS["recap_pipe_traceback"] = _tb.format_exc()
 
     rdf = pd.DataFrame(pipe["recap"]) if pipe else pd.DataFrame()
+    # Split the recapture rows into the ones we actually process this cycle vs
+    # the ones excluded by the ledger filter (roster entry says active but no
+    # FLEX payment in the quarter — likely the clinic left the program). The
+    # excluded set is surfaced in the review step as a warning so the operator
+    # can update the Clinic Roster, but their rows DON'T flow into the unused-
+    # recapture invoice builder or the overage routing. Safety: a stale-roster
+    # clinic with no real payments must NOT generate an internal recapture
+    # invoice or an overage-bill.
+    if pipe:
+        recap_included = [r for r in pipe["recap"] if not r.get("excluded_no_payments")]
+        recap_excluded = [r for r in pipe["recap"] if r.get("excluded_no_payments")]
+    else:
+        recap_included, recap_excluded = [], []
     udf = pd.DataFrame()
     next_ref = recap_start
-    if pipe and not rdf.empty:
+    if pipe and recap_included:
         udf, next_ref = flex_unused.build_unused_invoice_import(
-            pipe["recap"], rec_year, rec_month, recap_start, sales_class,
+            recap_included, rec_year, rec_month, recap_start, sales_class,
         )
-    overs = flex_unused.overage_rows(pipe["recap"]) if pipe else []
+    overs = flex_unused.overage_rows(recap_included) if pipe else []
     annotated = []
     if overs:
         annotated = flex_overage.annotate_overages(
@@ -1635,13 +1669,64 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         elif step_key == "review":
             st.markdown("### Review activity")
             st.caption("What the app found in the uploaded export. Sanity-check before generating files.")
+
+            # Roster-vs-ledger mismatch warnings — surface BEFORE the metrics
+            # so the operator sees them first. Two flavors:
+            #   1. excluded_no_payments: roster says active, ledger has no
+            #      positive FLEX payments this quarter → likely left program
+            #   2. orphan payments: ledger has payments for a clinic not in
+            #      roster → almost certainly a missing roster entry
+            if recap_excluded:
+                names = [(r.get("qb_name") or r.get("clinic_name") or "?")
+                         for r in recap_excluded]
+                st.warning(
+                    f":material/warning: **{len(recap_excluded)} roster clinic(s) "
+                    f"excluded from this cycle — no positive FLEX payments in "
+                    f"the quarter window ({win_start:%b %d}–{win_end:%b %d, %Y}).** "
+                    "These clinics are `active=true` in the Clinic Roster but the "
+                    "ledger has no record of them paying this quarter — likely they "
+                    "left the program. They will NOT generate recapture invoices or "
+                    "overage bills until either (a) a Stage 1 payment is recorded "
+                    "for them this quarter, or (b) they're marked inactive in the "
+                    "Clinic Roster.  \n\n"
+                    "Affected: " + ", ".join(names[:8])
+                    + (f" (+{len(names) - 8} more)" if len(names) > 8 else ""),
+                    icon=":material/warning:",
+                )
+            if orphan_payments:
+                # Group orphan payments by qb_customer for a readable summary
+                from collections import defaultdict
+                by_cust = defaultdict(list)
+                for p in orphan_payments:
+                    by_cust[p.get("qb_customer") or p.get("contract") or "(unknown)"].append(p)
+                lines = []
+                for cust, payments in sorted(by_cust.items()):
+                    total = sum(float(p.get("amount") or 0) for p in payments)
+                    lines.append(f"**{cust}** — {len(payments)} payment(s), ${total:,.2f}")
+                st.error(
+                    f":material/priority_high: **{len(orphan_payments)} ledger "
+                    f"payment(s) have no Clinic Roster entry — total "
+                    f"${sum(float(p.get('amount') or 0) for p in orphan_payments):,.2f}.** "
+                    "The finance partner wired us money for clinic(s) the roster "
+                    "doesn't know about — Stage 3 cannot compute recapture/overage "
+                    "without per-clinic threshold + monthly_credit config. **Add "
+                    "the missing clinic(s) to the Clinic Roster before committing "
+                    "this cycle.**  \n\n"
+                    + "  \n".join(f"- {line}" for line in lines[:8])
+                    + (f"  \n- … and {len(lines) - 8} more" if len(lines) > 8 else ""),
+                    icon=":material/priority_high:",
+                )
+
             m1, m2, m3 = st.columns(3)
             m1.metric("Source", pipe["profile"])
             m2.metric("Unused (recapture)", f"${rdf['unused'].fillna(0).sum():,.2f}")
             m3.metric("Overage (gross)", f"${rdf['overage'].fillna(0).sum():,.2f}")
             if pipe["profile"] == "case_grid":
                 st.caption("Case-grid: activity = sum of priced services per case (no AdminFee, STAT +$125).")
-            no_act = rdf[rdf["activity_match"] == "none"]
+            # Activity-match check operates on INCLUDED rows only — excluded
+            # ones already have a more specific warning above.
+            included_df = rdf[~rdf["excluded_no_payments"].fillna(False)] if "excluded_no_payments" in rdf.columns else rdf
+            no_act = included_df[included_df["activity_match"] == "none"]
             if not no_act.empty:
                 st.warning(
                     f"{len(no_act)} quarter-end clinic(s) had no matched OPD activity: "

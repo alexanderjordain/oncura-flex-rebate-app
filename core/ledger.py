@@ -265,6 +265,36 @@ def flex_payments_for_month(year: int, month: int) -> list[dict]:
     return out
 
 
+def flex_payments_in_window(start_date, end_date) -> list[dict]:
+    """All ledger rows with kind='flex' and payment_date in [start_date, end_date].
+
+    Date-range version of `flex_payments_for_month`. Used by Stage 3 to fetch
+    every FLEX payment in the closing quarter window so the ledger-aware
+    inclusion filter can decide which clinics are actually on the program
+    this quarter (vs. stale `active=true` entries that nobody updated).
+
+    `start_date` / `end_date` accept anything with .isoformat() or a "YYYY-MM-DD"
+    string — same shape as ledger payment_date values.
+    """
+    def _norm(d):
+        if hasattr(d, "isoformat"):
+            return d.isoformat()[:10]
+        return str(d)[:10]
+    start_iso = _norm(start_date)
+    end_iso = _norm(end_date)
+    data, _ = load()
+    out = []
+    for p in data.get("payments", []):
+        if p.get("kind") != "flex":
+            continue
+        pd_str = str(p.get("payment_date", ""))[:10]
+        if not pd_str:
+            continue
+        if start_iso <= pd_str <= end_iso:
+            out.append(p)
+    return out
+
+
 def summary():
     """Quick-stats {file_count, payment_count, by_company, latest_uploaded_at}."""
     data, _ = load()

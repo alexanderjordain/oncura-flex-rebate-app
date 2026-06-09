@@ -67,6 +67,26 @@ def build_import_from_payments(flex_clinics, payments, year, month, start_ref):
 
     matched, skipped = [], []
     for p in payments:
+        # Non-positive payments are clawbacks / reversals — GreatAmerica and
+        # OnePlace both occasionally include negative rows on a remittance when
+        # they're recouping a prior wire from us (clinic left the program,
+        # contract terminated, etc.). Auto-issuing a credit memo against a
+        # clawback would either book a new positive credit (matched path —
+        # silently wrong) or a negative credit (fallback path — technically
+        # right but compounds the bookkeeping). Skip them; the operator
+        # reverses the original credit memo manually in QBO after confirming.
+        try:
+            amt_raw = float(p.get("amount") or 0)
+        except (TypeError, ValueError):
+            amt_raw = 0.0
+        if amt_raw <= 0:
+            skipped.append({
+                "reason": "non-positive amount (clawback / reversal — manual review)",
+                "qb_customer": p.get("qb_customer"),
+                "contract": str(p.get("contract") or ""),
+                "amount": round(amt_raw, 2),
+            })
+            continue
         qbn = (p.get("qb_customer") or "").strip().lower()
         contract = str(p.get("contract") or "").strip()
         clinic = by_qb.get(qbn) or by_contract.get(contract)

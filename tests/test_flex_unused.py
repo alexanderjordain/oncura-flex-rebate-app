@@ -170,3 +170,155 @@ def test_build_unused_invoice_sequential_refs_unique():
     refs = list(df["Invoice No"])
     assert refs == [70000, 70001, 70002, 70003, 70004]
     assert next_ref == 70005
+
+
+# ── Ledger-aware inclusion filter (added 2026-06-09) ─────────────────────────
+
+
+def _payment(contract=None, qb_customer=None, amount=1000.0, date="2026-04-15"):
+    return {
+        "kind": "flex", "contract": contract or "", "qb_customer": qb_customer or "",
+        "amount": amount, "payment_date": date,
+    }
+
+
+def test_recapture_no_ledger_param_is_backward_compat():
+    """When ledger_payments_for_quarter is None (default), behavior matches
+    the pre-ledger-filter code path — every active+quarter-end clinic emits
+    a row with excluded_no_payments=False."""
+    clinics = [_clinic("Alpha", threshold=6000.0, spread="March-April-May")]
+    rows = flex_unused.compute_recapture(clinics, {"alpha": 5000.0}, 2026, 5)
+    assert len(rows) == 1
+    assert rows[0]["excluded_no_payments"] is False
+
+
+def test_recapture_with_ledger_flags_no_payment_clinic():
+    """active+quarter-end clinic but no positive FLEX payment in the ledger →
+    excluded_no_payments=True. Row still returned so the UI can warn about it."""
+    clinics = [_clinic("Alpha", threshold=6000.0, spread="March-April-May",
+                       contract_oneplace="OPC-A")]
+    payments = [_payment(contract="OPC-OTHER", qb_customer="Beta")]
+    rows = flex_unused.compute_recapture(
+        clinics, {"alpha": 5000.0}, 2026, 5,
+        ledger_payments_for_quarter=payments,
+    )
+    assert len(rows) == 1
+    assert rows[0]["excluded_no_payments"] is True
+
+
+def test_recapture_with_ledger_includes_paying_clinic_by_contract():
+    clinics = [_clinic("Alpha", threshold=6000.0, spread="March-April-May",
+                       contract_oneplace="OPC-A")]
+    payments = [_payment(contract="OPC-A", qb_customer="(any)")]
+    rows = flex_unused.compute_recapture(
+        clinics, {"alpha": 5000.0}, 2026, 5,
+        ledger_payments_for_quarter=payments,
+    )
+    assert rows[0]["excluded_no_payments"] is False
+
+
+def test_recapture_with_ledger_includes_by_qb_name():
+    clinics = [_clinic("Alpha QB", threshold=6000.0, spread="March-April-May")]
+    payments = [_payment(qb_customer="alpha qb")]  # lowercase match
+    rows = flex_unused.compute_recapture(
+        clinics, {"alpha qb": 5000.0}, 2026, 5,
+        ledger_payments_for_quarter=payments,
+    )
+    assert rows[0]["excluded_no_payments"] is False
+
+
+def test_recapture_ledger_ignores_clawbacks():
+    """Negative payments don't count as 'on the program' — a clinic whose
+    only ledger rows are clawbacks (amount<=0) is correctly excluded."""
+    clinics = [_clinic("Alpha", threshold=6000.0, spread="March-April-May",
+                       contract_oneplace="OPC-A")]
+    payments = [
+        _payment(contract="OPC-A", amount=-804.56),
+        _payment(contract="OPC-A", amount=0.0),
+    ]
+    rows = flex_unused.compute_recapture(
+        clinics, {"alpha": 5000.0}, 2026, 5,
+        ledger_payments_for_quarter=payments,
+    )
+    assert rows[0]["excluded_no_payments"] is True
+
+
+# ── Multi-clinic group payment check ─────────────────────────────────────────
+
+
+def test_recapture_group_anchor_included_when_member_has_payment():
+    """Mohnacky / River Trail / PR-vets pattern: payments may land under a
+    child clinic's contract. The anchor's group inclusion check must look at
+    ALL group members. Without this, a group could falsely drop out because
+    the wires happened to be booked under a member instead of the anchor."""
+    anchor = _clinic("Mohnacky Carlsbad", threshold=6000.0,
+                     contract_oneplace="OPC-Carlsbad")
+    child = _clinic("Mohnacky Vista", threshold=6000.0,
+                    contract_oneplace="OPC-Vista",
+                    parent_clinic_id="Mohnacky Carlsbad")
+    payments = [_payment(contract="OPC-Vista", qb_customer="Mohnacky Vista")]
+    rows = flex_unused.compute_recapture(
+        [anchor, child],
+        {"mohnacky carlsbad": 3000.0, "mohnacky vista": 2500.0},
+        2026, 5,
+        ledger_payments_for_quarter=payments,
+    )
+    assert len(rows) == 1
+    assert rows[0]["clinic_name"] == "Mohnacky Carlsbad"
+    assert rows[0]["excluded_no_payments"] is False
+
+
+def test_recapture_group_excluded_when_no_member_paid():
+    anchor = _clinic("Mohnacky Carlsbad", threshold=6000.0,
+                     contract_oneplace="OPC-Carlsbad")
+    child = _clinic("Mohnacky Vista", threshold=6000.0,
+                    contract_oneplace="OPC-Vista",
+                    parent_clinic_id="Mohnacky Carlsbad")
+    payments = [_payment(contract="OPC-OTHER", qb_customer="Beta")]
+    rows = flex_unused.compute_recapture(
+        [anchor, child],
+        {"mohnacky carlsbad": 3000.0, "mohnacky vista": 2500.0},
+        2026, 5,
+        ledger_payments_for_quarter=payments,
+    )
+    assert rows[0]["excluded_no_payments"] is True
+
+
+# ── find_orphan_payments — inverse warning surface ───────────────────────────
+
+
+def test_find_orphan_payments_empty_when_all_resolve():
+    clinics = [_clinic("Alpha", contract_oneplace="OPC-A")]
+    payments = [_payment(contract="OPC-A", qb_customer="Alpha", amount=1000.0)]
+    assert flex_unused.find_orphan_payments(clinics, payments) == []
+
+
+def test_find_orphan_payments_surfaces_unknown_contract():
+    """Payment for a contract the roster doesn't know about — Stage 3 can't
+    compute math (no threshold), operator must add the clinic before commit."""
+    clinics = [_clinic("Alpha", contract_oneplace="OPC-A")]
+    payments = [
+        _payment(contract="OPC-A", qb_customer="Alpha", amount=1000.0),
+        _payment(contract="OPC-Unknown", qb_customer="Stranger Vet", amount=750.0),
+    ]
+    orphans = flex_unused.find_orphan_payments(clinics, payments)
+    assert len(orphans) == 1
+    assert orphans[0]["qb_customer"] == "Stranger Vet"
+
+
+def test_find_orphan_payments_ignores_clawbacks():
+    """Clawbacks (amount<=0) are handled by the Stage 2 non-positive skip —
+    they shouldn't surface as orphan payments too (would double-warn)."""
+    clinics = [_clinic("Alpha", contract_oneplace="OPC-A")]
+    payments = [
+        _payment(contract="OPC-Unknown", qb_customer="Stranger", amount=-500.0),
+    ]
+    assert flex_unused.find_orphan_payments(clinics, payments) == []
+
+
+def test_find_orphan_payments_matches_by_clinic_name_too():
+    """Resolves by qb_customer OR clinic_name from flex_master."""
+    clinics = [{"clinic_name": "Alpha Clinic", "qb_name": "Alpha QB",
+                "contract_oneplace": None}]
+    payments = [_payment(qb_customer="Alpha Clinic", amount=1000.0)]
+    assert flex_unused.find_orphan_payments(clinics, payments) == []

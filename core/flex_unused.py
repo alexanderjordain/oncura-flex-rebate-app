@@ -144,7 +144,55 @@ def _pool_activity_by_group(activity_by_name: dict, member_to_anchor: dict) -> d
     return pooled
 
 
-def compute_recapture(flex_clinics, activity_by_name, year, month):
+def _index_payments_by_clinic(ledger_payments):
+    """Build (contract→bool, qb_lower→bool) indexes of clinics that have at
+    least one POSITIVE FLEX payment in the supplied ledger rows.
+
+    Used by compute_recapture's optional payment filter — clawbacks (amount<=0)
+    are intentionally excluded so a clinic whose net is negative still counts
+    as "had a real payment" if any single row was positive (handles a clinic
+    that paid in months 1-2 then got clawed back in month 3).
+    """
+    by_contract: set[str] = set()
+    by_qb: set[str] = set()
+    for p in ledger_payments or []:
+        if p.get("kind") != "flex":
+            continue
+        try:
+            if float(p.get("amount") or 0) <= 0:
+                continue
+        except (TypeError, ValueError):
+            continue
+        contract = str(p.get("contract") or "").strip()
+        qb = (p.get("qb_customer") or "").strip().lower()
+        if contract:
+            by_contract.add(contract)
+        if qb:
+            by_qb.add(qb)
+    return by_contract, by_qb
+
+
+def _group_has_positive_payment(anchor, members, payments_by_contract, payments_by_qb):
+    """Multi-clinic-group-aware payment check: True if the anchor OR any
+    member has a positive FLEX payment in the indexed set. In practice the
+    finance company typically wires under the anchor's contract, but member
+    contracts exist too (River Trail Memorial, etc.) — checking both ensures
+    we don't falsely exclude a whole group because the wires happen to be
+    booked against a child.
+    """
+    for c in [anchor] + list(members):
+        qb = (c.get("qb_name") or "").strip().lower()
+        if qb and qb in payments_by_qb:
+            return True
+        for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
+            cv = (c.get(k) or "").strip()
+            if cv and cv in payments_by_contract:
+                return True
+    return False
+
+
+def compute_recapture(flex_clinics, activity_by_name, year, month,
+                     ledger_payments_for_quarter=None):
     """Per-clinic unused/overage for clinics whose quarter ends in (year, month).
 
     Multi-clinic groups (Mohnacky, River Trail, PR-vets) are pooled at the anchor:
@@ -152,9 +200,23 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
     independent rows. Recapture / overage invoice (downstream) is emitted on the anchor.
 
     activity_by_name: {clinic_name_lower: total OPD activity over the quarter}.
+
+    ledger_payments_for_quarter: optional list of ledger payment dicts (from
+        `ledger.flex_payments_in_window(start, end)`) for the closing quarter.
+        When provided, each returned row gets an `excluded_no_payments` flag
+        set True when NEITHER the anchor NOR any group member has a positive
+        FLEX payment in the supplied ledger window. The UI uses the flag to
+        warn about roster entries that look stale (clinic left the program
+        but `active=true` was never updated). Rows are NOT removed — caller
+        decides whether to drop them or display them in a "review" bucket.
+        When None: flag is set to False on every row (backward-compatible).
     """
     members_by_anchor, member_to_anchor = _build_group_index(flex_clinics)
     pooled_activity = _pool_activity_by_group(activity_by_name, member_to_anchor)
+    payments_by_contract, payments_by_qb = _index_payments_by_clinic(
+        ledger_payments_for_quarter,
+    )
+    payment_filter_active = ledger_payments_for_quarter is not None
 
     rows = []
     for c in flex_clinics:
@@ -173,6 +235,16 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
         for m in members:
             threshold += float(m.get("quarterly_threshold") or 0.0)
         threshold = round(threshold, 2)
+
+        # Ledger-aware inclusion flag. Only set meaningfully when the caller
+        # passed payments; otherwise stays False (back-compat: prior behavior
+        # was to include every active+quarter-end clinic unconditionally).
+        excluded_no_payments = False
+        if payment_filter_active:
+            has_payment = _group_has_positive_payment(
+                c, members, payments_by_contract, payments_by_qb,
+            )
+            excluded_no_payments = not has_payment
 
         activity, q, matched_opd, fuzzy_score = match_activity(c, pooled_activity)
         # A clinic that's active on the FLEX program and whose quarter ends this
@@ -214,9 +286,60 @@ def compute_recapture(flex_clinics, activity_by_name, year, month):
                 # Multi-clinic group context (kept for downstream code; not displayed by default).
                 "group_id": c.get("group_id"),
                 "group_member_count": (1 + len(members)) if members else None,
+                # Ledger-aware filter flag — True when payments were supplied
+                # AND neither the anchor nor any group member had a positive
+                # FLEX payment in the quarter window. UI surfaces this as a
+                # "roster vs ledger mismatch" warning. Always False when no
+                # payment filter is active (backward compat).
+                "excluded_no_payments": excluded_no_payments,
             }
         )
     return rows
+
+
+def find_orphan_payments(flex_clinics, ledger_payments) -> list[dict]:
+    """Return positive-amount FLEX payments whose contract+qb_customer don't
+    resolve to any clinic in flex_master.
+
+    Surfaces the inverse of `excluded_no_payments`: a finance partner is
+    wiring us money for a clinic the roster doesn't know about. This is
+    almost always a "we forgot to add the clinic" config drift — flag it
+    loudly before the cycle commits.
+    """
+    known_contracts: set[str] = set()
+    known_qb: set[str] = set()
+    for c in flex_clinics:
+        for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
+            cv = (c.get(k) or "").strip()
+            if cv:
+                known_contracts.add(cv)
+        qb = (c.get("qb_name") or "").strip().lower()
+        if qb:
+            known_qb.add(qb)
+        cn = (c.get("clinic_name") or "").strip().lower()
+        if cn:
+            known_qb.add(cn)
+
+    orphans = []
+    for p in ledger_payments or []:
+        if p.get("kind") != "flex":
+            continue
+        try:
+            amt = float(p.get("amount") or 0)
+        except (TypeError, ValueError):
+            continue
+        if amt <= 0:
+            # Clawbacks are handled by the Stage 2 non-positive filter — not
+            # orphans for the purposes of "do we have config for this clinic".
+            continue
+        contract = str(p.get("contract") or "").strip()
+        qb = (p.get("qb_customer") or "").strip().lower()
+        if contract and contract in known_contracts:
+            continue
+        if qb and qb in known_qb:
+            continue
+        orphans.append(p)
+    return orphans
 
 
 def build_unused_invoice_import(recapture_rows, year, month, start_ref, sales_class):

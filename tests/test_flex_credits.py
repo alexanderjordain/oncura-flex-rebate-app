@@ -30,6 +30,62 @@ def test_empty_payments_produces_empty_df():
     assert skipped == []
 
 
+# ── Non-positive payment skip (clawback safety) ──────────────────────────────
+def test_negative_payment_skipped_not_credited():
+    """A clawback row in the ledger (amount < 0) must NOT auto-generate a
+    credit memo. Stage 2 records it to `skipped` for the operator to handle
+    manually in QBO."""
+    clinics = [_clinic("Alpha", monthly_credit=1000.0)]
+    payments = [
+        {"qb_customer": "Alpha", "contract": "X", "amount": -804.56,
+         "payment_date": "2026-05-15", "kind": "flex"},
+    ]
+    df, next_ref, skipped, _src = flex_credits.build_import_from_payments(
+        clinics, payments, 2026, 5, 50000,
+    )
+    assert len(df) == 0
+    assert next_ref == 50000  # no refs consumed
+    assert len(skipped) == 1
+    assert skipped[0]["amount"] == -804.56
+    assert "non-positive" in skipped[0]["reason"].lower()
+
+
+def test_zero_payment_skipped():
+    """Zero-amount rows skip the same way negatives do — neither should
+    generate a credit memo."""
+    clinics = [_clinic("Alpha", monthly_credit=1000.0)]
+    payments = [
+        {"qb_customer": "Alpha", "contract": "X", "amount": 0.0,
+         "payment_date": "2026-05-15", "kind": "flex"},
+    ]
+    df, _, skipped, _src = flex_credits.build_import_from_payments(
+        clinics, payments, 2026, 5, 50000,
+    )
+    assert len(df) == 0
+    assert len(skipped) == 1
+
+
+def test_mixed_payments_only_positive_produces_credit():
+    """Mix of positive + negative + zero — only positive generates a credit memo."""
+    clinics = [_clinic("Alpha", monthly_credit=1000.0)]
+    payments = [
+        {"qb_customer": "Alpha", "contract": "X", "amount": 1000.0,
+         "payment_date": "2026-05-01", "kind": "flex"},
+        {"qb_customer": "Alpha", "contract": "X", "amount": -500.0,
+         "payment_date": "2026-05-15", "kind": "flex"},
+        {"qb_customer": "Alpha", "contract": "X", "amount": 0.0,
+         "payment_date": "2026-05-20", "kind": "flex"},
+    ]
+    df, _, skipped, _src = flex_credits.build_import_from_payments(
+        clinics, payments, 2026, 5, 50000,
+    )
+    assert len(df) == 1
+    assert df.iloc[0]["Product/Service Amount"] == 1000.0
+    assert len(skipped) == 2  # one negative + one zero
+    reasons = {s["reason"] for s in skipped}
+    assert all("non-positive" in r.lower() for r in reasons)
+
+
 def test_one_payment_yields_one_credit_memo():
     clinics = [_clinic("Alpha", monthly_credit=1000.0)]
     payments = [
