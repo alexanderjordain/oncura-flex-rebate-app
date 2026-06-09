@@ -275,6 +275,52 @@
       ],
       "note": "73 new credit memo(s) recorded; 0 were already in ledger",
       "entry_hash": "6154e384aa0e245cb298f5caf9d3804e813009f4596dd17ce734d9abc72ff370"
+    },
+    {
+      "id": "1fd083c2-c524-4a62-81a9-d3a1c47b3e7d",
+      "timestamp": "2026-06-09T15:32:25",
+      "cycle_type": "rebate_report",
+      "approver": "JW",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "months": [
+          "2026-04",
+          "2026-05"
+        ],
+        "period_label": "April 2026 and May 2026",
+        "buckets": [
+          "NewLane Financed",
+          "Self-Financed",
+          "OnePlace Capital"
+        ],
+        "n_clinics": 87,
+        "per_bucket_totals": {
+          "NewLane Financed": 1295.8,
+          "Self-Financed": 1431.5,
+          "OnePlace Capital": 4197.78
+        },
+        "grand_total": 6925.08,
+        "fuzzy_match_decisions": {
+          "confirmed": 0,
+          "rejected": 1
+        }
+      },
+      "source_file": {
+        "name": "export_grid_590fe324-ccdc-4e88-a53e-fd8b8563dd46.xls",
+        "sha256": "75faba5953cfc2b77407076c53b4b65ff372ae7ad816b07301c3b6627e3a29bf",
+        "size_bytes": 1519104
+      },
+      "outputs": [
+        {
+          "name": "Rebates_Apr_2026_and_May_2026.xlsx",
+          "sha256": "729d0f363539f44703219b5385400770676c4fd6a37df19ac3d963b2a4a1b5dc",
+          "row_count": 87,
+          "total": 6925.08
+        }
+      ],
+      "note": "Rebate cycle for April 2026 and May 2026",
+      "entry_hash": "3a09f2b4e734cfff866f1ea64b8c78eed5d5ec6a5995a3e2a0870d3311ebed09"
     }
   ]
 }
