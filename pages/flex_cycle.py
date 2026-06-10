@@ -14,8 +14,9 @@ import pandas as pd
 import streamlit as st
 
 from core import (
-    accounting_handoff, audit, auth, flex_credits, flex_finance, flex_overage,
-    flex_unused, ledger, loaders, opd_adapter, opd_api, saasant, store, ui,
+    accounting_handoff, audit, auth, errors, flex_credits, flex_finance,
+    flex_overage, flex_unused, ledger, loaders, opd_adapter, opd_api, saasant,
+    store, ui,
 )
 
 
@@ -28,14 +29,10 @@ def safe_stage(label: str):
     try:
         yield
     except Exception as _e:
-        import traceback as _tb
-
-        st.error(f"**{label} failed:** `{type(_e).__name__}: {_e}`")
-        st.caption(
-            "The other stages are still usable. Share the traceback below if you need a fix."
-        )
-        with st.expander("Show full traceback"):
-            st.code(_tb.format_exc(), language="text")
+        _err = errors.capture(_e)
+        st.error(f"**{label} failed:** `{_err['summary']}`")
+        st.caption("The other stages are still usable.")
+        errors.render_details(_err)
 
 ui.header("Payment Cycle",
           "Handles FLEX and scan-package (pass-through) payments together. "
@@ -1332,10 +1329,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     # session: live OPD OData pull (default, preferred), or a manual file
     # upload (fallback for offline use or when the OData credential is
     # unavailable). Errors are captured into SS so the upload step can render
-    # them inline (with full traceback) instead of just a banner.
+    # them inline (with a reference ID + admin-only traceback) instead of
+    # just a banner.
     pipe = None
     SS["recap_pipe_error"] = None
-    SS["recap_pipe_traceback"] = None
     # Pull the quarter's positive FLEX payments from the ledger — drives the
     # "is this clinic actually on the program this quarter?" gate inside
     # compute_recapture, and feeds find_orphan_payments for the inverse
@@ -1360,9 +1357,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             )
             pipe = {"profile": "opd_live", "activity": activity, "recap": recap}
         except Exception as e:
-            import traceback as _tb
-            SS["recap_pipe_error"] = f"{type(e).__name__}: {e}"
-            SS["recap_pipe_traceback"] = _tb.format_exc()
+            SS["recap_pipe_error"] = errors.capture(e)
     elif SS.recap_uploaded_bytes:
         try:
             f = _io.BytesIO(SS.recap_uploaded_bytes)
@@ -1386,9 +1381,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             pipe = {"profile": rec_profile, "activity": activity, "recap": recap,
                     "upload_coverage": upload_coverage}
         except Exception as e:
-            import traceback as _tb
-            SS["recap_pipe_error"] = f"{type(e).__name__}: {e}"
-            SS["recap_pipe_traceback"] = _tb.format_exc()
+            SS["recap_pipe_error"] = errors.capture(e)
 
     rdf = pd.DataFrame(pipe["recap"]) if pipe else pd.DataFrame()
     # Split the recapture rows into the ones we actually process this cycle vs
@@ -1538,9 +1531,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     _do_opd_fetch()
                     st.rerun()
                 except Exception as e:
-                    import traceback as _tb
+                    _err = errors.capture(e)
                     st.error(
-                        f"**OPD fetch failed:** `{type(e).__name__}: {e}`\n\n"
+                        f"**OPD fetch failed:** `{_err['summary']}`\n\n"
                         "Check that OPD_ODATA_USER / OPD_ODATA_PASS are set in Streamlit "
                         "Cloud secrets, then click the button again. If the OPD OData "
                         "feed is unreachable, message Alexander — Stage 3 can't be run "
@@ -1550,8 +1543,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         "exports almost always miss data from one or more months in "
                         "the quarter."
                     )
-                    with st.expander("Full traceback"):
-                        st.code(_tb.format_exc(), language="text")
+                    errors.render_details(_err)
 
             if live_loaded:
                 fetched_at = (SS.recap_opd_fetched_at or "")[:19].replace("T", " ")
@@ -1603,14 +1595,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             # Error display when the OPD fetch failed
             if SS.get("recap_pipe_error"):
                 st.error(
-                    f"**Could not process the OPD response:**  `{SS['recap_pipe_error']}`\n\n"
+                    f"**Could not process the OPD response:**  "
+                    f"`{SS['recap_pipe_error']['summary']}`\n\n"
                     "Click the fetch button again to retry. If the error persists, "
                     "message Alexander — the OData feed or our integration may need "
                     "attention."
                 )
-                if SS.get("recap_pipe_traceback"):
-                    with st.expander("Full traceback (share this if asking for help)"):
-                        st.code(SS["recap_pipe_traceback"], language="text")
+                errors.render_details(SS["recap_pipe_error"])
 
             # Soft prompt when the OPD pull hasn't been run yet
             if not pipe and not SS.get("recap_pipe_error"):
@@ -2219,7 +2210,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         help="Clear the uploaded file + credit offsets and return to the setup step — use this between monthly Stage 3 runs.",
     ):
         for k in ("recap_uploaded_bytes", "recap_uploaded_name", "recap_credit_offsets",
-                  "recap_pipe_error", "recap_pipe_traceback",
+                  "recap_pipe_error",
                   "w_recap_file", "w_recap_offsets_editor",
                   "recap_opd_activity", "recap_opd_raw_rows", "recap_opd_fetched_at",
                   "recap_opd_invoice_count", "recap_opd_clinic_count",

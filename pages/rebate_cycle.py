@@ -1,11 +1,10 @@
 import datetime as dt
 from contextlib import contextmanager
-import traceback
 
 import pandas as pd
 import streamlit as st
 
-from core import accounting_handoff, audit, auth, loaders, opd_adapter, rebate_calc, rebate_report, store, ui
+from core import accounting_handoff, audit, auth, errors, loaders, opd_adapter, rebate_calc, rebate_report, store, ui
 
 
 @contextmanager
@@ -14,9 +13,9 @@ def safe_stage(label: str):
     try:
         yield
     except Exception as e:
-        st.error(f"**{label}** failed: {e}")
-        with st.expander("Traceback"):
-            st.code(traceback.format_exc())
+        err = errors.capture(e)
+        st.error(f"**{label}** failed: `{err['summary']}`")
+        errors.render_details(err)
 
 
 def _apply_fuzzy_decisions(per_bucket: dict, fuzzy_matches: list, decisions: dict) -> dict:
