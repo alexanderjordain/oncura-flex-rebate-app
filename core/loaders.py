@@ -58,6 +58,18 @@ def contract_qb_map():
     return data
 
 
+@st.cache_data(show_spinner=False)
+def fuzzy_decisions():
+    """Operator decisions on rebate-cycle fuzzy clinic matches — persists
+    across cycles so 'confirm' / 'reject' on a given (OPD name, master
+    clinic) pair sticks across browser refreshes and Cloud restarts.
+
+    Shape: {"decisions": {"<opd>::<matched_master>": {decision, decided_at}}}
+    """
+    data, _ = _load("fuzzy_decisions.json", {"decisions": {}})
+    return data
+
+
 def clear_caches():
     rebate_master.clear()
     flex_master.clear()
@@ -66,3 +78,4 @@ def clear_caches():
     name_map.clear()
     service_prices.clear()
     contract_qb_map.clear()
+    fuzzy_decisions.clear()

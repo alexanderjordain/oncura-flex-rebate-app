@@ -5,7 +5,7 @@ import traceback
 import pandas as pd
 import streamlit as st
 
-from core import accounting_handoff, audit, auth, loaders, opd_adapter, rebate_calc, rebate_report, ui
+from core import accounting_handoff, audit, auth, loaders, opd_adapter, rebate_calc, rebate_report, store, ui
 
 
 @contextmanager
@@ -410,7 +410,16 @@ elif step_key == "review":
                     rec["months"].append(fm["month_label"])
                 rec["total"] += float(fm["amount"])
 
+            # Hydrate session-state decisions from the persistent
+            # data/fuzzy_decisions.json on every render — that's the source
+            # of truth, session_state is just the in-flight working copy.
+            # Without this, a confirmed/rejected decision evaporated on the
+            # next page refresh, restart, or new Streamlit Cloud container.
             decisions = SS.setdefault("rebate_fuzzy_decisions", {})
+            _persisted = (loaders.fuzzy_decisions().get("decisions") or {})
+            for _key, _rec in _persisted.items():
+                if _key not in decisions:
+                    decisions[_key] = _rec.get("decision") if isinstance(_rec, dict) else _rec
             n_confirmed = sum(
                 1 for k in fuzzy_agg
                 if decisions.get(f"{k[0]}::{k[1]}") == "confirm"
@@ -463,21 +472,50 @@ elif step_key == "review":
                         row[4].markdown(":gray[Pending]")
                     btns = row[5].columns(2)
                     safe_key = abs(hash(key))
+
+                    def _persist_decision(verdict: str, _key=key,
+                                          _opd=opd, _matched=matched):
+                        """Update both session_state AND the persistent
+                        data/fuzzy_decisions.json so the choice survives
+                        a refresh / restart / new Cloud container."""
+                        decisions[_key] = verdict
+                        cur = dict(loaders.fuzzy_decisions() or {})
+                        cur_decisions = dict(cur.get("decisions") or {})
+                        cur_decisions[_key] = {
+                            "decision": verdict,
+                            "decided_at": dt.datetime.now().isoformat(timespec="seconds"),
+                            "opd_name": _opd,
+                            "matched_master": _matched,
+                        }
+                        cur["decisions"] = cur_decisions
+                        ok, info = store.save_json(
+                            "fuzzy_decisions.json", cur,
+                            f"Fuzzy match {verdict}: {_opd[:40]} -> {_matched[:40]}",
+                        )
+                        loaders.fuzzy_decisions.clear()
+                        if not ok:
+                            st.warning(
+                                f":material/warning: Decision saved locally only — {info}. "
+                                "It will be lost on the next Cloud restart. Set "
+                                "`GITHUB_TOKEN` in secrets for persistent decisions.",
+                                icon=":material/warning:",
+                            )
+
                     if btns[0].button(
                         "✓", key=f"fm_match_{safe_key}",
                         type="primary" if decision == "confirm" else "secondary",
-                        help="Confirm this is the right clinic — include in export",
+                        help="Confirm this is the right clinic — include in export. Persists across cycles.",
                         use_container_width=True,
                     ):
-                        decisions[key] = "confirm"
+                        _persist_decision("confirm")
                         st.rerun()
                     if btns[1].button(
                         "✗", key=f"fm_reject_{safe_key}",
                         type="primary" if decision == "reject" else "secondary",
-                        help="Not the right clinic — exclude from export",
+                        help="Not the right clinic — exclude from export. Persists across cycles.",
                         use_container_width=True,
                     ):
-                        decisions[key] = "reject"
+                        _persist_decision("reject")
                         st.rerun()
 
         if rads_pending:
