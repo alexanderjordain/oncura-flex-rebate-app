@@ -130,11 +130,37 @@ def match_clinic(name: str, index: dict[str, dict]):
     # bad matches usually differ in the first word ('abell' vs 'ace'). Require
     # the first stripped token to match the candidate's first stripped token
     # at >= 85% similarity.
-    src_first = src_strip.split()[0]
-    cand_first = hit[0].split()[0]
-    first_score = fuzz.ratio(src_first, cand_first)
+    src_toks = src_strip.split()
+    cand_toks = hit[0].split()
+    first_score = fuzz.ratio(src_toks[0], cand_toks[0])
     if first_score < 85:
         return None, "none"
+
+    # Per-token-pair gate — catches token_sort_ratio false positives where the
+    # OVERALL similarity is high (because most boilerplate-stripped tokens
+    # match) but ONE distinguishing token is actually a different clinic. The
+    # exact false positive that motivated this gate:
+    #   src:  'family hospital friendswood'  (Family Animal Hospital of Friendswood)
+    #   cand: 'family friends hospital'      (Family Friends Veterinary Hospital)
+    #   token_sort_ratio = 92% (above the 92% threshold)
+    #   first-token = 'family' vs 'family' = 100% (passes the first gate)
+    #   BUT: 'friendswood' vs its best counterpart 'friends' is only 77.8%
+    #
+    # Rule: every token in src AND every token in cand must have at least one
+    # match on the other side at >= 85% similarity. Symmetric check — catches
+    # both "src has a unique distinguishing token" and "cand has extra content
+    # src doesn't account for." Doesn't fire on single-token strips (e.g. 'abc'
+    # vs 'abc') because that case is already handled by the first-token gate.
+    if len(src_toks) > 1 or len(cand_toks) > 1:
+        def _every_token_has_match(a_toks, b_toks):
+            for a in a_toks:
+                best = max((fuzz.ratio(a, b) for b in b_toks), default=0)
+                if best < 85:
+                    return False
+            return True
+        if not (_every_token_has_match(src_toks, cand_toks)
+                and _every_token_has_match(cand_toks, src_toks)):
+            return None, "none"
 
     return stripped_index[hit[0]], "fuzzy"
 

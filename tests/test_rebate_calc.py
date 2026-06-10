@@ -193,3 +193,66 @@ def test_inactive_clinic_still_calculates_if_in_master():
     res = rebate_calc.calculate(norm, master, config={})
     # The clinic still matches and gets a rebate row; the cycle UI is what filters by active.
     assert len(res["per_clinic"]) == 1
+
+
+# ── Per-token-pair fuzzy gate (added 2026-06-10) ─────────────────────────────
+
+
+def test_match_clinic_rejects_friendswood_family_friends_false_positive():
+    """Real-world false positive that motivated the per-token gate:
+    'Family Animal Hospital of Friendswood' is NOT 'Family Friends Veterinary
+    Hospital'. Token-sort similarity is 92% (passes the threshold) and the
+    first stripped token is 'family' on both sides (passes the first-token
+    gate) — but the distinguishing token 'friendswood' only matches its
+    counterpart 'friends' at 77.8%, below the 85% per-token threshold.
+    """
+    master = {"clinics": [
+        {"clinic_name": "Family Friends Veterinary Hospital", "active": True},
+    ]}
+    idx = rebate_calc._build_index(master["clinics"])
+    rec, qual = rebate_calc.match_clinic(
+        "family animal hospital of friendswood", idx,
+    )
+    assert qual == "none", f"Expected 'none', got {qual!r} with rec={rec}"
+
+
+def test_match_clinic_still_accepts_legitimate_near_match():
+    """Sanity: the tightened gate must NOT break legitimate near-matches
+    where the only difference is boilerplate (Animal / of) being absent.
+    """
+    master = {"clinics": [
+        {"clinic_name": "Mohnacky Animal Hospital of Carlsbad", "active": True},
+    ]}
+    idx = rebate_calc._build_index(master["clinics"])
+    rec, qual = rebate_calc.match_clinic("Mohnacky Hospital Carlsbad", idx)
+    assert qual == "fuzzy"
+    assert rec["clinic_name"] == "Mohnacky Animal Hospital of Carlsbad"
+
+
+def test_match_clinic_rejects_when_cand_has_extra_distinguishing_token():
+    """Symmetric check: if the CANDIDATE has an extra distinguishing token
+    that the source doesn't account for, also reject. 'family hospital' (the
+    source) vs 'family friends hospital' (the candidate) — the source is
+    missing 'friends', which is a real distinguishing token, so this match
+    should fail too even though src→cand check would pass without the
+    reverse direction."""
+    master = {"clinics": [
+        {"clinic_name": "Family Friends Veterinary Hospital", "active": True},
+    ]}
+    idx = rebate_calc._build_index(master["clinics"])
+    # 'family hospital' strips to just 'family hospital' (hospital is NOT
+    # boilerplate). cand strips to 'family friends hospital'. Source is
+    # missing 'friends' equivalent — should reject.
+    rec, qual = rebate_calc.match_clinic("Family Hospital", idx)
+    assert qual == "none"
+
+
+def test_match_clinic_single_token_fuzzy_still_works():
+    """The per-token gate skips when either side has only one stripped token
+    (the first-token gate already handles that case). 'ABC Veterinary, LLC'
+    and 'ABC Vet' both strip to 'abc' (single token) — still fuzzy-matches."""
+    master = {"clinics": [{"clinic_name": "ABC Vet", "active": True}]}
+    idx = rebate_calc._build_index(master["clinics"])
+    rec, qual = rebate_calc.match_clinic("ABC Veterinary, LLC", idx)
+    assert qual == "fuzzy"
+    assert rec["clinic_name"] == "ABC Vet"
