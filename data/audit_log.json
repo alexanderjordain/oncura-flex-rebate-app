@@ -571,6 +571,38 @@
       "outputs": [],
       "note": "Superseded stage3_recapture entry 5d4af8e8 (JW, 2026-06-09T18:55:43). Removed 35 unused_invoice ledger rows so the corrected re-run (via OData live, default path) is not blocked by dedup. Operator (Tanya) voids the 35 corresponding QBO invoices manually.",
       "entry_hash": "948f3c6b7346b55938ee6f88850fb6633a9053cda74e7b8be5ce8f278a1c29d6"
+    },
+    {
+      "id": "c02d4967-3e2d-4020-8831-bd9fe0a465d3",
+      "timestamp": "2026-06-09T19:45:37",
+      "cycle_type": "settings_save",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "change": "rebate_rate_scheme_correction",
+        "authoritative_source": "Tanya email 2026-06-09 (in writing)",
+        "morning_scheme_was": {
+          "ultrasound_finance": 0.1,
+          "ultrasound_self_funded": 0.08,
+          "rads_finance": 0.05,
+          "rads_self_funded": 0.04
+        },
+        "corrected_scheme": {
+          "ultrasound_finance": 0.1,
+          "ultrasound_self_funded": 0.05,
+          "rads_finance": 0.08,
+          "rads_self_funded": 0.04
+        },
+        "deltas": {
+          "ultrasound_self_funded": "0.08 → 0.05 (revert)",
+          "rads_finance": "0.05 → 0.08 (bump)"
+        }
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "Tanya confirmed the authoritative rate scheme in writing: ultrasound 10%/5% finance/self-funded; rads 8%/4% finance/self-funded. Earlier 2026-06-09 morning update (10/8 + 5/4, recorded in audit entry tied to commit 0b62451) was based on an incomplete verbal — the rads finance rate was 5% then, now correctly 8%; the ultrasound self-funded was 8% then, now correctly 5%.",
+      "entry_hash": "6162d71347c995f4afe6c53f46e2bbbcbc28ff9c52ff88c5124b9579a233b0aa"
     }
   ]
 }

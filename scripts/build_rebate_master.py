@@ -5,9 +5,9 @@ Program type + rates are inferred from the Finance Company column:
   - 'Self-Financed'                  -> self_funded
   - 'OnePlace Capital' / 'NewLane*'  -> finance
 
-Rate scheme (set 2026-06-09 by Alexander Jordain):
-  - Ultrasound: 10% finance / 8% self-funded
-  - Rads:       5% finance / 4% self-funded
+Rate scheme (authoritative per Tanya, email 2026-06-09):
+  - Ultrasound: 10% finance / 5% self-funded
+  - Rads:       8% finance / 4% self-funded
 
 Usage:
   python scripts/build_rebate_master.py "<path to Rebate Accounts Copy.xlsx>"
@@ -24,9 +24,9 @@ from openpyxl import load_workbook
 DEFAULT_WB = r"C:\Users\AlexanderJordain\OneDrive - Oncura Partners\Rebate Accounts Copy.xlsx"
 OUT = os.path.join(os.path.dirname(__file__), "..", "data", "rebate_master.json")
 
-RATE_US_SELF = 0.08
+RATE_US_SELF = 0.05
 RATE_US_FINANCE = 0.10
-RATE_RADS_FINANCE = 0.05
+RATE_RADS_FINANCE = 0.08
 RATE_RADS_SELF = 0.04
 
 
