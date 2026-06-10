@@ -620,6 +620,52 @@
       "outputs": [],
       "note": "Superseded rebate_report entry b3d1e474 (AJ, 2026-06-09T22:43:48). Computed at rates that were corrected hours later by Tanya. The prior entry remains in the log unmodified.",
       "entry_hash": "d6ec737e4b0489008c5cb5aea6337910227cc4b866a03097b998f5d40622798e"
+    },
+    {
+      "id": "62cb409d-0a74-45a8-9c09-93e9f4808c80",
+      "timestamp": "2026-06-10T15:55:39",
+      "cycle_type": "rebate_report",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "months": [
+          "2026-04",
+          "2026-05"
+        ],
+        "period_label": "April 2026 and May 2026",
+        "buckets": [
+          "NewLane Financed",
+          "Self-Financed",
+          "OnePlace Capital"
+        ],
+        "n_clinics": 87,
+        "per_bucket_totals": {
+          "NewLane Financed": 1067.0,
+          "Self-Financed": 1429.5,
+          "OnePlace Capital": 3531.5
+        },
+        "grand_total": 6028.0,
+        "fuzzy_match_decisions": {
+          "confirmed": 0,
+          "rejected": 0
+        }
+      },
+      "source_file": {
+        "name": "export_grid_5503a39a-bd47-4171-aa2f-891967aefbe8.xls",
+        "sha256": "fde2213c70548bc372df4a7798ca57967303d43d7aab1651ab0cd272bc0cd6af",
+        "size_bytes": 1154048
+      },
+      "outputs": [
+        {
+          "name": "Rebates_Apr_2026_and_May_2026.xlsx",
+          "sha256": "12052df1272b3c6f33c08bf8d456e8bfa36b443eefe7fb1ecff9baff432849e2",
+          "row_count": 87,
+          "total": 6028.0
+        }
+      ],
+      "note": "Rebate cycle for April 2026 and May 2026",
+      "entry_hash": "cc9cd5b9998587b381177f58a7b465583e3fb15b62422b57e3f782ff64b5a632"
     }
   ]
 }
