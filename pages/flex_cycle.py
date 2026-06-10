@@ -1283,7 +1283,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
-    import io as _io
     import pandas as pd
 
     SS = st.session_state
@@ -1298,11 +1297,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     SS.setdefault("recap_sales_class", "03-Telemedicine")
     SS.setdefault("recap_start_ref", 50000)
     SS.setdefault("recap_direct_start", 50000)
-    SS.setdefault("recap_uploaded_bytes", None)
-    SS.setdefault("recap_uploaded_name", "")
     SS.setdefault("recap_credit_offsets", {})
-    # Live OPD-OData source state. "opd_live" is the default; "file" only when
-    # the operator falls back to the manual upload expander.
+    # Live OPD-OData source state. "opd_live" is the only source — the manual
+    # upload fallback was removed 2026-06-09 (see the comment near the fetch
+    # button). The key stays because the audit manifest records it.
     SS.setdefault("recap_data_source", "opd_live")
     SS.setdefault("recap_opd_activity", None)            # {clinic_lower: total_price}
     SS.setdefault("recap_opd_raw_rows", None)            # list[dict] for audit/preview
@@ -1325,12 +1323,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     )
     today_d = dt.date.today()
 
-    # Compute the pipeline. Two sources of activity, mutually exclusive per
-    # session: live OPD OData pull (default, preferred), or a manual file
-    # upload (fallback for offline use or when the OData credential is
-    # unavailable). Errors are captured into SS so the upload step can render
-    # them inline (with a reference ID + admin-only traceback) instead of
-    # just a banner.
+    # Compute the pipeline. Single source of activity: the live OPD OData
+    # pull. Errors are captured into SS so the fetch step can render them
+    # inline (with a reference ID + admin-only traceback) instead of just
+    # a banner.
     pipe = None
     SS["recap_pipe_error"] = None
     # Pull the quarter's positive FLEX payments from the ledger — drives the
@@ -1356,30 +1352,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 ledger_payments_for_quarter=ledger_payments_for_quarter,
             )
             pipe = {"profile": "opd_live", "activity": activity, "recap": recap}
-        except Exception as e:
-            SS["recap_pipe_error"] = errors.capture(e)
-    elif SS.recap_uploaded_bytes:
-        try:
-            f = _io.BytesIO(SS.recap_uploaded_bytes)
-            f.name = SS.recap_uploaded_name or "upload.xls"
-            rec_raw = opd_adapter.read_upload(f)
-            rec_profile = opd_adapter.detect_profile(list(rec_raw.columns))
-            if rec_profile == "case_grid":
-                activity = opd_adapter.flex_activity_from_case_grid(
-                    rec_raw, loaders.service_prices(), start=win_start, end=win_end,
-                )
-            else:
-                activity = opd_adapter.flex_activity_from_invoices(rec_raw, start=win_start, end=win_end)
-            # Coverage check — was the file actually exported for the full quarter
-            # window, or did the operator filter to a single month at the source?
-            # Stored in pipe so the Review step can warn loudly.
-            upload_coverage = opd_adapter.detect_upload_date_coverage(rec_raw, rec_profile)
-            recap = flex_unused.compute_recapture(
-                flex_clinics, activity, rec_year, rec_month,
-                ledger_payments_for_quarter=ledger_payments_for_quarter,
-            )
-            pipe = {"profile": rec_profile, "activity": activity, "recap": recap,
-                    "upload_coverage": upload_coverage}
         except Exception as e:
             SS["recap_pipe_error"] = errors.capture(e)
 
@@ -1516,9 +1488,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     SS.recap_opd_fetched_at = (
                         dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
                     )
-                    # Clear any stale file-upload state so the two paths can't conflict
-                    SS.recap_uploaded_bytes = None
-                    SS.recap_uploaded_name = ""
 
             live_loaded = (SS.recap_data_source == "opd_live"
                            and SS.recap_opd_activity is not None)
@@ -1629,47 +1598,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 
         elif step_key == "review":
             st.markdown("### Review activity")
-            st.caption("What the app found in the uploaded export. Sanity-check before generating files.")
-
-            # Partial-upload guard — fires on the file-upload path when the
-            # file's date column doesn't span the full quarter. This is the
-            # exact failure mode that produced JW's 2026-06-09 incident:
-            # operator filtered to a single month at the OPD source, the
-            # file parsed cleanly, but every clinic's quarter activity was
-            # ~1/3 of reality → 35 inflated unused-recapture invoices +
-            # 14 missed overages, including Abell ($3,095 unused billed
-            # when actual was $278.29 overage).
-            _coverage = (pipe or {}).get("upload_coverage") or {}
-            if pipe and SS.recap_data_source != "opd_live" and _coverage.get("date_col"):
-                expected_months = set()
-                _cur = win_start
-                while _cur <= win_end:
-                    expected_months.add((_cur.year, _cur.month))
-                    _ny, _nm = (_cur.year + 1, 1) if _cur.month == 12 else (_cur.year, _cur.month + 1)
-                    _cur = dt.date(_ny, _nm, 1)
-                covered = _coverage.get("months_covered") or set()
-                missing = expected_months - covered
-                if missing:
-                    missing_labels = ", ".join(
-                        dt.date(y, m, 1).strftime("%b %Y")
-                        for y, m in sorted(missing)
-                    )
-                    obs_min = _coverage.get("min_date")
-                    obs_max = _coverage.get("max_date")
-                    st.error(
-                        f":material/priority_high: **Uploaded file appears to be a "
-                        f"partial-quarter export.** Stage 3 needs the full window "
-                        f"**{win_start:%b %d, %Y} – {win_end:%b %d, %Y}**, but the "
-                        f"file's `{_coverage['date_col']}` column only contains data "
-                        f"from **{obs_min:%b %d, %Y} – {obs_max:%b %d, %Y}**. "
-                        f"Missing month(s): **{missing_labels}**.  \n\n"
-                        f"Every clinic's quarter activity will be undercounted, "
-                        f"producing inflated unused-recapture invoices and hiding "
-                        f"legitimate overages. **Re-export with the date filter set "
-                        f"to the full quarter, or use the live OPD fetch button above** "
-                        f"(it always pulls the full window automatically).",
-                        icon=":material/priority_high:",
-                    )
+            st.caption("What the app pulled from OPD. Sanity-check before generating files.")
 
             # Roster-vs-ledger mismatch warnings — surface BEFORE the metrics
             # so the operator sees them first. Two flavors:
@@ -1820,9 +1749,8 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         payments=recap_ledger_rows,
                         note=f"Stage 3 recapture / {rec_year}-{rec_month:02d}",
                     )
-                    # Audit-manifest source descriptor: capture which path was
-                    # used (live OPD pull vs manual upload) so future auditors
-                    # can trace exactly where the activity numbers came from.
+                    # Audit-manifest source descriptor so future auditors can
+                    # trace exactly where the activity numbers came from.
                     if SS.recap_data_source == "opd_live":
                         _live_rows_df = pd.DataFrame(SS.recap_opd_raw_rows or [])
                         _audit_source = {
@@ -1830,12 +1758,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "sha256": audit.output_hash_df(_live_rows_df),
                             "size_bytes": SS.recap_opd_invoice_count,
                             "fetched_at": SS.recap_opd_fetched_at,
-                        }
-                    elif SS.recap_uploaded_bytes:
-                        _audit_source = {
-                            "name": SS.recap_uploaded_name,
-                            "sha256": ledger.file_hash(SS.recap_uploaded_bytes),
-                            "size_bytes": len(SS.recap_uploaded_bytes),
                         }
                     else:
                         _audit_source = None
@@ -2209,9 +2131,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         use_container_width=True,
         help="Clear the uploaded file + credit offsets and return to the setup step — use this between monthly Stage 3 runs.",
     ):
-        for k in ("recap_uploaded_bytes", "recap_uploaded_name", "recap_credit_offsets",
+        for k in ("recap_credit_offsets",
                   "recap_pipe_error",
-                  "w_recap_file", "w_recap_offsets_editor",
+                  "w_recap_offsets_editor",
                   "recap_opd_activity", "recap_opd_raw_rows", "recap_opd_fetched_at",
                   "recap_opd_invoice_count", "recap_opd_clinic_count",
                   "recap_opd_components_mismatch", "recap_opd_orphans"):
