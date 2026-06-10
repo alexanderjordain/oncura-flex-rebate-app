@@ -18,6 +18,7 @@ read-only and a role password unlocks actions:
 """
 from __future__ import annotations
 
+import hmac
 import os
 
 import streamlit as st
@@ -42,11 +43,21 @@ def _secret(path, default=None):
         return default
 
 
+def _pw_match(entered, expected) -> bool:
+    """Constant-time password comparison. The app sits on a public Cloud URL,
+    so the equality check must not leak match-prefix length via timing."""
+    if not expected:
+        return False
+    return hmac.compare_digest(
+        str(entered).encode("utf-8"), str(expected).encode("utf-8")
+    )
+
+
 def _resolve_role(entered: str):
     """Return role name if `entered` matches a role password; else None."""
     roles = _secret(["roles"], {}) or {}
     for role, pw in roles.items():
-        if pw and entered == pw:
+        if _pw_match(entered, pw):
             return role.lower()
     return None
 
@@ -96,7 +107,7 @@ def require_login():
         if role:
             st.session_state["auth_role"] = role
             st.rerun()
-        elif app_pw and entered == app_pw:
+        elif _pw_match(entered, app_pw):
             # If [roles] are configured, the shared password is read-only and a role password
             # is needed for actions. With no roles, the shared password grants full access.
             st.session_state["auth_role"] = "viewer" if _secret(["roles"]) else "admin"
