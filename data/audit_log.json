@@ -603,6 +603,23 @@
       "outputs": [],
       "note": "Tanya confirmed the authoritative rate scheme in writing: ultrasound 10%/5% finance/self-funded; rads 8%/4% finance/self-funded. Earlier 2026-06-09 morning update (10/8 + 5/4, recorded in audit entry tied to commit 0b62451) was based on an incomplete verbal — the rads finance rate was 5% then, now correctly 8%; the ultrasound self-funded was 8% then, now correctly 5%.",
       "entry_hash": "6162d71347c995f4afe6c53f46e2bbbcbc28ff9c52ff88c5124b9579a233b0aa"
+    },
+    {
+      "id": "308688aa-8c36-4f7a-b3b9-c0c48f8f03f9",
+      "timestamp": "2026-06-10T09:16:54",
+      "cycle_type": "settings_save",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "change": "supersede_rebate_report",
+        "superseded_entry_id": "b3d1e474-59f9-4544-894f-12d6c791a17b",
+        "reason": "AJ rebate run for Apr+May 2026 (total $6,949.08) was calculated at the 2026-06-09 morning rate scheme (US 10% finance / 8% self-funded; Rads 5% finance / 4% self-funded). Tanya corrected the scheme in writing the same day to the authoritative values (US 10/5, Rads 8/4) — see audit entry c02d4967. AJ's run is therefore stale; the rebate for Apr+May 2026 will be re-run at the corrected rates."
+      },
+      "source_file": null,
+      "outputs": [],
+      "note": "Superseded rebate_report entry b3d1e474 (AJ, 2026-06-09T22:43:48). Computed at rates that were corrected hours later by Tanya. The prior entry remains in the log unmodified.",
+      "entry_hash": "d6ec737e4b0489008c5cb5aea6337910227cc4b866a03097b998f5d40622798e"
     }
   ]
 }
