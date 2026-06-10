@@ -177,6 +177,10 @@ streamlit run app.py
 python scripts/smoke_test.py          # static cross-module reference check
 python -m pytest tests/ -v            # calculation correctness suite
 
+# Live OPD canary — REQUIRED after any change to core/opd_api.py or Stage 3.
+# Needs OPD_ODATA_USER/PASS in secrets; not in CI (public repo, no creds there).
+python scripts/opd_canary.py          # Abell May-2026 quarter: 5978.29 / 278.29
+
 # Cloud
 # Push to main -> Streamlit Cloud auto-redeploys from github.com/alexanderjordain/oncura-flex-rebate-app
 # Required secrets on Cloud: APP_PASSWORD; optional GITHUB_TOKEN for master-edit persistence.
