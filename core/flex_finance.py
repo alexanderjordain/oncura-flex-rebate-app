@@ -30,7 +30,7 @@ SCAN_CLASS = "03-Telemedicine"
 SCAN_TERMS = "SCAN"
 
 COMPANY_META = {
-    "GreatAmerica": {"flex_label": "FlexGreat America", "scan_label": None, "bank_feed": "Accounting Services"},
+    "GreatAmerica": {"flex_label": "FlexGreat America", "scan_label": None, "bank_feed": "Account Services"},
     "OnePlace": {"flex_label": "FlexOnePlace", "scan_label": "FlexOnePlace", "bank_feed": "Origin Bank Midwest"},
     "NewLane": {"flex_label": "FlexNewLane", "scan_label": "NewLaneScan", "bank_feed": "New Lane"},
     # FPLeasing ("Loan & Leasing Services" on remittances) is SCAN-ONLY. One row =
