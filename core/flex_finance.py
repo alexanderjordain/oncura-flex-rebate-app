@@ -35,9 +35,9 @@ COMPANY_META = {
     "NewLane": {"flex_label": "FlexNewLane", "scan_label": "NewLaneScan", "bank_feed": "New Lane"},
     # FPLeasing ("Loan & Leasing Services" on remittances) is SCAN-ONLY. One row =
     # one wire = one scan invoice + one received payment. No flex/credit-memo
-    # mechanism. The bank-feed label is a placeholder — confirm with Tanya what
-    # the actual feed reads as on the first live cycle.
-    "FPLeasing": {"flex_label": None, "scan_label": "FPLeasingScan", "bank_feed": "FP Leasing"},
+    # mechanism. Bank-feed label set to exactly how it reads in the QBO bank
+    # feed ("Fp Leasing Group", confirmed 2026-06-17) so the operator can match it.
+    "FPLeasing": {"flex_label": None, "scan_label": "FPLeasingScan", "bank_feed": "Fp Leasing Group"},
 }
 
 RECEIVE_PAYMENT_COLS = [

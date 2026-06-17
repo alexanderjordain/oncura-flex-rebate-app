@@ -88,6 +88,11 @@ def test_fpleasing_ref_no_falls_back_to_seq_when_invoice_missing():
     assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=None, seq=3) == "FPL-3"
 
 
+def test_fpleasing_bank_feed_label_matches_qbo():
+    # Must match the QBO bank-feed string exactly so the operator can reconcile.
+    assert flex_finance.COMPANY_META["FPLeasing"]["bank_feed"] == "Fp Leasing Group"
+
+
 def test_fpleasing_dedup_key_recovers_invoice_number_from_ref():
     # Stage 1 dedup keys FP Leasing on its own invoice #, recovered from the
     # Ref No (FPL-<n>) via strip_invoice_prefix. Lock that derivation.
