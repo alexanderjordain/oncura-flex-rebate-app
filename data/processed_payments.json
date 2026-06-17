@@ -71,6 +71,14 @@
       "uploaded_at": "2026-06-17T17:43:27",
       "row_count": 3,
       "note": "Stage 1 / FPLeasing / pay_date=2026-06-09"
+    },
+    {
+      "sha256": "58ee23b7f7e10b71587af70b3b43ede35d795fd071cabce57e4b27e75c2ac0ab",
+      "filename": "Remittance Detail Downloadable (13).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-17T18:41:44",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-06-09"
     }
   ],
   "payments": [
@@ -2953,6 +2961,36 @@
       "payment_date": "2026-06-09",
       "amount": 811.25,
       "recorded_at": "2026-06-17T17:43:27"
+    },
+    {
+      "fingerprint": "446f3a9ada0734f67f2dc622e067236941765f6a5d1cfebe72fa98a8608a0b71",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732700",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-06-09",
+      "amount": 804.56,
+      "recorded_at": "2026-06-17T18:41:44"
+    },
+    {
+      "fingerprint": "42b68376745e1fbfce346d12bbffcab26701e138ec65cc0c538fa5e1c3783afd",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41974746",
+      "qb_customer": "TVC - Foster Veterinary Clinic",
+      "payment_date": "2026-06-09",
+      "amount": 921.84,
+      "recorded_at": "2026-06-17T18:41:44"
+    },
+    {
+      "fingerprint": "b1332502a904bbb19f506c8823af4e70b46f989df1489f4474ef670783e5c363",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41983798",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-06-09",
+      "amount": 804.56,
+      "recorded_at": "2026-06-17T18:41:44"
     }
   ]
 }
