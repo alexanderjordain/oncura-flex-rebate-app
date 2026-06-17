@@ -323,14 +323,6 @@ def process_remittance(
     work = work[amounts != 0].reset_index(drop=True)
     amounts = work[amount_col].map(coerce_amount)
 
-    # FP Leasing invoice #s carry an alphabetic prefix (EQ42901, EQM43234).
-    # Strip it to the bare number at ingestion so the passthrough Invoice #
-    # column, the SaasAnt Ref No, and the ledger fingerprint all use the same
-    # clean numeric value. One point of normalization; the Ref No re-adds its
-    # own 'FPL-' system prefix in make_ref_no.
-    if company == "FPLeasing" and id_col and id_col in work.columns:
-        work[id_col] = work[id_col].map(strip_invoice_prefix)
-
     # Resolve QB customer for each row. Contract-based map wins when both the
     # contract and a name lookup exist — the contract → QB mapping is curated
     # in flex_master.json and authoritative; the name_map is best-effort.
@@ -386,7 +378,8 @@ def process_remittance(
     scan_payments = pd.DataFrame()
     if len(scan):
         invoice_nos = list(range(int(start_invoice_no), int(start_invoice_no) + len(scan)))
-        scan_invoices = _build_scan_invoices(scan, invoice_nos, invoice_date)
+        scan_invoices = _build_scan_invoices(scan, invoice_nos, invoice_date,
+                                             company=company, id_col=id_col)
         scan_payments = _build_payments(
             scan, company, "scan", meta["scan_label"], payment_date, id_col, invoice_nos=invoice_nos
         )
@@ -458,14 +451,27 @@ def _build_payments(src, company, kind, label, payment_date, id_col, invoice_nos
         out["Amount"] = amount
         out["Reference No"] = label
         if invoice_nos is not None:
-            out["Invoice No"] = invoice_nos
+            if company == "FPLeasing" and id_col:
+                # One invoice-number column only. FP's own invoice # is preserved
+                # in the Ref No (FPL-<n>); the column under the remittance's own
+                # Invoice # header now carries the GENERATED SaasAnt invoice
+                # number this payment applies to. Overwrite that passthrough
+                # column in place so there's no duplicate 'Invoice No' column.
+                out[id_col] = invoice_nos
+            else:
+                out["Invoice No"] = invoice_nos
 
     _assert_unique(out["Ref No (Receive Payment No)"], f"{company} {kind} payments")
     return out
 
 
-def _build_scan_invoices(src, invoice_nos, invoice_date):
+def _build_scan_invoices(src, invoice_nos, invoice_date, company=None, id_col=None):
     out = _passthrough(src)
+    # FP Leasing: drop the remittance's own Invoice # passthrough column (FP's
+    # number, preserved on the payment's Ref No) so the invoice file carries a
+    # single invoice-number column — the canonical SaasAnt 'Invoice No'.
+    if company == "FPLeasing" and id_col and id_col in out.columns:
+        out = out.drop(columns=[id_col])
     out["Invoice No"] = invoice_nos
     out["Customer"] = src["_qb_customer"].values
     out["Invoice Date"] = _date_str(invoice_date)

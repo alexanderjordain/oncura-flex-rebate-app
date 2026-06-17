@@ -88,7 +88,14 @@ def test_fpleasing_ref_no_falls_back_to_seq_when_invoice_missing():
     assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=None, seq=3) == "FPL-3"
 
 
-def test_fpleasing_remittance_strips_invoice_prefix_keeps_ref_prefix():
+def test_fpleasing_dedup_key_recovers_invoice_number_from_ref():
+    # Stage 1 dedup keys FP Leasing on its own invoice #, recovered from the
+    # Ref No (FPL-<n>) via strip_invoice_prefix. Lock that derivation.
+    assert flex_finance.strip_invoice_prefix("FPL-42901") == "42901"
+    assert flex_finance.strip_invoice_prefix("FPL-43234") == "43234"
+
+
+def test_fpleasing_remittance_single_invoice_column():
     df = pd.DataFrame({
         "Customer Name": ["Abell Animal Hospital", "Banfield Pet Hospital"],
         "Due to Oncura": [100.00, 250.50],
@@ -111,14 +118,17 @@ def test_fpleasing_remittance_strips_invoice_prefix_keeps_ref_prefix():
     pay = out["scan_payments"]
     assert len(inv) == 2 and len(pay) == 2
 
-    # Generated Invoice No is the sequential number from the UI start.
+    # PAYMENT: exactly one invoice-number column — the remittance's own
+    # 'Invoice #' header, now carrying the GENERATED SaasAnt invoice number.
+    # No duplicate 'Invoice No' column.
+    assert list(pay["Invoice #"]) == [50088, 50089]
+    assert "Invoice No" not in pay.columns
+
+    # INVOICE: single invoice-number column under the canonical 'Invoice No';
+    # FP's own Invoice # passthrough is dropped.
     assert list(inv["Invoice No"]) == [50088, 50089]
-    assert list(pay["Invoice No"]) == [50088, 50089]
+    assert "Invoice #" not in inv.columns
 
-    # Invoice # column is stripped to the bare number (no EQ/EQM prefix).
-    assert list(pay["Invoice #"]) == ["42901", "43234"]
-    assert list(inv["Invoice #"]) == ["42901", "43234"]
-
-    # Ref No keeps the FPL- system prefix over the stripped invoice number.
+    # FP's own invoice # is preserved only in the Ref No, prefix-free + FPL-.
     refs = list(pay["Ref No (Receive Payment No)"])
     assert refs == ["FPL-42901", "FPL-43234"]

@@ -485,15 +485,30 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             )
 
             # ── Row-level dedup against the processed-payments ledger ──────────────
+            # Stable per-payment dedup key. For most companies that's id_col
+            # (contract / payment-invoice number). FP Leasing's displayed
+            # invoice-# column now carries the GENERATED SaasAnt invoice number
+            # (which changes per run with the start #), so key off FP's own
+            # invoice number instead — it's preserved in the Ref No as 'FPL-<n>'
+            # — so re-uploads still dedup regardless of the chosen start #.
+            ref_col = "Ref No (Receive Payment No)"
+
             def _row_payment_dicts(df, kind):
-                if df is None or df.empty or id_col not in df.columns:
+                if df is None or df.empty:
+                    return []
+                use_ref = company == "FPLeasing" and ref_col in df.columns
+                if not use_ref and id_col not in df.columns:
                     return []
                 out = []
                 for i in range(len(df)):
                     amt_val = df["Amount"].iloc[i] if "Amount" in df.columns else df[amount_col].iloc[i]
+                    if use_ref:
+                        contract = flex_finance.strip_invoice_prefix(df[ref_col].iloc[i])
+                    else:
+                        contract = df[id_col].iloc[i]
                     out.append({
                         "kind": kind,
-                        "contract": df[id_col].iloc[i],
+                        "contract": contract,
                         "qb_customer": df["Customer"].iloc[i] if "Customer" in df.columns else "",
                         "payment_date": pay_date,
                         "amount": amt_val,
