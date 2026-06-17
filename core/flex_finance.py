@@ -17,6 +17,8 @@ Per-company rules:
 """
 from __future__ import annotations
 
+import re
+
 import pandas as pd
 
 from .opd_adapter import coerce_amount
@@ -164,6 +166,32 @@ def normalize_contract(c) -> str:
     return s
 
 
+def strip_invoice_prefix(value) -> str:
+    """FP Leasing invoice #s arrive with an alphabetic prefix (EQ42901,
+    EQM43234, EQM43612). Accounting needs the bare NUMERIC invoice number —
+    no prefix — in both the remittance Invoice # column and the SaasAnt Ref No,
+    because that's what reconciles in QBO. Drop a leading run of non-digits and
+    a stray '.0' float artifact from xlsx reads. Returns '' when nothing usable
+    is left (None / NaN / blank), letting callers fall back to a sequence no.
+
+    Note: this collapses the alpha prefix, so two invoices that differ ONLY by
+    prefix (EQ42901 vs EQM42901) would map to the same number. FP Leasing's
+    numbers are distinct in their digits, and the per-row Ref-No dedup suffix
+    still guards SaasAnt uniqueness, but flag it if a future remittance shows
+    digit-identical invoice #s under different prefixes.
+    """
+    if value is None:
+        return ""
+    s = str(value).strip()
+    if not s or s.lower() == "nan":
+        return ""
+    if "." in s:
+        head, _, tail = s.partition(".")
+        if tail.strip("0") == "":
+            s = head
+    return re.sub(r"^\D+", "", s)
+
+
 def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, seq=None) -> str:
     if company == "GreatAmerica":
         return f"GA-{invoice_number}"
@@ -177,13 +205,11 @@ def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, 
     if company == "NewLane":
         return f"NewLaneScan - {seq}" if kind == "scan" else f"FlexNewLane - {seq}"
     if company == "FPLeasing":
-        # FP Leasing's own invoice # (EQ42901, EQM43234, …) is the unique-per-row
-        # ref we tie our SaasAnt payment to. Used VERBATIM — no prefix — so the
-        # Ref No matches the remittance's Invoice # column exactly (accounting
-        # rejected the FPL- prefix; the bare invoice # is what reconciles in QBO).
-        # normalize_contract strips a stray '.0' if the # was read as a float.
-        # Falls back to seq only if the invoice # is missing.
-        return normalize_contract(invoice_number) if invoice_number else str(seq)
+        # Ref No keeps the 'FPL-' system prefix (accounting wants it), but the
+        # invoice # itself must be the bare NUMERIC value — strip the alphabetic
+        # EQ/EQM prefix so 'EQ42901' -> 'FPL-42901', matching the (also stripped)
+        # Invoice # column. Falls back to seq only if the invoice # is missing.
+        return f"FPL-{strip_invoice_prefix(invoice_number) or seq}"
     return f"{company}-{kind}-{invoice_number or contract or seq}"
 
 
@@ -296,6 +322,14 @@ def process_remittance(
     amounts = work[amount_col].map(coerce_amount)
     work = work[amounts != 0].reset_index(drop=True)
     amounts = work[amount_col].map(coerce_amount)
+
+    # FP Leasing invoice #s carry an alphabetic prefix (EQ42901, EQM43234).
+    # Strip it to the bare number at ingestion so the passthrough Invoice #
+    # column, the SaasAnt Ref No, and the ledger fingerprint all use the same
+    # clean numeric value. One point of normalization; the Ref No re-adds its
+    # own 'FPL-' system prefix in make_ref_no.
+    if company == "FPLeasing" and id_col and id_col in work.columns:
+        work[id_col] = work[id_col].map(strip_invoice_prefix)
 
     # Resolve QB customer for each row. Contract-based map wins when both the
     # contract and a name lookup exist — the contract → QB mapping is curated

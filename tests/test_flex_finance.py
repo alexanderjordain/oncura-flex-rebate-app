@@ -65,28 +65,30 @@ def test_is_whole_dollar_handles_bad_input():
     assert not flex_finance.is_whole_dollar("abc")
 
 
-# ── FP Leasing: Ref No is the bare invoice #, NO prefix ──────────────────────
-# Accounting requires the SaasAnt Ref No to match the remittance's Invoice #
-# column exactly — no 'FPL-' (or any) prefix.
+# ── FP Leasing: strip the alphabetic invoice-# prefix; keep the FPL- ref prefix ─
+# The invoice number itself (Invoice # column AND inside the Ref No) must be the
+# bare numeric value: EQ42901 -> 42901. The Ref No keeps its 'FPL-' system
+# prefix, so the Ref No reads 'FPL-42901'.
 
-def test_fpleasing_ref_no_has_no_prefix():
-    ref = flex_finance.make_ref_no("FPLeasing", "scan", invoice_number="EQ42901")
-    assert ref == "EQ42901"
-    assert "FPL" not in ref
+def test_strip_invoice_prefix_drops_alpha_prefix():
+    assert flex_finance.strip_invoice_prefix("EQ42901") == "42901"
+    assert flex_finance.strip_invoice_prefix("EQM43234") == "43234"
+    assert flex_finance.strip_invoice_prefix("43612") == "43612"  # already bare
+    assert flex_finance.strip_invoice_prefix(42901.0) == "42901"  # xlsx float read
+    assert flex_finance.strip_invoice_prefix(None) == ""
+    assert flex_finance.strip_invoice_prefix("") == ""
 
 
-def test_fpleasing_ref_no_strips_float_artifact():
-    # A purely numeric invoice # read from xlsx may arrive as 42901.0
-    assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=42901.0) == "42901"
+def test_fpleasing_ref_keeps_fpl_prefix_strips_alpha_invoice_prefix():
+    assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number="EQ42901") == "FPL-42901"
+    assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number="EQM43234") == "FPL-43234"
 
 
 def test_fpleasing_ref_no_falls_back_to_seq_when_invoice_missing():
-    ref = flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=None, seq=3)
-    assert ref == "3"
-    assert "FPL" not in ref
+    assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=None, seq=3) == "FPL-3"
 
 
-def test_fpleasing_remittance_ref_matches_invoice_column_no_prefix():
+def test_fpleasing_remittance_strips_invoice_prefix_keeps_ref_prefix():
     df = pd.DataFrame({
         "Customer Name": ["Abell Animal Hospital", "Banfield Pet Hospital"],
         "Due to Oncura": [100.00, 250.50],
@@ -109,13 +111,14 @@ def test_fpleasing_remittance_ref_matches_invoice_column_no_prefix():
     pay = out["scan_payments"]
     assert len(inv) == 2 and len(pay) == 2
 
-    # Generated Invoice No is the sequential number from the UI start, no prefix.
+    # Generated Invoice No is the sequential number from the UI start.
     assert list(inv["Invoice No"]) == [50088, 50089]
     assert list(pay["Invoice No"]) == [50088, 50089]
 
-    # Ref No is the bare FP Leasing invoice #, equal to the passthrough Invoice #
-    # column, with no FPL- prefix anywhere.
+    # Invoice # column is stripped to the bare number (no EQ/EQM prefix).
+    assert list(pay["Invoice #"]) == ["42901", "43234"]
+    assert list(inv["Invoice #"]) == ["42901", "43234"]
+
+    # Ref No keeps the FPL- system prefix over the stripped invoice number.
     refs = list(pay["Ref No (Receive Payment No)"])
-    assert refs == ["EQ42901", "EQM43234"]
-    assert list(pay["Invoice #"]) == refs
-    assert not any(str(r).startswith("FPL") for r in refs)
+    assert refs == ["FPL-42901", "FPL-43234"]
