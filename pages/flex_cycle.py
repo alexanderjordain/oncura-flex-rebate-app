@@ -373,21 +373,36 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 if _year_months else {}
             )
 
-            if already_processed_months:
+            # Whether a month overlap is a genuine re-upload signal depends on the
+            # partner. Single-remittance-per-month partners (OnePlace, NewLane,
+            # FP Leasing) overlapping a month → likely re-upload → hard gate.
+            # GreatAmerica sends MULTIPLE remittances per month, so a month overlap
+            # is expected — inform, don't gate. The exact-file-hash match is a true
+            # re-upload signal for ANY partner and always gates.
+            multi_remittance = company in flex_finance.MULTI_REMITTANCE_COMPANIES
+            month_overlap = bool(already_processed_months)
+            hard_dupe_risk = bool(prior_file) or (month_overlap and not multi_remittance)
+
+            if month_overlap:
                 _human_months = ", ".join(
                     f"**{dt.date(y, m, 1):%B %Y}** ({n} payment(s))"
                     for (y, m), n in sorted(already_processed_months.items())
                 )
+
+            if hard_dupe_risk:
                 _extra_hash_note = ""
                 if prior_file:
                     _extra_hash_note = (
-                        f"  \nThis exact file was also previously processed on "
+                        f"  \nThis exact file was previously processed on "
                         f"{prior_file.get('uploaded_at', '?')[:10]} "
                         f"(`{prior_file.get('filename', '?')}`)."
                     )
+                _month_clause = (
+                    f"contains payments for a month that's already in the ledger: {_human_months}. "
+                    if month_overlap else "was uploaded before. "
+                )
                 st.error(
-                    f"**This file contains payments for a month that's already in the "
-                    f"ledger:** {_human_months}. Re-uploading would risk double-posting "
+                    f"**This file {_month_clause}**Re-uploading would risk double-posting "
                     f"to QBO. Row-level dedup will still skip already-imported payments "
                     f"below — but verify before downloading.{_extra_hash_note}"
                 )
@@ -397,6 +412,16 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                     key="remit_file_override",
                 ):
                     st.stop()
+            elif month_overlap and multi_remittance:
+                # Expected for GreatAmerica — multiple remittances per month is the
+                # normal flow. Informational only; no override gate.
+                st.info(
+                    f"{company} sends multiple remittances per month, so finding "
+                    f"{_human_months} already in the ledger is expected — this is not a "
+                    f"re-upload warning. Row-level dedup still skips any payment already "
+                    f"imported, and an identical file would be flagged. Verify the totals "
+                    f"below before downloading."
+                )
             elif prior_file:
                 # Same bytes seen before but no month overlap in the ledger — this
                 # means the prior import was rolled back / cleared. Note quietly;

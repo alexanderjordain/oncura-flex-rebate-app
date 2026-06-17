@@ -273,6 +273,13 @@ def build_contract_qb_map(flex_clinics: list[dict], company: str,
 # 'contract:022-XXX' in the unmapped list — the operator maps by contract.
 CONTRACT_PRIMARY_COMPANIES = {"GreatAmerica"}
 
+# Partners that legitimately send MORE THAN ONE remittance per month. For these,
+# finding the month already in the ledger is expected (not a re-upload signal),
+# so Stage 1's month-level pre-check should inform rather than gate. The
+# exact-file-hash check and per-row fingerprint dedup still protect against true
+# double-posting.
+MULTI_REMITTANCE_COMPANIES = {"GreatAmerica"}
+
 
 def process_remittance(
     df: pd.DataFrame,

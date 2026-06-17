@@ -88,6 +88,15 @@ def test_fpleasing_ref_no_falls_back_to_seq_when_invoice_missing():
     assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=None, seq=3) == "FPL-3"
 
 
+def test_multi_remittance_companies():
+    # GreatAmerica sends multiple remittances per month (month-overlap is
+    # expected, not a re-upload signal). The single-remittance partners must NOT
+    # be in this set, or their genuine re-upload warning would be downgraded.
+    assert "GreatAmerica" in flex_finance.MULTI_REMITTANCE_COMPANIES
+    for c in ("OnePlace", "NewLane", "FPLeasing"):
+        assert c not in flex_finance.MULTI_REMITTANCE_COMPANIES
+
+
 def test_bank_feed_labels_match_qbo():
     # Must match the QBO bank-feed strings exactly so the operator can reconcile.
     assert flex_finance.COMPANY_META["FPLeasing"]["bank_feed"] == "Fp Leasing Group"
