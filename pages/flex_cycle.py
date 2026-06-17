@@ -414,13 +414,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                     st.stop()
             elif month_overlap and multi_remittance:
                 # Expected for GreatAmerica — multiple remittances per month is the
-                # normal flow. Informational only; no override gate.
-                st.info(
-                    f"{company} sends multiple remittances per month, so finding "
-                    f"{_human_months} already in the ledger is expected — this is not a "
-                    f"re-upload warning. Row-level dedup still skips any payment already "
-                    f"imported, and an identical file would be flagged. Verify the totals "
-                    f"below before downloading."
+                # normal flow. A quiet caption, not a banner; no override gate.
+                _overlap_months = ", ".join(
+                    f"{dt.date(y, m, 1):%B %Y}" for (y, m) in sorted(already_processed_months)
+                )
+                st.caption(
+                    f"{company} sends multiple remittances per month, so {_overlap_months} "
+                    f"already in the ledger is expected; already-imported rows are skipped below."
                 )
             elif prior_file:
                 # Same bytes seen before but no month overlap in the ledger — this
