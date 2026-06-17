@@ -1,6 +1,9 @@
 """Finance-co remittance classification — prefix + cents split rules."""
 from __future__ import annotations
 
+import datetime as dt
+
+import pandas as pd
 import pytest
 
 from core import flex_finance
@@ -60,3 +63,59 @@ def test_is_whole_dollar_false_cases():
 def test_is_whole_dollar_handles_bad_input():
     assert not flex_finance.is_whole_dollar(None)
     assert not flex_finance.is_whole_dollar("abc")
+
+
+# ── FP Leasing: Ref No is the bare invoice #, NO prefix ──────────────────────
+# Accounting requires the SaasAnt Ref No to match the remittance's Invoice #
+# column exactly — no 'FPL-' (or any) prefix.
+
+def test_fpleasing_ref_no_has_no_prefix():
+    ref = flex_finance.make_ref_no("FPLeasing", "scan", invoice_number="EQ42901")
+    assert ref == "EQ42901"
+    assert "FPL" not in ref
+
+
+def test_fpleasing_ref_no_strips_float_artifact():
+    # A purely numeric invoice # read from xlsx may arrive as 42901.0
+    assert flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=42901.0) == "42901"
+
+
+def test_fpleasing_ref_no_falls_back_to_seq_when_invoice_missing():
+    ref = flex_finance.make_ref_no("FPLeasing", "scan", invoice_number=None, seq=3)
+    assert ref == "3"
+    assert "FPL" not in ref
+
+
+def test_fpleasing_remittance_ref_matches_invoice_column_no_prefix():
+    df = pd.DataFrame({
+        "Customer Name": ["Abell Animal Hospital", "Banfield Pet Hospital"],
+        "Due to Oncura": [100.00, 250.50],
+        "Invoice #": ["EQ42901", "EQM43234"],
+    })
+    out = flex_finance.process_remittance(
+        df, "FPLeasing",
+        customer_col="Customer Name",
+        amount_col="Due to Oncura",
+        id_col="Invoice #",
+        payment_date=dt.date(2026, 6, 9),
+        invoice_date=dt.date(2026, 6, 9),
+        start_invoice_no=50088,
+        name_map={},
+        split="all_scan",
+    )
+    # Scan-only: no flex payments, one scan invoice + one payment per row.
+    assert out["flex_payments"].empty
+    inv = out["scan_invoices"]
+    pay = out["scan_payments"]
+    assert len(inv) == 2 and len(pay) == 2
+
+    # Generated Invoice No is the sequential number from the UI start, no prefix.
+    assert list(inv["Invoice No"]) == [50088, 50089]
+    assert list(pay["Invoice No"]) == [50088, 50089]
+
+    # Ref No is the bare FP Leasing invoice #, equal to the passthrough Invoice #
+    # column, with no FPL- prefix anywhere.
+    refs = list(pay["Ref No (Receive Payment No)"])
+    assert refs == ["EQ42901", "EQM43234"]
+    assert list(pay["Invoice #"]) == refs
+    assert not any(str(r).startswith("FPL") for r in refs)

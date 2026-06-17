@@ -178,8 +178,12 @@ def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, 
         return f"NewLaneScan - {seq}" if kind == "scan" else f"FlexNewLane - {seq}"
     if company == "FPLeasing":
         # FP Leasing's own invoice # (EQ42901, EQM43234, …) is the unique-per-row
-        # ref we tie our SaasAnt payment to. Falls back to seq if absent.
-        return f"FPL-{invoice_number or seq}"
+        # ref we tie our SaasAnt payment to. Used VERBATIM — no prefix — so the
+        # Ref No matches the remittance's Invoice # column exactly (accounting
+        # rejected the FPL- prefix; the bare invoice # is what reconciles in QBO).
+        # normalize_contract strips a stray '.0' if the # was read as a float.
+        # Falls back to seq only if the invoice # is missing.
+        return normalize_contract(invoice_number) if invoice_number else str(seq)
     return f"{company}-{kind}-{invoice_number or contract or seq}"
 
 
