@@ -666,6 +666,42 @@
       ],
       "note": "Rebate cycle for April 2026 and May 2026",
       "entry_hash": "cc9cd5b9998587b381177f58a7b465583e3fb15b62422b57e3f782ff64b5a632"
+    },
+    {
+      "id": "900fd220-e6c1-4562-acfb-5336e82c3449",
+      "timestamp": "2026-06-17T17:43:28",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "company": "FPLeasing",
+        "payment_date": "2026-06-09",
+        "invoice_date": "2026-06-09",
+        "start_invoice_no": 50088,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Pass Thru Report June 2026 - Oncura.xlsx",
+        "sha256": "d5a6d90607d958b8dfea7ca53011bb84e4e4038b74811f400eabb10e467823a8",
+        "size_bytes": 14090
+      },
+      "outputs": [
+        {
+          "name": "scan_invoices",
+          "sha256": "a70d7c5f990a7c92d6f241914dc713471437b6cf8c93491b3bf8d3100b8bebcf",
+          "row_count": 3,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "8eb43d3be7525e2f20f36f501a98959a48247ff48984e68e0b9ef5d2361bc102",
+          "row_count": 3,
+          "total": 2233.75
+        }
+      ],
+      "note": "3 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "86ac4319d62813a119d52323ca3f6a838d67687caeed77940c0a6f34adfcfee4"
     }
   ]
 }
