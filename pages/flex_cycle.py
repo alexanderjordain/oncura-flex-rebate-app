@@ -340,6 +340,15 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         else:
             file_bytes = up.getvalue()
             prior_file = ledger.check_file_seen(file_bytes)
+            # Did we record THIS exact file earlier in this session? Tracked in
+            # session state (keyed by file hash) so the "already recorded" state
+            # is deterministic and does NOT depend on the just-written ledger
+            # having propagated to the next read. This is what stops the "Mark N"
+            # button from lingering after a successful record and inviting a
+            # confusing second click that records 0. {file_hash: added_count}
+            this_file_hash = ledger.file_hash(file_bytes)
+            SS.setdefault("stage1_recorded_files", {})
+            recorded_this_session = this_file_hash in SS["stage1_recorded_files"]
             raw = opd_adapter.read_remittance(up)
 
             # Month-based dedup — the real signal for protecting against
@@ -381,7 +390,12 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             # re-upload signal for ANY partner and always gates.
             multi_remittance = company in flex_finance.MULTI_REMITTANCE_COMPANIES
             month_overlap = bool(already_processed_months)
-            hard_dupe_risk = bool(prior_file) or (month_overlap and not multi_remittance)
+            # A file we already recorded this session is expected to be "seen" —
+            # don't throw the red re-upload gate for it; the recorded-state
+            # confirmation below handles it.
+            hard_dupe_risk = (not recorded_this_session) and (
+                bool(prior_file) or (month_overlap and not multi_remittance)
+            )
 
             if month_overlap:
                 _human_months = ", ".join(
@@ -546,6 +560,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             all_fps = [ledger.fingerprint(company, r["kind"], r["contract"], r["payment_date"], r["amount"])
                        for r in all_rows]
             seen_fps = ledger.check_payments_seen(all_fps)
+            # A batch recorded earlier in THIS session is definitively in the
+            # ledger even if the just-written copy hasn't propagated to this
+            # read. Treat all its rows as seen so the flow reflects the recorded
+            # state deterministically (no lingering "Mark N" button / 0-record
+            # second click).
+            if recorded_this_session:
+                seen_fps = set(all_fps)
 
             # ── Reissue check: rows that weren't exact-duplicates but match an existing
             #    ledger row on (company, kind, contract, amount) with a DIFFERENT payment_date.
@@ -617,12 +638,26 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             # clean 'nothing to import' message and skip to the bottom reset.
             fully_deduped = bool(seen_fps) and s["total"] == 0 and (s["flex_count"] + s["scan_count"]) == 0
             if fully_deduped:
-                st.success(
-                    ":material/check_circle: **All payments in this file are already in the "
-                    "ledger.** Nothing new to import — the prior batch covers this remittance. "
-                    "Use **◀ Back to Setup** at the bottom of the page to upload a different "
-                    "file."
-                )
+                if recorded_this_session:
+                    _rec_n = SS["stage1_recorded_files"].get(this_file_hash, 0)
+                    _rec_lead = (
+                        f"**Recorded.** {_rec_n} payment(s) from this file were written to the "
+                        f"ledger + audit manifest this session"
+                        if _rec_n else
+                        "**Already in the ledger.** These payments were previously recorded — "
+                        "nothing new was written"
+                    )
+                    st.success(
+                        f":material/check_circle: {_rec_lead}. Re-uploading the same file won't "
+                        "double-post. Use **◀ Back to Setup** below to process the next file."
+                    )
+                else:
+                    st.success(
+                        ":material/check_circle: **All payments in this file are already in the "
+                        "ledger.** Nothing new to import — the prior batch covers this remittance. "
+                        "Use **◀ Back to Setup** at the bottom of the page to upload a different "
+                        "file."
+                    )
                 st.divider()
                 reset_col, _ = st.columns([1, 4])
                 if reset_col.button(
@@ -907,7 +942,12 @@ the next. After all uploads, the combined total should match the bank-feed depos
                     note=f"{added} new payment(s) recorded; {len(seen_fps)} already in ledger",
                 )
                 if ok:
-                    st.success(f"Recorded {added} payment(s) in the ledger + audit manifest. {msg}")
+                    # Mark this file recorded for the session and rerun, so the
+                    # page re-renders in the deterministic recorded state (no
+                    # lingering "Mark N" button) instead of relying on the
+                    # just-written ledger being visible to the next read.
+                    SS["stage1_recorded_files"][this_file_hash] = added
+                    st.rerun()
                 else:
                     st.warning(
                         f"Recorded {added} locally (no GitHub commit). On Cloud, this means "
@@ -920,6 +960,14 @@ the next. After all uploads, the combined total should match the bank-feed depos
             sop2_meta = flex_finance.COMPANY_META.get(company, {})
             st.divider()
             _bank = sop2_meta.get("bank_feed", "the bank feed")
+            # Build the bank-feed-label crosswalk from COMPANY_META so it can't
+            # drift out of sync with the labels (as it did when GreatAmerica was
+            # corrected to "Account Services").
+            _label_pairs = " · ".join(
+                f"**{m['bank_feed']}** = {c}"
+                for c, m in flex_finance.COMPANY_META.items()
+                if m.get("bank_feed")
+            )
             # st.warning gives the yellow call-to-action box appropriate for a
             # "you still have work to do in QBO" reminder. The bank-feed-label
             # crosswalk at the bottom uses :blue[] so the label names stand
@@ -931,8 +979,7 @@ the next. After all uploads, the combined total should match the bank-feed depos
                 f"shows up under the finance company's bank-feed label — for this batch: **{_bank}**. "
                 f"Confirm the deposit amount equals the **Total** shown on this page; if there's a "
                 f"mismatch, stop and reconcile before posting the next remittance.  \n"
-                f":blue[Bank-feed labels: **Origin Bank Midwest** = OnePlace (flex + scan) · "
-                f"**Accounting Services** = GreatAmerica · **New Lane** = New Lane]",
+                f":blue[Bank-feed labels: {_label_pairs}]",
                 icon=":material/account_balance:",
             )
 
