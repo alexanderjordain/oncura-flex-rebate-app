@@ -1734,15 +1734,36 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     icon=":material/priority_high:",
                 )
 
+            # Split included (billable) vs excluded (active in roster but no FLEX
+            # payment this quarter — held out, see the warning above). The headline
+            # metrics show what will ACTUALLY be billed, so they reconcile with the
+            # recapture/overage steps; the excluded amount is a caption beneath.
+            if "excluded_no_payments" in rdf.columns:
+                _excluded_mask = rdf["excluded_no_payments"].fillna(False)
+                included_df = rdf[~_excluded_mask]
+                excluded_df = rdf[_excluded_mask]
+            else:
+                included_df, excluded_df = rdf, rdf.iloc[0:0]
+
+            def _col_sum(df, col):
+                return float(df[col].fillna(0).sum()) if (col in df.columns and not df.empty) else 0.0
+
+            _exc_unused = _col_sum(excluded_df, "unused")
+            _exc_overage = _col_sum(excluded_df, "overage")
+            _n_excl = len(excluded_df)
+
             m1, m2, m3 = st.columns(3)
             m1.metric("Source", pipe["profile"])
-            m2.metric("Unused (recapture)", f"${rdf['unused'].fillna(0).sum():,.2f}")
-            m3.metric("Overage (gross)", f"${rdf['overage'].fillna(0).sum():,.2f}")
+            m2.metric("Unused (recapture)", f"${_col_sum(included_df, 'unused'):,.2f}")
+            if _n_excl and _exc_unused:
+                m2.caption(f"+ ${_exc_unused:,.2f} across {_n_excl} excluded clinic(s) — not billed")
+            m3.metric("Overage (gross)", f"${_col_sum(included_df, 'overage'):,.2f}")
+            if _n_excl and _exc_overage:
+                m3.caption(f"+ ${_exc_overage:,.2f} across {_n_excl} excluded clinic(s) — not billed")
             if pipe["profile"] == "case_grid":
                 st.caption("Case-grid: activity = sum of priced services per case (no AdminFee, STAT +$125).")
             # Activity-match check operates on INCLUDED rows only — excluded
             # ones already have a more specific warning above.
-            included_df = rdf[~rdf["excluded_no_payments"].fillna(False)] if "excluded_no_payments" in rdf.columns else rdf
             no_act = included_df[included_df["activity_match"] == "none"]
             if not no_act.empty:
                 st.warning(
