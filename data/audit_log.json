@@ -762,6 +762,48 @@
       ],
       "note": "0 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "ed56ced3147e7476afcf6babc5d116b1b62d929ecde239fdb0e60e765f378f20"
+    },
+    {
+      "id": "4900262a-4e7a-4be1-bbcc-48ec1d39367c",
+      "timestamp": "2026-06-19T17:54:55",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-06-09",
+        "invoice_date": "2026-06-09",
+        "start_invoice_no": 50128,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Oncura May Passthrough.xlsx",
+        "sha256": "9341fef58e7d90450fcba443935d078ed51dabb5fc6dde1d77acb3ebea048127",
+        "size_bytes": 12170
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "51263f4873a83bc7b74be275cfcffcec6c2e291755f63d218563429868ea674e",
+          "row_count": 2,
+          "total": 1705.86
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "9e0d904d8dc787f9be47f3463c96d59f54b9b497cf14e455c4782339e8c7be10",
+          "row_count": 24,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "0c61349f601f6daea33b94589adc2c531a494dcf0350e580d370da40424603b2",
+          "row_count": 24,
+          "total": 14845.0
+        }
+      ],
+      "note": "26 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "615006c3e2ec4adb1d654218fe3c879e43662458f1b6fb0b74e545f9894b42a2"
     }
   ]
 }
