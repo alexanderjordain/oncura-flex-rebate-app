@@ -17,9 +17,10 @@ from openpyxl.styles import Alignment, Border, Font, Side
 from openpyxl.utils import get_column_letter
 
 # rebate_master.finance_company -> (pretty bucket name, tab-name suffix)
+# Keys are the stored data values (unchanged); the pretty names are display only.
 BUCKET_PRETTY = {
-    "Self-Financed": ("Self Funded", "Self-Funded"),
-    "NewLane Financed": ("Newlane Finance", "NewLane Fin"),
+    "Self-Financed": ("Self-Funded", "Self-Funded"),
+    "NewLane Financed": ("Newlane Financed", "NewLane Fin"),
     "OnePlace Capital": ("OnePlace Capital", "OnePlace Ca"),
 }
 

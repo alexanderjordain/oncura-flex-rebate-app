@@ -356,11 +356,13 @@ elif step_key == "review":
         m4.metric("Grand total", f"${grand:,.2f}")
 
         st.subheader("Per-bucket totals")
+        # Display label only — the stored bucket key stays "Self-Financed".
+        _bucket_label = {"Self-Financed": "Self-Funded"}
         for bucket in ["OnePlace Capital", "NewLane Financed", "Self-Financed"]:
             if bucket not in per_bucket: continue
             bsum = sum(sum(d.values()) for d in per_bucket[bucket].values())
             nz = sum(1 for d in per_bucket[bucket].values() if any(v > 0 for v in d.values()))
-            st.write(f"- **{bucket}** — {len(per_bucket[bucket])} clinics ({nz} with activity), **${bsum:,.2f}**")
+            st.write(f"- **{_bucket_label.get(bucket, bucket)}** — {len(per_bucket[bucket])} clinics ({nz} with activity), **${bsum:,.2f}**")
 
         # ── Pre-export review surfaces: things the calc flagged that the operator
         #    needs to look at before signing off. Previously these were computed

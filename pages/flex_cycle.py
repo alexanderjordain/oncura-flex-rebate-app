@@ -1926,7 +1926,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 and escalation warning."""
                 st.caption(
                     "OnePlace handles overages submitted before the cutoff. Great America + "
-                    "New Lane have opted out (direct-bill). Self-Financed: direct. Missed cutoff: direct."
+                    "New Lane have opted out (direct-bill). Self-Funded: direct. Missed cutoff: direct."
                 )
                 with st.expander(":gray[Pre-existing credit offsets (optional)]"):
                     st.caption(

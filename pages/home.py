@@ -79,7 +79,7 @@ with col_rebate:
         "- **Rebate Program Controls** — view/edit the clinic roster, rebate rates, and service price list\n"
         "- **Rebate Cycle** — pick one or more months, upload OPD detail, download a multi-tab "
         "report (one tab per finance bucket)\n\n"
-        "Ultrasound 10% finance / 5% self-funded; rads 4% finance / 2% self-funded."
+        "Ultrasound 10% financed / 5% self-funded; rads 4% financed / 2% self-funded."
     )
 
 st.divider()
@@ -113,6 +113,6 @@ with st.expander("Setup / status notes"):
 - **QBO:** SaasAnt import-file generation — no direct QBO writes in this version.
 - **Persistence:** masters + config live in `data/` and persist to GitHub
   (`{store.GITHUB_REPO}` @ `{store.GITHUB_BRANCH}`) when `GITHUB_TOKEN` is set.
-- **Rebate rates:** ultrasound 10% / 5%, rads 4% / 2% (finance / self-funded).
+- **Rebate rates:** ultrasound 10% / 5%, rads 4% / 2% (financed / self-funded).
 """
     )
