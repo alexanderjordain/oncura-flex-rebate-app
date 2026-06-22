@@ -4,55 +4,220 @@
   "note": "Each entry: {price, category}. Category drives rebate classification (ultrasound/rads -> rebatable; stat/assistance/non_ema/other -> excluded). STAT-priority cases get an implicit STAT line at $125 if no STAT service is already in the Services string.",
   "stat_fee": 125.0,
   "services": {
-    "*Discounted* 1 Hour Radiograph Submitted M-F 8-5pm CST": {"price": 137.0, "category": "rads"},
-    "*Discounted* AFTER HOURS 4 HOUR Radiograph - Abdominal Thoracic or Orthopedic": {"price": 170.0, "category": "rads"},
-    "*Discounted* Radiograph - Abdominal Thoracic & Orthopedic": {"price": 52.0, "category": "rads"},
-    "1 HOUR Radiograph Submitted M-F 8-5pm CST - Abdominal Thoracic or Orthopedic": {"price": 170.0, "category": "rads"},
-    "AFTER HOURS 4 HOUR Radiograph - Abdominal Thoracic or Orthopedic": {"price": 170.0, "category": "rads"},
-    "Abdominal Assist over 40 Images": {"price": 400.0, "category": "assistance"},
-    "Abdominal Contrast Study": {"price": 120.0, "category": "ultrasound"},
-    "Add On Abdominal Radiographs (3)": {"price": 75.0, "category": "rads"},
-    "Add On Thoracic Radiographs (3)": {"price": 75.0, "category": "rads"},
-    "Add on - Ultrasound (up to 10 additional images)": {"price": 20.0, "category": "ultrasound"},
-    "Add on - Ultrasound (up to 20 additional images)": {"price": 40.0, "category": "ultrasound"},
-    "Add on - Ultrasound (up to 30 additional images)": {"price": 60.0, "category": "ultrasound"},
-    "Add on - Ultrasound (up to 40 additional images)": {"price": 90.0, "category": "ultrasound"},
-    "Add on - Ultrasound (up to 60 additional images)": {"price": 100.0, "category": "ultrasound"},
-    "Basic Abdominal Ultrasound": {"price": 135.0, "category": "ultrasound"},
-    "Basic Echocardiogram": {"price": 195.0, "category": "ultrasound"},
-    "Bi-Cavity": {"price": 85.0, "category": "ultrasound"},
-    "Certification - Abdomen": {"price": 0.0, "category": "other"},
-    "Certification - Basic Echocardiography": {"price": 0.0, "category": "other"},
-    "Comprehensive Abdominal Consult (Includes US Labs History Review & Recommendations)": {"price": 210.0, "category": "ultrasound"},
-    "Comprehensive Echocardiogram Consult (Includes ECHO 3 Thoracic Rads ECG Labs BP History Review Recommendations & Treatment)": {"price": 295.0, "category": "ultrasound"},
-    "Diagnostic Attachment Assistance": {"price": 30.0, "category": "other"},
-    "Diagnostic Scan Support": {"price": 0.0, "category": "other"},
-    "ECG": {"price": 75.0, "category": "other"},
-    "Echo - OP Sonographer Measurements (+EMA)": {"price": 85.0, "category": "other"},
-    "Echo - OP Sonographer Measurements (Non-EMA)": {"price": 85.0, "category": "other"},
-    "Exam Assist (Not Certified) 0-30min": {"price": 300.0, "category": "assistance"},
-    "Exam Assist 16-30 (Non-EMA)": {"price": 160.0, "category": "non_ema"},
-    "Exam Assist 16-30min (+EMA)": {"price": 80.0, "category": "assistance"},
-    "Exam Assist 31-45 (Non-EMA)": {"price": 240.0, "category": "non_ema"},
-    "Exam Assist 31-45min (+EMA)": {"price": 160.0, "category": "assistance"},
-    "Exam Assist 46-60+ (Non-EMA)": {"price": 320.0, "category": "non_ema"},
-    "Exam Assist 46-60min (+EMA)": {"price": 240.0, "category": "assistance"},
-    "Exam Assist 61+ min (+EMA)": {"price": 210.0, "category": "assistance"},
-    "Exam Assist <15 (Non-EMA)": {"price": 80.0, "category": "non_ema"},
-    "Exam Assist <15min (+EMA)": {"price": 0.0, "category": "assistance"},
-    "Extended Consultation time with Specialist": {"price": 0.0, "category": "other"},
-    "Greater than 6 Pages Attachment Fee": {"price": 125.0, "category": "other"},
-    "Internal Medicine": {"price": 130.0, "category": "ultrasound"},
-    "Non-Diagnostic Image Removal": {"price": 0.0, "category": "other"},
-    "Partner Promo": {"price": 0.0, "category": "other"},
-    "Point of Care (GlobalFAST)": {"price": 44.0, "category": "ultrasound"},
-    "Point of Care (GlobalFAST) Certification": {"price": 0.0, "category": "other"},
-    "Radiograph - Abdominal Thoracic & Orthopedic": {"price": 85.0, "category": "rads"},
-    "Radiograph - up to 2 additional views": {"price": 40.0, "category": "rads"},
-    "Radiograph - up to 4 additional views": {"price": 80.0, "category": "rads"},
-    "Radiograph - up to 6 additional views": {"price": 120.0, "category": "rads"},
-    "Radiograph Comparison Study": {"price": 60.0, "category": "rads"},
-    "STAT Sonographer Assistance Fee": {"price": 125.0, "category": "stat"},
-    "System Focused Abdominal Ultrasound": {"price": 110.0, "category": "ultrasound"}
+    "*Discounted* 1 Hour Radiograph Submitted M-F 8-5pm CST": {
+      "price": 137.0,
+      "category": "rads"
+    },
+    "*Discounted* AFTER HOURS 4 HOUR Radiograph - Abdominal Thoracic or Orthopedic": {
+      "price": 170.0,
+      "category": "rads"
+    },
+    "*Discounted* Radiograph - Abdominal Thoracic & Orthopedic": {
+      "price": 52.0,
+      "category": "rads"
+    },
+    "1 HOUR Radiograph Submitted M-F 8-5pm CST - Abdominal Thoracic or Orthopedic": {
+      "price": 170.0,
+      "category": "rads"
+    },
+    "AFTER HOURS 4 HOUR Radiograph - Abdominal Thoracic or Orthopedic": {
+      "price": 170.0,
+      "category": "rads"
+    },
+    "Abdominal Assist over 40 Images": {
+      "price": 400.0,
+      "category": "assistance"
+    },
+    "Abdominal Contrast Study": {
+      "price": 120.0,
+      "category": "ultrasound"
+    },
+    "Add On Abdominal Radiographs (3)": {
+      "price": 75.0,
+      "category": "rads"
+    },
+    "Add On Thoracic Radiographs (3)": {
+      "price": 75.0,
+      "category": "rads"
+    },
+    "Basic Abdominal Ultrasound": {
+      "price": 135.0,
+      "category": "ultrasound"
+    },
+    "Basic Echocardiogram": {
+      "price": 195.0,
+      "category": "ultrasound"
+    },
+    "Bi-Cavity": {
+      "price": 85.0,
+      "category": "ultrasound"
+    },
+    "Certification - Abdomen": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "Certification - Basic Echocardiography": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "Comprehensive Echocardiogram Consult (Includes ECHO 3 Thoracic Rads ECG Labs BP History Review Recommendations & Treatment)": {
+      "price": 295.0,
+      "category": "ultrasound"
+    },
+    "Diagnostic Attachment Assistance": {
+      "price": 30.0,
+      "category": "other"
+    },
+    "Diagnostic Scan Support": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "ECG": {
+      "price": 75.0,
+      "category": "other"
+    },
+    "Echo - OP Sonographer Measurements (+EMA)": {
+      "price": 85.0,
+      "category": "other"
+    },
+    "Echo - OP Sonographer Measurements (Non-EMA)": {
+      "price": 85.0,
+      "category": "other"
+    },
+    "Exam Assist (Not Certified) 0-30min": {
+      "price": 300.0,
+      "category": "assistance"
+    },
+    "Exam Assist 16-30 (Non-EMA)": {
+      "price": 160.0,
+      "category": "non_ema"
+    },
+    "Exam Assist 16-30min (+EMA)": {
+      "price": 80.0,
+      "category": "assistance"
+    },
+    "Exam Assist 31-45 (Non-EMA)": {
+      "price": 240.0,
+      "category": "non_ema"
+    },
+    "Exam Assist 31-45min (+EMA)": {
+      "price": 160.0,
+      "category": "assistance"
+    },
+    "Exam Assist 46-60+ (Non-EMA)": {
+      "price": 320.0,
+      "category": "non_ema"
+    },
+    "Exam Assist 46-60min (+EMA)": {
+      "price": 240.0,
+      "category": "assistance"
+    },
+    "Exam Assist 61+ min (+EMA)": {
+      "price": 210.0,
+      "category": "assistance"
+    },
+    "Exam Assist <15 (Non-EMA)": {
+      "price": 80.0,
+      "category": "non_ema"
+    },
+    "Exam Assist <15min (+EMA)": {
+      "price": 0.0,
+      "category": "assistance"
+    },
+    "Extended Consultation time with Specialist": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "Greater than 6 Pages Attachment Fee": {
+      "price": 125.0,
+      "category": "other"
+    },
+    "Internal Medicine": {
+      "price": 130.0,
+      "category": "ultrasound"
+    },
+    "Non-Diagnostic Image Removal": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "Partner Promo": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "Point of Care (GlobalFAST)": {
+      "price": 44.0,
+      "category": "ultrasound"
+    },
+    "Point of Care (GlobalFAST) Certification": {
+      "price": 0.0,
+      "category": "other"
+    },
+    "Radiograph - Abdominal Thoracic & Orthopedic": {
+      "price": 85.0,
+      "category": "rads"
+    },
+    "Radiograph - up to 2 additional views": {
+      "price": 40.0,
+      "category": "rads"
+    },
+    "Radiograph - up to 4 additional views": {
+      "price": 80.0,
+      "category": "rads"
+    },
+    "Radiograph - up to 6 additional views": {
+      "price": 120.0,
+      "category": "rads"
+    },
+    "Radiograph Comparison Study": {
+      "price": 60.0,
+      "category": "rads"
+    },
+    "STAT Sonographer Assistance Fee": {
+      "price": 125.0,
+      "category": "stat"
+    },
+    "System Focused Abdominal Ultrasound": {
+      "price": 110.0,
+      "category": "ultrasound"
+    },
+    "Comprehensive Abdominal Consult (Includes US Labs History Review  & Recommendations)": {
+      "price": 210.0,
+      "category": "ultrasound"
+    },
+    "Add on -  Ultrasound (up to 10 additional images)": {
+      "price": 20.0,
+      "category": "ultrasound"
+    },
+    "Add on -  Ultrasound (up to 20 additional images)": {
+      "price": 40.0,
+      "category": "ultrasound"
+    },
+    "Add on -  Ultrasound (up to 30 additional images)": {
+      "price": 60.0,
+      "category": "ultrasound"
+    },
+    "Add on -  Ultrasound (up to 40 additional images)": {
+      "price": 90.0,
+      "category": "ultrasound"
+    },
+    "Add on -  Ultrasound (up to 60 additional images)": {
+      "price": 100.0,
+      "category": "ultrasound"
+    },
+    "STAT Specialist Assistance Fee": {
+      "price": 125.0,
+      "category": "stat",
+      "_note": "Matches global stat_fee constant ($125). High confidence."
+    },
+    "Exam Assist (Not Certified) 31-60min": {
+      "price": 300.0,
+      "category": "assistance",
+      "_note": "PLACEHOLDER — mirrored from Exam Assist (Not Certified) 0-30min. Confirm with Tanya/Marty."
+    },
+    "*Discounted* Comprehensive Abdominal Consult (Includes US Labs History Review & Recommendations)": {
+      "price": 147.0,
+      "category": "ultrasound",
+      "_note": "PLACEHOLDER — ~30% off standard $210. Confirm with Tanya/Marty."
+    }
   }
 }
