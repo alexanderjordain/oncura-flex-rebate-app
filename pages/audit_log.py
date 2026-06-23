@@ -13,6 +13,9 @@ doesn't carry over to Settings or other pages.
 """
 from __future__ import annotations
 
+import datetime as dt
+
+import pandas as pd
 import streamlit as st
 
 from core import audit, auth, ledger, loaders, store, ui
@@ -125,6 +128,103 @@ else:
         "No audit entries yet. They start appearing once you click 'Mark X as imported' "
         "(or the equivalent record button) inside a Payment Cycle or Rebate Cycle run."
     )
+
+st.divider()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Monthly task checklist
+# ═════════════════════════════════════════════════════════════════════════════
+st.subheader("Monthly task checklist")
+st.caption(
+    "What's been recorded for each month, straight from the audit log — a check means "
+    "at least one entry of that type exists for that month. Stage 1, 2, and 3 are the "
+    "monthly close tasks; the **Rebate Cycle** runs on its own cadence, so a blank Rebate "
+    "cell is not necessarily a miss. **Stage 3** runs for whichever calendar group's "
+    "quarter closes that month, and the **overage** entry only appears when a clinic "
+    "actually went over — so a blank overage cell can be legitimate too."
+)
+
+# (cycle_type, column label) — the operator-facing monthly tasks, in run order.
+MONTHLY_TASKS = [
+    ("stage1_finance_payment", "Stage 1 · Payments"),
+    ("stage2_credit_memo", "Stage 2 · Credit memos"),
+    ("stage3_recapture", "Stage 3 · Recapture"),
+    ("stage3_overage", "Stage 3 · Overage"),
+    ("rebate_report", "Rebate cycle"),
+]
+_TASK_TYPES = {ct for ct, _ in MONTHLY_TASKS}
+
+# Which task types are recorded per (year, month). Keyed on the entry's target
+# period (params year/month), not the run timestamp — that's the month the
+# work is *for*.
+_done: dict[tuple[int, int], set[str]] = {}
+for _e in audit.list_entries():
+    _y, _m, _ct = _e.get("year"), _e.get("month"), _e.get("cycle_type")
+    if _y is None or _m is None or _ct not in _TASK_TYPES:
+        continue
+    try:
+        _done.setdefault((int(_y), int(_m)), set()).add(_ct)
+    except (TypeError, ValueError):
+        continue
+
+if not _done:
+    st.info(
+        "No dated cycle entries yet — the checklist fills in as Payment Cycle and "
+        "Rebate Cycle runs are recorded."
+    )
+else:
+    # Continuous month range: earliest recorded task month → current month, so a
+    # skipped month shows as an all-unchecked row instead of silently vanishing.
+    _today = dt.date.today()
+    _earliest = min(_done.keys())
+    _latest = max(max(_done.keys()), (_today.year, _today.month))
+    _months: list[tuple[int, int]] = []
+    _y, _m = _earliest
+    while (_y, _m) <= _latest:
+        _months.append((_y, _m))
+        _y, _m = (_y + 1, 1) if _m == 12 else (_y, _m + 1)
+    _months.reverse()  # most recent first
+
+    _rows = []
+    for (_y, _m) in _months:
+        _present = _done.get((_y, _m), set())
+        _row = {"Month": f"{dt.date(_y, _m, 1):%b %Y}"}
+        for _ct, _label in MONTHLY_TASKS:
+            _row[_label] = _ct in _present
+        _rows.append(_row)
+    st.dataframe(
+        pd.DataFrame(_rows),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            _label: st.column_config.CheckboxColumn(_label, disabled=True)
+            for _, _label in MONTHLY_TASKS
+        },
+    )
+
+    # Current-month nudge for the well-defined core tasks (Stage 1/2/3-recapture).
+    # Overage + rebate are conditional, so they're shown above but not flagged.
+    _core = [
+        ("stage1_finance_payment", "Stage 1 payments"),
+        ("stage2_credit_memo", "Stage 2 credit memos"),
+        ("stage3_recapture", "Stage 3 recapture"),
+    ]
+    _cur_done = _done.get((_today.year, _today.month), set())
+    _open = [lbl for ct, lbl in _core if ct not in _cur_done]
+    _cur_label = f"{dt.date(_today.year, _today.month, 1):%B %Y}"
+    if _open:
+        st.warning(
+            f":material/pending_actions: **{_cur_label} still open:** "
+            + ", ".join(_open)
+            + ". Stage 3 overage and the Rebate Cycle are conditional — not flagged here.",
+            icon=":material/pending_actions:",
+        )
+    else:
+        st.success(
+            f":material/check_circle: **{_cur_label}:** Stage 1, 2, and 3 (recapture) "
+            "all recorded."
+        )
 
 st.divider()
 
