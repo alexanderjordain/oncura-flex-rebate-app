@@ -9,7 +9,9 @@ into one payment booked against the first customer. 'Reference No' is a constant
 
 Per-company rules:
   GreatAmerica : all flex (Maintenance charges). Ref 'GA-{Payment Invoice Number}', label 'FlexGreat America'.
-  OnePlace     : Ref 'OPC{Contract #}', label 'FlexOnePlace'.
+  OnePlace     : flex + scan mixed, split by cents. Ref 'OPC{Contract #}'.
+                 flex label 'FlexOnePlace'; scan label 'OnePlaceScan' (scan packages must
+                 NOT carry the flex label).
   NewLane      : ONE remittance mixes flex + scan. Split by cents -> whole-dollar (.00) = scan
                  package, non-round = flex. Flex Ref 'FlexNewLane - n' / label 'FlexNewLane';
                  scan Ref 'NewLaneScan - n' / label 'NewLaneScan'. Scan needs invoices uploaded
@@ -31,7 +33,10 @@ SCAN_TERMS = "SCAN"
 
 COMPANY_META = {
     "GreatAmerica": {"flex_label": "FlexGreat America", "scan_label": None, "bank_feed": "Account Services"},
-    "OnePlace": {"flex_label": "FlexOnePlace", "scan_label": "FlexOnePlace", "bank_feed": "Origin Bank Midwest"},
+    # OnePlace mixes flex + scan in one remittance (split by cents). Scan packages
+    # get their OWN label so they're never tagged as flex — the scan_label used to
+    # be "FlexOnePlace" (same as flex), which mislabeled scan rows as flex.
+    "OnePlace": {"flex_label": "FlexOnePlace", "scan_label": "OnePlaceScan", "bank_feed": "Origin Bank Midwest"},
     "NewLane": {"flex_label": "FlexNewLane", "scan_label": "NewLaneScan", "bank_feed": "New Lane"},
     # FPLeasing ("Loan & Leasing Services" on remittances) is SCAN-ONLY. One row =
     # one wire = one scan invoice + one received payment. No flex/credit-memo

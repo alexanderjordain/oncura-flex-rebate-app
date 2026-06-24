@@ -37,6 +37,36 @@ def test_oneplace_handles_whitespace_and_none():
     assert not flex_finance.is_oneplace_flex_contract("")
 
 
+def test_oneplace_scan_package_is_not_labeled_flex():
+    # Reported bug: a OnePlace scan-package row (whole-dollar) was tagged
+    # "FlexOnePlace" in the Reference No because scan_label == flex_label.
+    # Scan packages must carry a scan label and get an invoice number; flex rows
+    # keep the flex label.
+    df = pd.DataFrame({
+        "Customer": ["Risius & Associates Veterinary Service", "Flex Clinic"],
+        "Amount": [395.00, 912.68],          # whole-dollar = scan, cents = flex
+        "Contract": ["000000020405", "040010172988"],
+    })
+    out = flex_finance.process_remittance(
+        df, "OnePlace",
+        customer_col="Customer", amount_col="Amount", id_col="Contract",
+        payment_date=dt.date(2026, 5, 5), invoice_date=dt.date(2026, 5, 5),
+        start_invoice_no=50000, name_map={}, split="by_cents",
+    )
+    scan, flex = out["scan_payments"], out["flex_payments"]
+    assert len(scan) == 1 and len(flex) == 1
+
+    # Scan package: scan label (NOT flex), and it gets a generated invoice number.
+    assert list(scan["Reference No"]) == ["OnePlaceScan"]
+    assert "Flex" not in scan["Reference No"].iloc[0]
+    assert scan["Invoice No"].iloc[0] == 50000
+    assert scan["Ref No (Receive Payment No)"].iloc[0] == "OPC000000020405"
+    assert not out["scan_invoices"].empty
+
+    # Flex row still carries the flex label.
+    assert list(flex["Reference No"]) == ["FlexOnePlace"]
+
+
 def test_oneplace_classification_independent_of_cents():
     """The regression we just fixed: a whole-dollar flex payment must still classify as flex."""
     # Whole-dollar amount on a flex contract -> flex
