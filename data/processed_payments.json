@@ -3449,6 +3449,116 @@
       "payment_date": "05/31/2026",
       "amount": 493.0,
       "recorded_at": "2026-06-24T21:36:53"
+    },
+    {
+      "fingerprint": "fefa0622ce9016ab028d74c506aa6bc84b584248883d4cf9eb66a06f526750d1",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Abell Animal Hospital",
+      "qb_customer": "Abell Animal Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 278.29,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "e4acb9e2202d27afd2451effffd9bbf5639d884b1112c7711855b3842d25bb54",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Chenango Animal Hospital",
+      "qb_customer": "Chenango Animal Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 1865.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "c5b2eda92860328e116372d46fbc2a753b2d9dfcd77ba5b85debb6d3145d881a",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Crossroads Animal Hospital TX",
+      "qb_customer": "Crossroads Animal Hospital TX",
+      "payment_date": "2026-05-01",
+      "amount": 5792.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "8b6689faf9bc5fc9c210f10104d6bd07889ca0d2009d5f95b9638f0b12711928",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Day Hollow Animal Hospital",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 2117.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "fe07ff170c9836d0c5cc39b6089c9a147e179006db76036005ec5107a0fa43af",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Mohnacky Animal Hospital of Carlsbad",
+      "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
+      "payment_date": "2026-05-01",
+      "amount": 5047.5,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "38fc93e81a27e9221b9b3d7bc62bcbfa2b372bd000d8c4684aa3de4533a1b283",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Pine Tree Veterinary Hospital",
+      "qb_customer": "Pine Tree Veterinary Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 4915.95,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "740875b28bbfa838e8496427f8683c4eda3a141fa717e71f16b29b804d40e786",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Riverdale Integrative Veterinary Care",
+      "qb_customer": "Riverdale Integrative Veterinary Care",
+      "payment_date": "2026-05-01",
+      "amount": 680.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "9b55dfbe681737a5a32f2151e15eafdf246bd0c1badaa5572a7dffdef3123575",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Riverlin Animal Hospital",
+      "qb_customer": "Riverlin Animal Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 7735.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "897dc9192a6f5bae772be5483682890132a01bede7e0f29bf3209caa9809e2d9",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "South Bay Veterinary Group - Charles St",
+      "qb_customer": "South Bay Veterinary Group - Charles St",
+      "payment_date": "2026-05-01",
+      "amount": 591.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "0043d9434d50f3a471880d4aefac6159983473526371af722543d7f65f75b8cb",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "The Scaredy Cat Hospital",
+      "qb_customer": "The Scaredy Cat Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 1809.0,
+      "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "eb74207cc63df9070f41d3f47d808c2e27eabfa7b6817617f4f3a7ab4b248c65",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "TVC-Driftwood Animal Hospital",
+      "qb_customer": "TVC-Driftwood Animal Hospital",
+      "payment_date": "2026-05-01",
+      "amount": 772.0,
+      "recorded_at": "2026-06-24T21:37:04"
     }
   ]
 }
