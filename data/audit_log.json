@@ -839,6 +839,30 @@
       ],
       "note": "19 new recapture invoice(s); 0 already in ledger",
       "entry_hash": "8797a15e10be03adbc96fb0f93f459eaa02a0ef5dd6f5b3912238d4fa13497bb"
+    },
+    {
+      "id": "e8e80201-ef53-4b24-a6c3-3e078fa07acb",
+      "timestamp": "2026-06-24T21:37:05",
+      "cycle_type": "stage3_overage",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "route": "direct_bill",
+        "clinic_count": 11,
+        "sent_to": "accounting@oncurapartners.com"
+      },
+      "source_file": null,
+      "outputs": [
+        {
+          "name": "overage_direct_invoices",
+          "sha256": "2e368d8f6ce37c36df40f783f5bbd138d217f2f23e250e81b528a560f9e604d8",
+          "row_count": 11,
+          "total": 31602.74
+        }
+      ],
+      "note": "Direct-bill overages emailed to accounting for May 2000",
+      "entry_hash": "cb92fb1807af2dab410877dffcd2913b0dcdce622f3b2390a0d4ca3b955aa7c8"
     }
   ]
 }
