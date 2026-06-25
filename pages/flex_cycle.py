@@ -2246,12 +2246,13 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     )
     _confirm_armed = (SS.get("recap_skip_confirm") == SS.recap_step) and not _initials_live
     if _confirm_armed:
-        st.warning(
-            "**No initials entered for this step — it won't be recorded.** Enter your "
-            "initials above to sign off, or press **Next →** again to continue without "
-            "recording this step.",
-            icon=":material/edit_note:",
-        )
+        _spacer, _box = st.columns([1, 1.4])
+        with _box, st.container(border=True):
+            st.markdown(
+                ":material/edit_note:&nbsp; **No initials entered for this step — it "
+                "won't be recorded.**  \nEnter your initials above to sign off, or press "
+                "**Next →** again to continue without recording this step."
+            )
 
     # Single nav row: [◀ Set up new cycle]  [blocked reason]  [← Back]  [Next →]
     # The reset, Back, and Next live on the same horizontal plane so the
