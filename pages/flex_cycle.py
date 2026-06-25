@@ -2228,6 +2228,31 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         else:
             next_blocked_reason = "Fetch the quarter from OPD before continuing."
 
+    # Soft sign-off confirm. A sign-off step only exists when it has rows to
+    # record, so empty initials here means the operator is about to advance
+    # WITHOUT signing off / recording. The first Next press arms a confirm (no
+    # advance); a second press — or any press once initials are entered —
+    # advances. The flag stores the step index it was armed for so it can't leak
+    # across steps. Initials persist for the session, so this only nudges on the
+    # first un-initialed sign-off step.
+    _signoff_key = {
+        "recapture": "stage3_recap_audit_initials",
+        "direct_bill": "stage3_direct_audit_initials",
+        "partner_submission": "stage3_partner_audit_initials",
+    }.get(step_key)
+    _initials_live = (
+        (SS.get(_signoff_key) or SS.get("user_initials", "") or "").strip()
+        if _signoff_key else "n/a"
+    )
+    _confirm_armed = (SS.get("recap_skip_confirm") == SS.recap_step) and not _initials_live
+    if _confirm_armed:
+        st.warning(
+            "**No initials entered for this step — it won't be recorded.** Enter your "
+            "initials above to sign off, or press **Next →** again to continue without "
+            "recording this step.",
+            icon=":material/edit_note:",
+        )
+
     # Single nav row: [◀ Set up new cycle]  [blocked reason]  [← Back]  [Next →]
     # The reset, Back, and Next live on the same horizontal plane so the
     # operator sees all available navigation actions at once.
@@ -2239,7 +2264,8 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         use_container_width=True,
         help="Clear the uploaded file + credit offsets and return to the setup step — use this between monthly Stage 3 runs.",
     ):
-        for k in ("recap_credit_offsets",
+        for k in ("recap_skip_confirm",
+                  "recap_credit_offsets",
                   "recap_pipe_error",
                   "w_recap_offsets_editor",
                   "recap_opd_activity", "recap_opd_raw_rows", "recap_opd_fetched_at",
@@ -2255,13 +2281,19 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     if can_back:
         if nav_b.button("← Back", key=f"w_recap_back_{SS.recap_step}",
                         use_container_width=True):
+            SS.pop("recap_skip_confirm", None)
             SS.recap_step -= 1
             st.rerun()
     if SS.recap_step < total - 1:
         if nav_n.button("Next →", key=f"w_recap_next_{SS.recap_step}",
                         type="primary", disabled=not can_next,
                         use_container_width=True):
-            SS.recap_step += 1
+            if _signoff_key and not _initials_live and SS.get("recap_skip_confirm") != SS.recap_step:
+                # First press on an un-initialed sign-off step: arm + hold, don't advance.
+                SS["recap_skip_confirm"] = SS.recap_step
+            else:
+                SS.pop("recap_skip_confirm", None)
+                SS.recap_step += 1
             st.rerun()
     else:
         nav_n.markdown("**Done ✓**")
