@@ -63,6 +63,24 @@ def test_billing_date_february_rollover_est():
     assert opd_api._utc_to_billing_date(utc) == dt.date(2026, 2, 28)
 
 
+def test_billing_date_rollover_batch_jitter_still_backshifts():
+    """The rollover batch's write latency drifts past 00:05 local. An invoice
+    stamped Jun-01 04:08:25 UTC = 00:08 EDT is STILL May billing and must
+    backshift — the old 5-minute window wrongly left these on the 1st, leaking
+    a clinic's prior-month or next-month invoice into the wrong quarter."""
+    utc = dt.datetime(2026, 6, 1, 4, 8, 25)   # 00:08:25 EDT, day 1, midnight hour
+    assert opd_api._utc_to_billing_date(utc) == dt.date(2026, 5, 31)
+    # And the February pre-DST equivalent at 00:06 EST.
+    assert opd_api._utc_to_billing_date(dt.datetime(2026, 3, 1, 5, 6, 17)) == dt.date(2026, 2, 28)
+
+
+def test_billing_date_one_am_not_backshifted():
+    """The batch runs in the midnight hour only; a 1st-of-month invoice at 1am+
+    local is a genuine same-day invoice, not a rollover — keep its own date."""
+    utc = dt.datetime(2026, 6, 1, 5, 30, 0)   # 01:30 EDT on the 1st
+    assert opd_api._utc_to_billing_date(utc) == dt.date(2026, 6, 1)
+
+
 def test_billing_date_mid_month_no_backshift():
     """Mid-month manual invoices keep their own local date."""
     utc = dt.datetime(2026, 4, 15, 18, 0, 0)  # 2pm EDT
@@ -216,9 +234,11 @@ def _df_from(rows):
 
 
 def test_split_activity_no_orphans():
+    # gross and total_price deliberately differ so the test pins that activity
+    # is summed on GROSS (Subtotal+AdminFee), not the net total_price.
     df = _df_from([
-        {"clinic_name": "Abell", "invoice_clinic_fk": 1, "total_price": 100.0},
-        {"clinic_name": "Beta",  "invoice_clinic_fk": 2, "total_price": 200.0},
+        {"clinic_name": "Abell", "invoice_clinic_fk": 1, "total_price": 90.0, "gross": 100.0},
+        {"clinic_name": "Beta",  "invoice_clinic_fk": 2, "total_price": 180.0, "gross": 200.0},
     ])
     activity, _, orphans = opd_api._split_activity_and_orphans(df)
     assert activity == {"abell": 100.0, "beta": 200.0}
@@ -230,15 +250,15 @@ def test_split_activity_with_orphans_surfaces_them():
     EXCLUDED from the activity dict (otherwise the unknown clinic key would
     confuse downstream matching) AND reported in the orphans summary."""
     df = _df_from([
-        {"clinic_name": "Abell", "invoice_clinic_fk": 1, "total_price": 100.0},
-        {"clinic_name": None,    "invoice_clinic_fk": 999, "total_price": 500.0},
-        {"clinic_name": None,    "invoice_clinic_fk": 888, "total_price": 50.0},
-        {"clinic_name": None,    "invoice_clinic_fk": 999, "total_price": 25.0},  # same FK twice
+        {"clinic_name": "Abell", "invoice_clinic_fk": 1, "total_price": 90.0, "gross": 100.0},
+        {"clinic_name": None,    "invoice_clinic_fk": 999, "total_price": 450.0, "gross": 500.0},
+        {"clinic_name": None,    "invoice_clinic_fk": 888, "total_price": 45.0, "gross": 50.0},
+        {"clinic_name": None,    "invoice_clinic_fk": 999, "total_price": 20.0, "gross": 25.0},  # same FK twice
     ])
     activity, _, orphans = opd_api._split_activity_and_orphans(df)
     assert activity == {"abell": 100.0}
     assert orphans["count"] == 3
-    assert orphans["total"] == 575.0
+    assert orphans["total"] == 575.0  # gross sum of orphan rows (500+50+25)
     assert orphans["fk_list"] == [888, 999]  # deduped + sorted
 
 
@@ -258,7 +278,7 @@ def test_invoice_columns_includes_all_critical_fields():
         "invoice_internal_id", "clinic_name",
         "invoice_date_utc", "invoice_date_local",
         "status", "subtotal", "credit", "old_credit", "misc_credit",
-        "admin_fee", "total_price", "consult_count",
+        "admin_fee", "total_price", "gross", "consult_count",
         "components_match", "components_delta",
     }
     assert required.issubset(set(opd_api.INVOICE_COLUMNS))

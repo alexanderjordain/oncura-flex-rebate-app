@@ -144,6 +144,29 @@ def _pool_activity_by_group(activity_by_name: dict, member_to_anchor: dict) -> d
     return pooled
 
 
+def _norm_contract(value) -> str:
+    """Canonicalize a contract id for cross-source matching.
+
+    Roster and ledger store the same OnePlace contract three different ways —
+    'OPC40010149681' (roster, OPC-prefixed), '040010149681' (ledger, padded),
+    '40010149681' (bare). Comparing them raw never matches, so the inclusion
+    gate's contract branch was dead. Strip a trailing Excel float artifact
+    ('...988.0'), keep digits only, drop leading zeros -> all three collapse to
+    '40010149681'. Returns '' when there are no significant digits.
+
+    NOTE: this does NOT bridge GreatAmerica, whose roster contract is a dashed
+    number ('022-1996782-000') while the ledger stores a different bare account
+    number — those are distinct identifiers, so the GA gate stays on qb-name.
+    """
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    if "." in s:                      # Excel coerced the id to a float
+        s = s.split(".", 1)[0]
+    digits = "".join(ch for ch in s if ch.isdigit())
+    return digits.lstrip("0")
+
+
 def _index_payments_by_clinic(ledger_payments):
     """Build (contract→bool, qb_lower→bool) indexes of clinics that have at
     least one POSITIVE FLEX payment in the supplied ledger rows.
@@ -163,7 +186,7 @@ def _index_payments_by_clinic(ledger_payments):
                 continue
         except (TypeError, ValueError):
             continue
-        contract = str(p.get("contract") or "").strip()
+        contract = _norm_contract(p.get("contract"))
         qb = (p.get("qb_customer") or "").strip().lower()
         if contract:
             by_contract.add(contract)
@@ -185,7 +208,7 @@ def _group_has_positive_payment(anchor, members, payments_by_contract, payments_
         if qb and qb in payments_by_qb:
             return True
         for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
-            cv = (c.get(k) or "").strip()
+            cv = _norm_contract(c.get(k))
             if cv and cv in payments_by_contract:
                 return True
     return False
@@ -310,7 +333,7 @@ def find_orphan_payments(flex_clinics, ledger_payments) -> list[dict]:
     known_qb: set[str] = set()
     for c in flex_clinics:
         for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
-            cv = (c.get(k) or "").strip()
+            cv = _norm_contract(c.get(k))
             if cv:
                 known_contracts.add(cv)
         qb = (c.get("qb_name") or "").strip().lower()
@@ -332,7 +355,7 @@ def find_orphan_payments(flex_clinics, ledger_payments) -> list[dict]:
             # Clawbacks are handled by the Stage 2 non-positive filter — not
             # orphans for the purposes of "do we have config for this clinic".
             continue
-        contract = str(p.get("contract") or "").strip()
+        contract = _norm_contract(p.get("contract"))
         qb = (p.get("qb_customer") or "").strip().lower()
         if contract and contract in known_contracts:
             continue
@@ -340,6 +363,48 @@ def find_orphan_payments(flex_clinics, ledger_payments) -> list[dict]:
             continue
         orphans.append(p)
     return orphans
+
+
+def group_calendar_mismatches(flex_clinics) -> list[dict]:
+    """Detect multi-clinic groups whose members don't all share the anchor's
+    calendar_spread.
+
+    compute_recapture pools every member's threshold AND activity onto the
+    anchor row, gated on the ANCHOR's quarter-end month only. That is correct
+    only when the whole group closes on one calendar. A member on a different
+    calendar_spread is (a) swept into the anchor's quarter even though its own
+    quarter hasn't closed — inflating the anchor's pooled threshold/activity —
+    and (b) never emitted in its OWN quarter-end month, because children are
+    never emitted as independent rows. Either way the numbers are wrong.
+
+    Returns one dict per offending group: {anchor, anchor_spread, members:[...]}
+    listing only the members whose spread differs. The Stage 3 review surfaces
+    this so the operator resolves it (align the roster calendars, or split the
+    off-calendar clinics out of the group) before committing.
+    """
+    members_by_anchor, _ = _build_group_index(flex_clinics)
+    out = []
+    for c in flex_clinics:
+        if c.get("parent_clinic_id"):
+            continue
+        anchor_key = (c.get("clinic_name") or "").strip().lower()
+        members = members_by_anchor.get(anchor_key, [])
+        if not members:
+            continue
+        anchor_spread = c.get("calendar_spread") or None
+        off = [
+            {"clinic_name": m.get("clinic_name"),
+             "calendar_spread": m.get("calendar_spread")}
+            for m in members
+            if (m.get("calendar_spread") or None) != anchor_spread
+        ]
+        if off:
+            out.append({
+                "anchor": c.get("clinic_name"),
+                "anchor_spread": c.get("calendar_spread"),
+                "members": off,
+            })
+    return out
 
 
 def build_unused_invoice_import(recapture_rows, year, month, start_ref, sales_class):

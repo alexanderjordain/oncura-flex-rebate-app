@@ -207,14 +207,58 @@ def test_recapture_with_ledger_flags_no_payment_clinic():
 
 
 def test_recapture_with_ledger_includes_paying_clinic_by_contract():
+    # The real-world bug this guards: the roster stores the OnePlace contract
+    # OPC-prefixed ('OPC40010149681') while the ledger stores it zero-padded
+    # ('040010149681'). Raw equality never matched, so the contract gate was
+    # dead. qb_customer is deliberately unmatched, isolating the contract path.
     clinics = [_clinic("Alpha", threshold=6000.0, spread="March-April-May",
-                       contract_oneplace="OPC-A")]
-    payments = [_payment(contract="OPC-A", qb_customer="(any)")]
+                       contract_oneplace="OPC40010149681")]
+    payments = [_payment(contract="040010149681", qb_customer="(unmatched)")]
     rows = flex_unused.compute_recapture(
         clinics, {"alpha": 5000.0}, 2026, 5,
         ledger_payments_for_quarter=payments,
     )
     assert rows[0]["excluded_no_payments"] is False
+
+
+def test_norm_contract_bridges_opc_prefix_and_padding():
+    # OPC prefix, zero-padding, and the Excel float artifact all collapse to
+    # the same canonical digits.
+    canon = "40010149681"
+    assert flex_unused._norm_contract("OPC40010149681") == canon
+    assert flex_unused._norm_contract("040010149681") == canon
+    assert flex_unused._norm_contract("40010149681") == canon
+    assert flex_unused._norm_contract("40010149681.0") == canon
+    # No significant digits -> empty (never a false match against the gate).
+    assert flex_unused._norm_contract("OPC-A") == ""
+    assert flex_unused._norm_contract(None) == ""
+    # GreatAmerica's dashed roster id and a bare ledger account are NOT bridged
+    # (genuinely different identifiers).
+    assert flex_unused._norm_contract("022-1996782-000") != flex_unused._norm_contract("41732307")
+
+
+def test_group_calendar_mismatches_flags_off_calendar_members():
+    clinics = [
+        _clinic("Anchor", spread="March-April-May", group_id="g1"),
+        _clinic("MemberAligned", spread="March-April-May", group_id="g1",
+                parent_clinic_id="Anchor"),
+        _clinic("MemberOff", spread="Calendar", group_id="g1",
+                parent_clinic_id="Anchor"),
+    ]
+    out = flex_unused.group_calendar_mismatches(clinics)
+    assert len(out) == 1
+    assert out[0]["anchor"] == "Anchor"
+    names = [m["clinic_name"] for m in out[0]["members"]]
+    assert names == ["MemberOff"]          # only the off-calendar member is listed
+
+
+def test_group_calendar_mismatches_silent_when_aligned():
+    clinics = [
+        _clinic("Anchor", spread="Calendar", group_id="g1"),
+        _clinic("Member", spread="Calendar", group_id="g1", parent_clinic_id="Anchor"),
+        _clinic("Solo", spread="March-April-May"),
+    ]
+    assert flex_unused.group_calendar_mismatches(clinics) == []
 
 
 def test_recapture_with_ledger_includes_by_qb_name():

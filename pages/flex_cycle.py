@@ -1419,13 +1419,22 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     # Pull the quarter's positive FLEX payments from the ledger — drives the
     # "is this clinic actually on the program this quarter?" gate inside
     # compute_recapture, and feeds find_orphan_payments for the inverse
-    # ("payments exist but no roster config") warning. If the ledger query
-    # fails for any reason, fall back to None which preserves the legacy
-    # active-flag-only behavior — safer than skipping clinics on a ledger glitch.
+    # ("payments exist but no roster config") warning.
+    #
+    # FAIL CLOSED on a ledger read error. The old behavior fell back to None,
+    # which DISABLES the payment gate and includes every active+quarter-end
+    # clinic unverified — that is exactly the inflated-recapture incident
+    # (a full-threshold unused invoice emitted for clinics with no payment
+    # proof). Instead, pass an empty ledger: the gate stays active, so EVERY
+    # clinic trips excluded_no_payments and drops into the held-out review
+    # bucket, and we record the failure so the review step renders a blocking
+    # warning. A glitchy ledger pauses the cycle; it never auto-posts.
     try:
         ledger_payments_for_quarter = ledger.flex_payments_in_window(win_start, win_end)
-    except Exception:
-        ledger_payments_for_quarter = None
+        SS["recap_ledger_read_failed"] = None
+    except Exception as e:
+        ledger_payments_for_quarter = []
+        SS["recap_ledger_read_failed"] = errors.capture(e)
     orphan_payments = (
         flex_unused.find_orphan_payments(flex_clinics, ledger_payments_for_quarter)
         if ledger_payments_for_quarter else []
@@ -1687,6 +1696,24 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             st.markdown("### Review activity")
             st.caption("What the app pulled from OPD. Sanity-check before generating files.")
 
+            # Ledger read failed → the payment gate failed CLOSED (every clinic
+            # held out). Surface it above everything else: nothing is billable
+            # until the ledger is readable again.
+            _ledger_err = SS.get("recap_ledger_read_failed")
+            if _ledger_err:
+                st.error(
+                    ":material/priority_high: **The processed-payments ledger could "
+                    "not be read — the payment gate failed CLOSED, so every clinic is "
+                    "held out and this cycle will generate NO recapture or overage.** "
+                    "This is deliberate: without the ledger we can't confirm who "
+                    "actually paid into FLEX this quarter, and silently including "
+                    "everyone is the inflated-recapture incident. Restore the ledger "
+                    "(Settings → ledger summary, or docs/RECOVERY.md) and reload "
+                    "before committing.",
+                    icon=":material/priority_high:",
+                )
+                errors.render_details(_ledger_err)
+
             # Roster-vs-ledger mismatch warnings — surface BEFORE the metrics
             # so the operator sees them first. Two flavors:
             #   1. excluded_no_payments: roster says active, ledger has no
@@ -1734,6 +1761,34 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     icon=":material/priority_high:",
                 )
 
+            # Cross-calendar group members. The engine pools every member's
+            # threshold + activity onto the anchor's quarter-end month; a member
+            # on a different calendar_spread is swept into a quarter that isn't
+            # its own AND never gets a row in its real quarter-end month. Surface
+            # it so the figure isn't trusted blind.
+            _cal_mismatch = flex_unused.group_calendar_mismatches(flex_clinics)
+            if _cal_mismatch:
+                _lines = []
+                for g in _cal_mismatch:
+                    offs = ", ".join(
+                        f"{m['clinic_name']} ({m['calendar_spread']})" for m in g["members"]
+                    )
+                    _lines.append(
+                        f"**{g['anchor']}** (anchor: {g['anchor_spread']}) — off-calendar "
+                        f"member(s): {offs}"
+                    )
+                st.warning(
+                    f":material/warning: **{len(_cal_mismatch)} multi-clinic group(s) "
+                    "have members on a DIFFERENT billing calendar than the anchor.** "
+                    "Their threshold and activity are pooled into the anchor's "
+                    "quarter-end month even though their own quarter doesn't close "
+                    "then, and they get no row in the month it does — so this group's "
+                    "pooled figure is unreliable. Align the calendars in the Clinic "
+                    "Roster, or split the off-calendar clinics out of the group, "
+                    "before committing.  \n\n" + "  \n".join(f"- {ln}" for ln in _lines),
+                    icon=":material/warning:",
+                )
+
             # Split included (billable) vs excluded (active in roster but no FLEX
             # payment this quarter — held out, see the warning above). The headline
             # metrics show what will ACTUALLY be billed, so they reconcile with the
@@ -1771,14 +1826,30 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     + ", ".join(no_act["clinic_name"].head(8))
                     + (" …" if len(no_act) > 8 else "")
                 )
+            # Status flag per row. The breakdown lists EVERY quarter-close clinic,
+            # including held-out ones; without this column a held-out clinic is
+            # indistinguishable from a billed one — that is exactly why Alum Rock
+            # looked like it was "on the import" when it was actually held out.
+            def _row_status(r):
+                if r.get("excluded_no_payments"):
+                    return "Held out — no payment"
+                if r.get("activity_match") == "none":
+                    return "No OPD match (full unused)"
+                if (r.get("overage") or 0) > 0:
+                    return "Overage"
+                if (r.get("unused") or 0) > 0:
+                    return "Recapture"
+                return "Reconciled"
+            breakdown = rdf.copy()
+            breakdown["status"] = breakdown.apply(_row_status, axis=1)
             display_cols = [
-                "clinic_name", "qb_name", "finance_company", "contract_number",
+                "status", "clinic_name", "qb_name", "finance_company", "contract_number",
                 "calendar_spread", "quarterly_threshold", "quarter_activity",
                 "unused", "overage", "activity_match",
             ]
             with st.expander(f"Per-clinic breakdown ({len(rdf)} clinics)"):
                 st.dataframe(
-                    rdf[[c for c in display_cols if c in rdf.columns]],
+                    breakdown[[c for c in display_cols if c in breakdown.columns]],
                     use_container_width=True, height=320,
                 )
             fuzzy = rdf[rdf["activity_match"] == "fuzzy"]

@@ -60,7 +60,6 @@ REQUEST_TIMEOUT = 60
 # DST awareness, then backshifts one day for rollover-boundary timestamps so
 # the result matches what the OPD UI displays.
 ZONE_EASTERN = ZoneInfo("America/New_York")
-_BOUNDARY_TOLERANCE_MINUTES = 5  # write latency observed at <1s; 5min gives margin
 
 _ATOM_NS = {
     "a": "http://www.w3.org/2005/Atom",
@@ -182,16 +181,18 @@ def _utc_to_billing_date(utc_dt: dt.datetime | None) -> dt.date | None:
     OPD's month-end rollover fires at midnight LOCAL on the 1st of the next
     month. Its UTC timestamp lands at the same instant (04:00Z EDT, 05:00Z
     EST). The OPD UI labels that invoice as the LAST day of the prior month —
-    that's the billed date. For any rollover-boundary timestamp (local time
-    within `_BOUNDARY_TOLERANCE_MINUTES` of midnight on day 1) we backshift one
-    day so the date matches what the operator sees. Mid-month manual invoices
-    keep their own local date.
+    that's the billed date. Every OPD invoice is produced by that rollover
+    batch, which runs in the midnight hour of the 1st; its write latency drifts
+    (observed from 00:00 to past 00:09 local), so we cannot key off a tight
+    minute window. Any invoice landing on day 1 in the midnight hour is
+    prior-month billing — we backshift one day so the date matches what the
+    operator sees. Mid-month and daytime invoices keep their own local date.
     """
     if utc_dt is None:
         return None
     aware = utc_dt.replace(tzinfo=dt.timezone.utc)
     local = aware.astimezone(ZONE_EASTERN)
-    if local.day == 1 and local.hour == 0 and local.minute < _BOUNDARY_TOLERANCE_MINUTES:
+    if local.day == 1 and local.hour == 0:
         local = local - dt.timedelta(days=1)
     return local.date()
 
@@ -252,7 +253,7 @@ INVOICE_COLUMNS = [
     "invoice_internal_id", "invoice_clinic_fk", "clinic_name",
     "invoice_date_utc", "invoice_date_local",
     "status", "subtotal", "credit", "old_credit", "misc_credit",
-    "admin_fee", "total_price", "consult_count",
+    "admin_fee", "total_price", "gross", "consult_count",
     "paid_date_utc", "transaction_date_utc",
     "components_match", "components_delta",
 ]
@@ -325,12 +326,20 @@ def fetch_invoices_for_quarter(
         mc = _coerce_decimal(r.get("MiscCredit"))
         ad = _coerce_decimal(r.get("AdminFee"))
         tot = _coerce_decimal(r.get("TotalPrice"))
-        # Components formula: Mendix double-writes OldCredit and MiscCredit
-        # (legacy schema refactor) — applying both as credits double-counts.
-        # `max(OldCredit, MiscCredit)` is the actual credit applied, validated
-        # against 935+ rows where one of the two is the larger / authoritative
-        # value. TotalPrice is still authoritative; this check just surfaces
-        # the rare orphan ($4-AdminFee voids etc.) for audit.
+        # GROSS = Subtotal + AdminFee is the FLEX activity basis: it equals the
+        # `Telemedicine-OPD` invoice QBO books each month (confirmed against the
+        # QBO export — e.g. Mohnacky Carlsbad QBO $2,009 = sub 2,005 + admin 4,
+        # NOT the $900 net). The OldCredit/MiscCredit on the OPD invoice is the
+        # FLEX credit memo applied separately downstream; netting it into
+        # "usage" double-counts the program benefit and undercounts the pool the
+        # clinic actually consumed. So activity must NOT subtract credits.
+        gross = sub + ad
+        # Components reconciliation: Mendix double-writes OldCredit and
+        # MiscCredit (legacy schema refactor) so applying both double-counts;
+        # max(OldCredit, MiscCredit) is the actual credit. This compares the
+        # net TotalPrice to its components purely as an audit/data-integrity
+        # signal (surfacing rare orphans like $4-AdminFee voids) — it does NOT
+        # feed activity, which is `gross` above.
         comp_total = sub - cr - max(oc, mc) + ad
         delta = round(tot - comp_total, 2)
         components_match = abs(delta) < 1.00
@@ -360,6 +369,7 @@ def fetch_invoices_for_quarter(
             "misc_credit": round(mc, 2),
             "admin_fee": round(ad, 2),
             "total_price": round(tot, 2),
+            "gross": round(gross, 2),
             "consult_count": int(_coerce_decimal(r.get("ConsultCount"))) if r.get("ConsultCount") else 0,
             "paid_date_utc": (_parse_dt(r.get("PaidDate")) or "") and _parse_dt(r.get("PaidDate")).isoformat(),
             "transaction_date_utc": (_parse_dt(r.get("TransactionDate")) or "") and _parse_dt(r.get("TransactionDate")).isoformat(),
@@ -377,7 +387,7 @@ def flex_activity_for_quarter(
     auth: HTTPBasicAuth | None = None,
 ) -> tuple[dict[str, float], pd.DataFrame, dict]:
     """Pull the quarter's invoices live and return:
-      - {clinic_lower: TotalPrice sum} (same shape as flex_activity_from_invoices)
+      - {clinic_lower: GROSS (Subtotal+AdminFee) sum} (same shape as flex_activity_from_invoices)
       - The raw DataFrame (for audit + UI display) — INCLUDES orphan rows
       - Orphan summary: {"count": N, "total": $X, "fk_list": [...]}
 
@@ -406,7 +416,7 @@ def _split_activity_and_orphans(df: pd.DataFrame) -> tuple[dict[str, float], pd.
     if orphan_mask.any():
         orphans = {
             "count": int(orphan_mask.sum()),
-            "total": round(float(df.loc[orphan_mask, "total_price"].sum()), 2),
+            "total": round(float(df.loc[orphan_mask, "gross"].sum()), 2),
             "fk_list": sorted(set(
                 int(fk) for fk in df.loc[orphan_mask, "invoice_clinic_fk"].dropna()
             )),
@@ -414,10 +424,13 @@ def _split_activity_and_orphans(df: pd.DataFrame) -> tuple[dict[str, float], pd.
     else:
         orphans = empty_orphans
 
+    # Activity = sum of GROSS (Subtotal + AdminFee) per clinic — the figure QBO
+    # books for the monthly Telemedicine-OPD invoice. NOT total_price (net of
+    # the separately-applied FLEX credit).
     by_clinic = (
         df.dropna(subset=["clinic_name"])
         .assign(_key=lambda d: d["clinic_name"].str.strip().str.lower())
-        .groupby("_key")["total_price"]
+        .groupby("_key")["gross"]
         .sum()
         .round(2)
         .to_dict()
