@@ -1841,17 +1841,28 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     return "Held out — no payment"
                 if r.get("activity_match") == "none":
                     return "No OPD match (full unused)"
+                # Payment-band annotation: over-funded clinics had the pool
+                # auto-raised to absorb extra payments; under-funded ones still
+                # post the hurdle invoice but need a verified manual reduction.
+                n, exp = r.get("payments_in_quarter"), r.get("expected_payments")
+                band = ""
+                if r.get("pool_basis") == "ledger_over":
+                    over = round(float(r.get("effective_pool") or 0)
+                                 - float(r.get("quarterly_threshold") or 0), 2)
+                    band = f" · auto-raised +${over:,.0f} ({n} pmts)"
+                elif r.get("underfunded"):
+                    band = f" · underfunded ({n}/{exp} pmts — verify)"
                 if (r.get("overage") or 0) > 0:
-                    return "Overage"
+                    return "Overage" + band
                 if (r.get("unused") or 0) > 0:
-                    return "Recapture"
-                return "Reconciled"
+                    return "Recapture" + band
+                return "Reconciled" + band
             breakdown = rdf.copy()
             breakdown["status"] = breakdown.apply(_row_status, axis=1)
             display_cols = [
                 "status", "clinic_name", "qb_name", "finance_company", "contract_number",
                 "calendar_spread", "quarterly_threshold", "quarter_activity",
-                "unused", "overage", "activity_match",
+                "payments_in_quarter", "unused", "overage", "activity_match",
             ]
             with st.expander(f"Per-clinic breakdown ({len(rdf)} clinics)"):
                 st.dataframe(
@@ -1985,6 +1996,63 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     (st.success if ok_l else st.warning)(
                         f"Recorded {added} recapture invoice(s) in ledger + audit manifest."
                     )
+
+            # ── Zero-the-account adjustments hand-off ───────────────────────
+            # Under-funded clinics (paid < expected) got a posted hurdle invoice
+            # that's bigger than the credit on the account, so it won't zero —
+            # accounting must reduce it (after verifying no payment was simply
+            # un-imported). Over-funded clinics (paid > expected) were already
+            # auto-raised in the recapture, so they're FYI only.
+            inv_by_customer = {}
+            for _, _ir in udf.iterrows():
+                inv_by_customer.setdefault(
+                    str(_ir["Customer"]).strip().lower(), _ir["Invoice No"])
+            underfunded_rows = []
+            for r in recap_included:
+                if not r.get("underfunded"):
+                    continue
+                cust = (r.get("qb_name") or r.get("clinic_name") or "").strip().lower()
+                cur = round(float(r.get("unused") or 0.0), 2)
+                sug = round(float(r.get("balance_unused") or 0.0), 2)
+                underfunded_rows.append({
+                    "clinic": r.get("qb_name") or r.get("clinic_name"),
+                    "payments": r.get("payments_in_quarter"),
+                    "expected": r.get("expected_payments"),
+                    "invoice_no": inv_by_customer.get(cust, "(see import)"),
+                    "current": cur, "suggested": sug, "delta": round(cur - sug, 2),
+                })
+            overfunded_rows = [
+                {"clinic": r.get("qb_name") or r.get("clinic_name"),
+                 "payments": r.get("payments_in_quarter"),
+                 "true_up": round(float(r.get("unused") or 0.0), 2)}
+                for r in recap_included
+                if r.get("pool_basis") == "ledger_over" and float(r.get("unused") or 0) > 0
+            ]
+            if underfunded_rows or overfunded_rows:
+                st.divider()
+                st.markdown("#### Zero-out adjustments")
+                if underfunded_rows:
+                    st.warning(
+                        f":material/warning: **{len(underfunded_rows)} clinic(s) paid fewer than "
+                        "the expected payments this quarter.** The posted unused invoice is larger "
+                        "than the credit on the account, so it won't zero. Verify a payment wasn't "
+                        "just un-imported, then reduce the invoice per the email.",
+                        icon=":material/warning:",
+                    )
+                if overfunded_rows:
+                    st.info(
+                        f":material/info: **{len(overfunded_rows)} clinic(s) paid more than "
+                        "expected** — recapture was auto-raised to absorb the extra credit so the "
+                        "account zeros (no action; in the email for the record).",
+                        icon=":material/info:",
+                    )
+                _zsubj, _zbody = accounting_handoff.recapture_zeroing_adjustments_email(
+                    year=rec_year, month=rec_month,
+                    underfunded=underfunded_rows, overfunded=overfunded_rows,
+                )
+                accounting_handoff.render_handoff(
+                    _zsubj, _zbody, key_prefix="recap_zeroing_email",
+                )
 
         elif step_key in ("direct_bill", "partner_submission"):
             # Shared totals + dataframe used by both overage steps.

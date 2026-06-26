@@ -366,3 +366,97 @@ def test_find_orphan_payments_matches_by_clinic_name_too():
                 "contract_oneplace": None}]
     payments = [_payment(qb_customer="Alpha Clinic", amount=1000.0)]
     assert flex_unused.find_orphan_payments(clinics, payments) == []
+
+
+# ── Payment-band recapture: hurdle (<=3) vs flex-up (>3), under-funded flag ──
+
+def test_recapture_three_payments_is_standard_hurdle():
+    clinics = [_clinic("Gamma", threshold=5700.0, spread="March-April-May",
+                       contract_oneplace="OPC789")]
+    payments = [_payment(qb_customer="Gamma", amount=950.0) for _ in range(3)]
+    rows = flex_unused.compute_recapture(
+        clinics, {"gamma": 5000.0}, 2026, 5, ledger_payments_for_quarter=payments)
+    r = rows[0]
+    assert r["payments_in_quarter"] == 3
+    assert r["expected_payments"] == 3
+    assert r["pool_basis"] == "hurdle"
+    assert r["effective_pool"] == 5700.0
+    assert r["unused"] == 700.0          # 5700 - 5000
+    assert r["underfunded"] is False
+
+
+def test_recapture_overfunded_flexes_pool_up():
+    """4 payments (expected 3) -> pool flexes to 4/3 of threshold so the extra
+    month's credit is absorbed and the account zeros (the St. Michael case)."""
+    clinics = [_clinic("Alpha", threshold=5700.0, spread="March-April-May",
+                       contract_oneplace="OPC123")]
+    payments = [_payment(qb_customer="Alpha", amount=950.0) for _ in range(4)]
+    rows = flex_unused.compute_recapture(
+        clinics, {"alpha": 5102.0}, 2026, 5, ledger_payments_for_quarter=payments)
+    r = rows[0]
+    assert r["payments_in_quarter"] == 4
+    assert r["pool_basis"] == "ledger_over"
+    assert r["effective_pool"] == 7600.0          # 4 * (5700/3)
+    assert r["unused"] == 2498.0                   # 7600 - 5102
+    assert r["underfunded"] is False
+
+
+def test_recapture_underfunded_keeps_hurdle_and_flags():
+    """2 payments (expected 3) -> still posts the full hurdle invoice, but is
+    flagged for manual reduction; balance_unused shows the books-zeroing target."""
+    clinics = [_clinic("Beta", threshold=5700.0, spread="March-April-May",
+                       contract_oneplace="OPC456")]
+    payments = [_payment(qb_customer="Beta", amount=950.0) for _ in range(2)]
+    rows = flex_unused.compute_recapture(
+        clinics, {"beta": 1000.0}, 2026, 5, ledger_payments_for_quarter=payments)
+    r = rows[0]
+    assert r["payments_in_quarter"] == 2
+    assert r["pool_basis"] == "hurdle"
+    assert r["effective_pool"] == 5700.0
+    assert r["unused"] == 4700.0                   # hurdle posted as-is (5700 - 1000)
+    assert r["underfunded"] is True
+    assert r["balance_unused"] == 2800.0           # 2*1900 - 1000 (manual target)
+
+
+def test_recapture_group_overfunded_uses_per_clinic_expected():
+    """A 2-clinic group expects 6 payments; 7 posted -> over-funded by one."""
+    clinics = [
+        _clinic("Anchor", threshold=5700.0, spread="March-April-May", group_id="g"),
+        _clinic("Member", threshold=5700.0, spread="March-April-May", group_id="g",
+                parent_clinic_id="Anchor"),
+    ]
+    payments = ([_payment(qb_customer="Anchor", amount=950.0) for _ in range(4)]
+                + [_payment(qb_customer="Member", amount=950.0) for _ in range(3)])
+    rows = flex_unused.compute_recapture(
+        clinics, {"anchor": 0.0, "member": 0.0}, 2026, 5,
+        ledger_payments_for_quarter=payments)
+    r = rows[0]                                    # anchor row (members pooled)
+    assert r["payments_in_quarter"] == 7
+    assert r["expected_payments"] == 6
+    assert r["pool_basis"] == "ledger_over"
+    assert r["effective_pool"] == 13300.0          # 7 * (11400/6)
+
+
+def test_recapture_no_ledger_uses_threshold_for_pool():
+    """Back-compat: with no ledger, the pool is always the flat threshold."""
+    clinics = [_clinic("Solo", threshold=5700.0, spread="March-April-May")]
+    rows = flex_unused.compute_recapture(clinics, {"solo": 5000.0}, 2026, 5)
+    r = rows[0]
+    assert r["payments_in_quarter"] is None
+    assert r["pool_basis"] == "hurdle"
+    assert r["unused"] == 700.0
+    assert r["underfunded"] is False
+
+
+def test_recapture_zeroing_adjustments_email_sections():
+    from core import accounting_handoff
+    subj, body = accounting_handoff.recapture_zeroing_adjustments_email(
+        year=2026, month=5,
+        underfunded=[{"clinic": "Beta", "payments": 2, "expected": 3,
+                      "invoice_no": 50010, "current": 4700.0,
+                      "suggested": 2800.0, "delta": 1900.0}],
+        overfunded=[{"clinic": "Alpha", "payments": 4, "true_up": 2498.0}],
+    )
+    assert "Manual Adjustments" in subj
+    assert "Beta" in body and "invoice 50010" in body and "reduce by $1,900.00" in body
+    assert "Alpha" in body and "NO action" in body and "$2,498.00" in body

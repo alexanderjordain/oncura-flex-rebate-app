@@ -481,6 +481,66 @@ def recapture_email(*, year: int, month: int,
     return subj, "\n".join(parts)
 
 
+def recapture_zeroing_adjustments_email(*, year: int, month: int,
+                                        underfunded: list[dict],
+                                        overfunded: list[dict]) -> tuple[str, str]:
+    """Manual-adjustment worklist so every FLEX account nets to zero at quarter end.
+
+    underfunded: clinics that paid FEWER than the expected payments — the posted
+      unused-credit invoice is larger than the credit on their account and won't
+      zero. Each dict: {clinic, payments, expected, invoice_no, current,
+      suggested, delta}. ACTION: confirm no un-imported payment, then reduce.
+    overfunded: clinics that paid MORE than expected — recapture was auto-raised
+      to absorb the extra credit. Each dict: {clinic, payments, true_up}. No
+      action; listed for the record.
+    """
+    month_name = dt.date(year, month, 1).strftime("%B")
+    subj = (f"[Action Required] FLEX Recapture — Manual Adjustments to Zero "
+            f"Accounts — {month_name} {year}")
+    parts = [
+        "Hi accounting,",
+        "",
+        f"Quarter-end FLEX recapture for {month_name} {year}. The unused-credit "
+        "import posts the standard hurdle amount for every clinic; the items "
+        "below need attention so each account nets to zero (SOP-11).",
+        "",
+    ]
+    if underfunded:
+        parts += [
+            f"A. ADJUST THESE — paid fewer than the expected payments "
+            f"({len(underfunded)}). The account holds less credit than the posted "
+            "invoice, so it won't zero as-is. FIRST confirm a payment wasn't simply "
+            "missed in import; if the count is correct, reduce the invoice:",
+            "",
+        ]
+        for r in underfunded:
+            parts.append(
+                f"  - {r['clinic']} — {r['payments']} of {r['expected']} payments "
+                f"· invoice {r['invoice_no']}: ${r['current']:,.2f} -> "
+                f"${r['suggested']:,.2f} (reduce by ${r['delta']:,.2f})"
+            )
+        parts.append("")
+    if overfunded:
+        parts += [
+            f"B. FYI — auto-adjusted, NO action ({len(overfunded)}). These had MORE "
+            "than the expected payments; the recapture was automatically raised to "
+            "absorb the extra credit so the account zeros. Listed for the record — "
+            "confirm each extra payment is real, not a double-post:",
+            "",
+        ]
+        for r in overfunded:
+            parts.append(
+                f"  - {r['clinic']} — {r['payments']} payments · "
+                f"true-up ${r['true_up']:,.2f}"
+            )
+        parts.append("")
+    parts.append(
+        "These adjustments are what hold every FLEX account at a zero balance "
+        "after the true-up."
+    )
+    return subj, "\n".join(parts)
+
+
 def direct_bill_overage_email(*, year: int, month: int,
                               invoice_count: int, invoice_total: float,
                               clinic_details: list[dict] | None = None,  # noqa: ARG001

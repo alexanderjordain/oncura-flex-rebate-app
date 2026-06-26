@@ -214,6 +214,42 @@ def _group_has_positive_payment(anchor, members, payments_by_contract, payments_
     return False
 
 
+def _group_payment_count(anchor, members, ledger_payments) -> int:
+    """Count POSITIVE FLEX payments in the ledger belonging to this clinic or any
+    of its group members — matched by qb_name OR normalized contract, each
+    payment counted once.
+
+    Drives the recapture payment-band logic: the expected count is 3 per clinic
+    (one per month of the quarter), so a single clinic with >3 — or an M-clinic
+    group with >3M — has extra payments on the books whose credit the recapture
+    must absorb to zero the account.
+    """
+    qbs: set[str] = set()
+    contracts: set[str] = set()
+    for c in [anchor] + list(members):
+        qb = (c.get("qb_name") or "").strip().lower()
+        if qb:
+            qbs.add(qb)
+        for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
+            cv = _norm_contract(c.get(k))
+            if cv:
+                contracts.add(cv)
+    n = 0
+    for p in ledger_payments or []:
+        if p.get("kind") != "flex":
+            continue
+        try:
+            if float(p.get("amount") or 0) <= 0:
+                continue
+        except (TypeError, ValueError):
+            continue
+        pqb = (p.get("qb_customer") or "").strip().lower()
+        pc = _norm_contract(p.get("contract"))
+        if (pqb and pqb in qbs) or (pc and pc in contracts):
+            n += 1
+    return n
+
+
 def compute_recapture(flex_clinics, activity_by_name, year, month,
                      ledger_payments_for_quarter=None):
     """Per-clinic unused/overage for clinics whose quarter ends in (year, month).
@@ -278,8 +314,43 @@ def compute_recapture(flex_clinics, activity_by_name, year, month,
         # can sanity-check that the lack of activity is real and not a name
         # mismatch hiding genuine consults.
         activity_val = float(activity) if activity is not None else 0.0
-        unused = round(max(threshold - activity_val, 0.0), 2)
-        overage = round(max(activity_val - threshold, 0.0), 2)
+
+        # ── Payment-band recapture ───────────────────────────────────────────
+        # The standard "hurdle" pool is the threshold (3 months of entitlement
+        # per clinic). When a clinic/group has MORE payments on the books than
+        # expected (3 per clinic), those extra payments are real credit sitting
+        # on the account, so the pool flexes UP to absorb them — otherwise the
+        # recapture under-recognizes and the account can't zero. We deliberately
+        # do NOT flex DOWN for fewer-than-expected payments: that's ambiguous (a
+        # payment may simply not be imported yet), so it's left to a verified
+        # MANUAL adjustment instead, surfaced via the `underfunded` flag.
+        clinic_count = 1 + len(members)
+        n_expected = 3 * clinic_count
+        per_payment = round(threshold / n_expected, 4) if n_expected else 0.0
+        n_payments = (
+            _group_payment_count(c, members, ledger_payments_for_quarter)
+            if payment_filter_active else None
+        )
+        if payment_filter_active and n_payments is not None and n_payments > n_expected:
+            effective_pool = round(n_payments * per_payment, 2)
+            pool_basis = "ledger_over"
+        else:
+            effective_pool = threshold
+            pool_basis = "hurdle"
+        unused = round(max(effective_pool - activity_val, 0.0), 2)
+        overage = round(max(activity_val - effective_pool, 0.0), 2)
+        # Books-zeroing unused implied by the ACTUAL posted payment count (what
+        # the account needs to net to zero). Equals `unused` for the hurdle/over
+        # cases; for under-funded clinics it's the smaller figure the manual
+        # adjustment should target.
+        if payment_filter_active and n_payments is not None:
+            balance_unused = round(max(n_payments * per_payment - activity_val, 0.0), 2)
+        else:
+            balance_unused = unused
+        underfunded = bool(
+            payment_filter_active and n_payments is not None
+            and 0 < n_payments < n_expected and unused > 0 and not excluded_no_payments
+        )
         fc = c.get("finance_company")
         contract_number = (
             c.get("contract_greatamerica") if fc == "GreatAmerica"
@@ -315,6 +386,19 @@ def compute_recapture(flex_clinics, activity_by_name, year, month,
                 # "roster vs ledger mismatch" warning. Always False when no
                 # payment filter is active (backward compat).
                 "excluded_no_payments": excluded_no_payments,
+                # ── Payment-band fields ──────────────────────────────────────
+                # n positive FLEX payments on the books this quarter (None when
+                # no ledger supplied); expected count (3 per clinic); the pool
+                # actually used and whether it's the flat hurdle or was flexed
+                # up to absorb extra payments; the books-zeroing unused; and the
+                # under-funded flag (paid fewer than expected -> the posted
+                # hurdle invoice needs a verified manual reduction).
+                "payments_in_quarter": n_payments,
+                "expected_payments": n_expected,
+                "effective_pool": round(effective_pool, 2),
+                "pool_basis": pool_basis,
+                "balance_unused": balance_unused,
+                "underfunded": underfunded,
             }
         )
     return rows
