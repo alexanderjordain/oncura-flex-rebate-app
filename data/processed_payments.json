@@ -3569,6 +3569,26 @@
       "payment_date": "2026-05-12",
       "amount": 870.14,
       "recorded_at": "2026-06-26T19:52:58"
+    },
+    {
+      "fingerprint": "1dc2d0799bd8120bae364011919771bb3536febff7b8b88305377d18b0f8f4ae",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2012503-000",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-03-01",
+      "amount": 870.14,
+      "recorded_at": "2026-06-26T16:17:02"
+    },
+    {
+      "fingerprint": "f3143e5b8dc85ae1a9b92590ff7470e3a775fd2477515e079b0d4c822cf6ac65",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2014435-000",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-03-01",
+      "amount": 921.84,
+      "recorded_at": "2026-06-26T16:17:02"
     }
   ]
 }
