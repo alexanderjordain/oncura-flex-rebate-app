@@ -1615,8 +1615,8 @@
       "ema_end": "2029-05-29",
       "support_ema_end": "2025-01-29",
       "hardware_ema_end": "2029-05-29",
-      "active": true,
-      "notes": "",
+      "active": false,
+      "notes": "Marked inactive 2026-06-26 (Alexander Jordain): clinic fell off the FLEX program — no payments in the ledger and no OnePlace contract on file. Excluded from true-ups going forward.",
       "group_id": null,
       "parent_clinic_id": null
     },
