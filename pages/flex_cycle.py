@@ -2413,13 +2413,11 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         else:
             next_blocked_reason = "Fetch the quarter from OPD before continuing."
 
-    # Soft sign-off confirm. A sign-off step only exists when it has rows to
-    # record, so empty initials here means the operator is about to advance
-    # WITHOUT signing off / recording. The first Next press arms a confirm (no
-    # advance); a second press — or any press once initials are entered —
-    # advances. The flag stores the step index it was armed for so it can't leak
-    # across steps. Initials persist for the session, so this only nudges on the
-    # first un-initialed sign-off step.
+    # Sign-off gate. A sign-off step only exists when it has rows to record, so
+    # empty initials here means the operator is about to advance WITHOUT signing
+    # off / recording. Clicking Next with no initials opens a large blocking
+    # modal (Go back & add initials / Continue without recording) — hard to
+    # miss, and it fires on EVERY un-initialed sign-off step.
     _signoff_key = {
         "recapture": "stage3_recap_audit_initials",
         "direct_bill": "stage3_direct_audit_initials",
@@ -2429,15 +2427,29 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         (SS.get(_signoff_key) or SS.get("user_initials", "") or "").strip()
         if _signoff_key else "n/a"
     )
-    _confirm_armed = (SS.get("recap_skip_confirm") == SS.recap_step) and not _initials_live
-    if _confirm_armed:
-        _spacer, _box = st.columns([1, 1.4])
-        with _box, st.container(border=True):
-            st.markdown(
-                ":material/edit_note:&nbsp; **No initials entered for this step — it "
-                "won't be recorded.**  \nEnter your initials above to sign off, or press "
-                "**Next →** again to continue without recording this step."
-            )
+
+    @st.dialog("Sign-off needed before you continue", width="large", dismissible=False)
+    def _signoff_modal():
+        st.info(
+            "**You haven't entered your initials for this step.**\n\n"
+            "Without a sign-off, this step will **NOT be recorded** to the ledger "
+            "or the audit manifest. Add your initials to sign off, or continue "
+            "without recording this step.",
+            icon=":material/draw:",
+        )
+        _gb, _ct = st.columns(2)
+        if _gb.button("← Go back & add initials", key="recap_signoff_goback",
+                      type="primary", use_container_width=True):
+            SS.pop("recap_signoff_modal", None)
+            st.rerun()
+        if _ct.button("Continue without recording →", key="recap_signoff_continue",
+                      use_container_width=True):
+            SS.pop("recap_signoff_modal", None)
+            SS.recap_step += 1
+            st.rerun()
+
+    if SS.get("recap_signoff_modal") == SS.recap_step:
+        _signoff_modal()
 
     # Single nav row: [◀ Set up new cycle]  [blocked reason]  [← Back]  [Next →]
     # The reset, Back, and Next live on the same horizontal plane so the
@@ -2450,7 +2462,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         use_container_width=True,
         help="Clear the uploaded file + credit offsets and return to the setup step — use this between monthly Stage 3 runs.",
     ):
-        for k in ("recap_skip_confirm",
+        for k in ("recap_signoff_modal",
                   "recap_credit_offsets",
                   "recap_pipe_error",
                   "w_recap_offsets_editor",
@@ -2467,18 +2479,18 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     if can_back:
         if nav_b.button("← Back", key=f"w_recap_back_{SS.recap_step}",
                         use_container_width=True):
-            SS.pop("recap_skip_confirm", None)
+            SS.pop("recap_signoff_modal", None)
             SS.recap_step -= 1
             st.rerun()
     if SS.recap_step < total - 1:
         if nav_n.button("Next →", key=f"w_recap_next_{SS.recap_step}",
                         type="primary", disabled=not can_next,
                         use_container_width=True):
-            if _signoff_key and not _initials_live and SS.get("recap_skip_confirm") != SS.recap_step:
-                # First press on an un-initialed sign-off step: arm + hold, don't advance.
-                SS["recap_skip_confirm"] = SS.recap_step
+            if _signoff_key and not _initials_live:
+                # Un-initialed sign-off step: open the blocking modal, don't advance.
+                SS["recap_signoff_modal"] = SS.recap_step
             else:
-                SS.pop("recap_skip_confirm", None)
+                SS.pop("recap_signoff_modal", None)
                 SS.recap_step += 1
             st.rerun()
     else:
