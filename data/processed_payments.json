@@ -3559,6 +3559,16 @@
       "payment_date": "2026-05-01",
       "amount": 772.0,
       "recorded_at": "2026-06-24T21:37:04"
+    },
+    {
+      "fingerprint": "74f3756ae780fa4f237b5e6822d4c241879737a9377366edeed022145680aee7",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2012503-000",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-05-12",
+      "amount": 870.14,
+      "recorded_at": "2026-06-26T19:52:58"
     }
   ]
 }
