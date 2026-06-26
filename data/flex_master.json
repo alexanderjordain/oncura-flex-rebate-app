@@ -377,9 +377,9 @@
       "support_ema_end": "2025-06-14",
       "hardware_ema_end": "2029-10-14",
       "active": true,
-      "notes": "",
-      "group_id": "pr-vets",
-      "parent_clinic_id": "Clinica Veterinaria Gardenville"
+      "notes": "Standalone (NOT under Gardenville) — removed from the pr-vets group 2026-06-26 per Alexander Jordain; trued up on its own.",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Clinica Veterinaria Diaz Umpierre",
@@ -537,7 +537,7 @@
       "monthly_finance_payment": 921.84,
       "monthly_threshold": 1900.0,
       "quarterly_threshold": 5700.0,
-      "calendar_spread": "Calendar",
+      "calendar_spread": "March-April-May",
       "contract_greatamerica": "022-2003538-000",
       "contract_oneplace": null,
       "contract_newlane": null,
@@ -545,9 +545,9 @@
       "support_ema_end": "2025-04-22",
       "hardware_ema_end": "2029-08-22",
       "active": true,
-      "notes": "",
-      "group_id": null,
-      "parent_clinic_id": null
+      "notes": "Added to the pr-vets group under Gardenville 2026-06-26 per Alexander Jordain; calendar corrected Calendar->March-April-May to match the group's May close.",
+      "group_id": "pr-vets",
+      "parent_clinic_id": "Clinica Veterinaria Gardenville"
     },
     {
       "clinic_name": "Encanto Animal Hospital",

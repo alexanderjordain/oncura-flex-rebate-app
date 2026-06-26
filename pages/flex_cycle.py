@@ -580,12 +580,13 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             #    silently treated as net-new. Surface for confirm-and-proceed.
             novel_rows = [r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps]
             possible_reissues = ledger.check_possible_reissues(company, novel_rows) if novel_rows else []
+            reissue_fps: set[str] = set()
             if possible_reissues:
                 st.warning(
                     f":material/warning: **{len(possible_reissues)} payment(s) look like possible reissues** — "
                     "same company / contract / amount as a prior ledger row but a different payment date. "
-                    "Confirm these are intentional reissues, not accidental re-imports of the same money "
-                    "with a re-typed date.",
+                    "By default they're EXCLUDED from this import (assumed to be the same money re-dated); "
+                    "the genuinely-new rows still import. Tick the box only if these are intentional reissues.",
                 )
                 with st.expander("Show possible reissues", expanded=False):
                     for r in possible_reissues:
@@ -599,27 +600,42 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                             f"new payment date **`{ledger._date_iso(inc['payment_date'])}`**"
                         )
                 SS["remit_reissue_ack"] = st.checkbox(
-                    "I confirm these are intentional reissues — proceed.",
+                    "Include these reissues — they are intentional, not the same money re-dated.",
                     value=SS.get("remit_reissue_ack", False),
                     key="remit_reissue_ack_widget",
                 )
                 if not SS["remit_reissue_ack"]:
-                    st.info("Tick the box above once you've verified the reissues to enable the downloads.")
-                    st.stop()
+                    # Exclude just the reissue rows; the clean new rows still import.
+                    reissue_fps = {
+                        ledger.fingerprint(company, r["incoming"].get("kind", "flex"),
+                                           r["incoming"].get("contract", ""),
+                                           r["incoming"]["payment_date"],
+                                           r["incoming"]["amount"])
+                        for r in possible_reissues
+                    }
+                    st.info(
+                        f"{len(reissue_fps)} reissue(s) excluded from this import — the rest still "
+                        "import. Tick the box above to include them."
+                    )
             else:
                 SS["remit_reissue_ack"] = True
 
-            if seen_fps:
-                skipped_flex = sum(1 for fp, r in zip(all_fps[:len(flex_rows)], flex_rows) if fp in seen_fps)
-                skipped_scan = sum(1 for fp, r in zip(all_fps[len(flex_rows):], scan_rows) if fp in seen_fps)
-                st.warning(
-                    f"**Ledger already contains {len(seen_fps)} of these payments** "
-                    f"(flex: {skipped_flex}, scan: {skipped_scan}). They've been removed from the "
-                    f"downloads below so you don't double-post."
-                )
+            # Rows to drop from the downloads + ledger: exact dups already in the
+            # ledger, plus any suspected reissues the operator hasn't confirmed.
+            skip_fps = set(seen_fps) | reissue_fps
+
+            if skip_fps:
+                if seen_fps:
+                    sk_flex = sum(1 for fp in all_fps[:len(flex_rows)] if fp in seen_fps)
+                    sk_scan = sum(1 for fp in all_fps[len(flex_rows):] if fp in seen_fps)
+                    st.warning(
+                        f"**Ledger already contains {len(seen_fps)} of these payments** "
+                        f"(flex: {sk_flex}, scan: {sk_scan}). They've been removed from the "
+                        f"downloads below so you don't double-post."
+                    )
                 # Filter the output dataframes in-place
-                keep_flex = [i for i, fp in enumerate(all_fps[:len(flex_rows)]) if fp not in seen_fps]
-                keep_scan = [i for i, fp in enumerate(all_fps[len(flex_rows):]) if fp not in seen_fps]
+                keep_flex = [i for i, fp in enumerate(all_fps[:len(flex_rows)]) if fp not in skip_fps]
+                keep_scan = [i for i, fp in enumerate(all_fps[len(flex_rows):]) if fp not in skip_fps]
                 if not res["flex_payments"].empty:
                     res["flex_payments"] = res["flex_payments"].iloc[keep_flex].reset_index(drop=True)
                 if not res["scan_payments"].empty:
@@ -890,7 +906,7 @@ the next. After all uploads, the combined total should match the bank-feed depos
             # ── Mark batch processed: write to ledger so future re-uploads are caught ────
             st.divider()
             rows_to_record = [
-                r for r, fp in zip(all_rows, all_fps) if fp not in seen_fps
+                r for r, fp in zip(all_rows, all_fps) if fp not in skip_fps
             ]
             ack_disabled = len(rows_to_record) == 0
             if not ack_disabled:
@@ -1112,6 +1128,30 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         df, next_ref, skipped, source_payments = flex_credits.build_import_from_payments(
             flex_clinics, payments, year, month, start_ref,
         )
+
+        # Drop credit memos already recorded for this month so the download + mark
+        # carry ONLY new ones (no manual row-picking, no double-post). Dedup key =
+        # the SOURCE payment's immutable fingerprint — the same key the mark step
+        # uses below.
+        if not df.empty:
+            _emit_fps = [
+                ledger.fingerprint(
+                    "INTERNAL", "credit_memo",
+                    sp.get("fingerprint") or row["Customer"],
+                    row["Credit Memo Date"], float(row["Product/Service Amount"]),
+                )
+                for sp, (_, row) in zip(source_payments, df.iterrows())
+            ]
+            _seen_cred = ledger.check_payments_seen(_emit_fps)
+            if _seen_cred:
+                _keep = [i for i, fp in enumerate(_emit_fps) if fp not in _seen_cred]
+                df = df.iloc[_keep].reset_index(drop=True)
+                source_payments = [source_payments[i] for i in _keep]
+                st.info(
+                    f"{len(_seen_cred)} credit memo(s) already recorded for {mname} {year} "
+                    "were removed — the download below holds only new ones.",
+                    icon=":material/info:",
+                )
 
         # ── Payments Remitted in {Month} panel ─────────────────────────────────────
         head_l, head_r = st.columns([5, 1])
