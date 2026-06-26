@@ -863,6 +863,36 @@
       ],
       "note": "Direct-bill overages emailed to accounting for May 2000",
       "entry_hash": "cb92fb1807af2dab410877dffcd2913b0dcdce622f3b2390a0d4ca3b955aa7c8"
+    },
+    {
+      "id": "f6aa737e-43e4-44ed-b67b-9566f9b0d8da",
+      "timestamp": "2026-06-26T19:52:59",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "company": "GreatAmerica",
+        "payment_date": "2026-05-12",
+        "invoice_date": "2026-05-12",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 2
+      },
+      "source_file": {
+        "name": "Remittance Detail Downloadable (16).csv",
+        "sha256": "a902bae6f7ac9aa2a61336e7809edfc544aafdb039b0e0bc143796602b6196b8",
+        "size_bytes": 912
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "384792deadb589921d64093b344e10c15dc08e66ab72ccc73866d6cc3e5fa95d",
+          "row_count": 1,
+          "total": 870.14
+        }
+      ],
+      "note": "1 new payment(s) recorded; 2 already in ledger",
+      "entry_hash": "00805dd7097489da1c8af4efe1596cb4e3dc3c3c71aef71e6847e91666ff049c"
     }
   ]
 }
