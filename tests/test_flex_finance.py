@@ -177,3 +177,57 @@ def test_fpleasing_remittance_single_invoice_column():
     # FP's own invoice # is preserved only in the Ref No, prefix-free + FPL-.
     refs = list(pay["Ref No (Receive Payment No)"])
     assert refs == ["FPL-42901", "FPL-43234"]
+
+
+# ── GreatAmerica: a blank Payment Invoice Number must NOT drop the payment ─────
+# A live GA remittance shipped a real payment (St. Michael, $870.14) with a
+# blank Payment Invoice Number but a valid ContractID. The old code dropped it
+# as a "summary row," silently losing the payment and holding the clinic out of
+# the true-up. It must be kept, resolved by contract, and given a unique Ref No.
+
+def test_greatamerica_blank_invoice_number_is_not_dropped():
+    df = pd.DataFrame({
+        "Customer Name": ["St. Michael Veterinary Clinic, P.A.",
+                          "Clark Veterinary Hospital, INC."],
+        "ContractID": ["022-2012503-000", "022-2000185-000"],
+        "Payment Invoice Number": ["", "41724002"],   # St. Michael's is blank
+        "Paid": [870.14, 921.84],
+    })
+    out = flex_finance.process_remittance(
+        df, "GreatAmerica",
+        customer_col="Customer Name", amount_col="Paid",
+        id_col="Payment Invoice Number", contract_id_col="ContractID",
+        payment_date=dt.date(2026, 5, 8), invoice_date=dt.date(2026, 5, 8),
+        start_invoice_no=50000, name_map={},
+        contract_qb_map={"022-2012503-000": "St. Michael Veterinary Clinic",
+                         "022-2000185-000": "Clark Veterinary Hospital"},
+        split="all_flex",
+    )
+    flex = out["flex_payments"]
+    assert len(flex) == 2                                   # neither row dropped
+    assert "St. Michael Veterinary Clinic" in list(flex["Customer"])  # resolved by contract
+    refs = list(flex["Ref No (Receive Payment No)"])
+    assert "GA-022-2012503-000" in refs                     # blank invoice -> ContractID fallback
+    assert "GA-41724002" in refs                            # normal row unchanged
+    assert len(set(refs)) == len(refs)                      # unique (SaasAnt won't collapse)
+
+
+def test_greatamerica_summary_row_still_dropped():
+    # A genuine summary/total row (no invoice id AND no contract id) must still
+    # be dropped — the fix must not start keeping junk rows.
+    df = pd.DataFrame({
+        "Customer Name": ["Real Clinic", "Pass-Thru received total"],
+        "ContractID": ["022-2000185-000", ""],
+        "Payment Invoice Number": ["41724002", ""],
+        "Paid": [921.84, 921.84],
+    })
+    out = flex_finance.process_remittance(
+        df, "GreatAmerica",
+        customer_col="Customer Name", amount_col="Paid",
+        id_col="Payment Invoice Number", contract_id_col="ContractID",
+        payment_date=dt.date(2026, 5, 8), invoice_date=dt.date(2026, 5, 8),
+        start_invoice_no=50000, name_map={},
+        contract_qb_map={"022-2000185-000": "Clark Veterinary Hospital"},
+        split="all_flex",
+    )
+    assert len(out["flex_payments"]) == 1                   # the no-id summary row dropped

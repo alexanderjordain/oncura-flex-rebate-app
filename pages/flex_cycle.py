@@ -545,6 +545,12 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                         contract = flex_finance.strip_invoice_prefix(df[ref_col].iloc[i])
                     else:
                         contract = df[id_col].iloc[i]
+                        # GA can ship a real payment with a blank Payment Invoice
+                        # Number; fall back to the dashed ContractID so the ledger
+                        # fingerprint key is stable and non-blank.
+                        if (contract is None or str(contract).strip().lower() in ("", "nan")) \
+                                and ga_contract_col and ga_contract_col in df.columns:
+                            contract = df[ga_contract_col].iloc[i]
                     out.append({
                         "kind": kind,
                         "contract": contract,

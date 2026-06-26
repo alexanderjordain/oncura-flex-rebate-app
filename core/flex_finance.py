@@ -199,7 +199,14 @@ def strip_invoice_prefix(value) -> str:
 
 def make_ref_no(company: str, kind: str, *, invoice_number=None, contract=None, seq=None) -> str:
     if company == "GreatAmerica":
-        return f"GA-{invoice_number}"
+        inv = "" if invoice_number is None else str(invoice_number).strip()
+        if inv and inv.lower() != "nan":
+            return f"GA-{inv}"
+        # GA can omit the Payment Invoice Number; fall back to the (dashed)
+        # ContractID so the row still gets a unique, traceable Ref No rather than
+        # a bare 'GA-' that would collide across blank-invoice rows.
+        c = "" if contract is None else str(contract).strip()
+        return f"GA-{c}" if c and c.lower() != "nan" else f"GA-{seq}"
     if company == "OnePlace":
         c = normalize_contract(contract)
         # flex contracts are padded with a leading zero in the export -> strip for flex;
@@ -313,11 +320,21 @@ def process_remittance(
     Original columns are preserved; SaasAnt columns are appended.
     """
     work = df.copy()
-    # drop summary/total rows (e.g. trailing "Pass-Thru received" line): a real payment always
-    # has a contract/invoice id, so a blank id_col is the reliable signal.
-    if id_col and id_col in work.columns:
-        work = work[work[id_col].notna()]
-        work = work[work[id_col].astype(str).str.replace("\xa0", " ").str.strip().ne("")]
+    # Drop only genuine summary/total rows (e.g. a trailing "Pass-Thru received"
+    # line). A real payment carries SOME identifier — but GreatAmerica can issue
+    # a real payment with a BLANK Payment Invoice Number yet a valid ContractID
+    # (confirmed on a live GA remittance — it silently lost a clinic's payment),
+    # so keying the drop on id_col alone is wrong. Keep a row when EITHER the
+    # invoice id OR the contract id is populated; drop only when both are blank.
+    def _nonblank(col):
+        return (work[col].notna()
+                & work[col].astype(str).str.replace("\xa0", " ").str.strip().ne(""))
+    _id_cols = [c for c in (id_col, contract_id_col) if c and c in work.columns]
+    if _id_cols:
+        has_id = _nonblank(_id_cols[0])
+        for c in _id_cols[1:]:
+            has_id = has_id | _nonblank(c)
+        work = work[has_id]
     # Column used for QB-customer lookup. For GA this is the ContractID column
     # (dashed format) — distinct from id_col which is Payment Invoice Number
     # (used for the SaasAnt Ref No). For non-GA the two collapse.
@@ -384,7 +401,8 @@ def process_remittance(
     flex = work[work["_kind"] == "flex"].reset_index(drop=True)
     scan = work[work["_kind"] == "scan"].reset_index(drop=True)
 
-    flex_payments = _build_payments(flex, company, "flex", meta["flex_label"], payment_date, id_col)
+    flex_payments = _build_payments(flex, company, "flex", meta["flex_label"], payment_date, id_col,
+                                    contract_col=contract_id_col)
 
     scan_invoices = pd.DataFrame()
     scan_payments = pd.DataFrame()
@@ -393,7 +411,8 @@ def process_remittance(
         scan_invoices = _build_scan_invoices(scan, invoice_nos, invoice_date,
                                              company=company, id_col=id_col)
         scan_payments = _build_payments(
-            scan, company, "scan", meta["scan_label"], payment_date, id_col, invoice_nos=invoice_nos
+            scan, company, "scan", meta["scan_label"], payment_date, id_col,
+            invoice_nos=invoice_nos, contract_col=contract_id_col,
         )
 
     return {
@@ -422,7 +441,7 @@ def _passthrough(src: pd.DataFrame) -> pd.DataFrame:
     return src.drop(columns=[c for c in src.columns if c.startswith("_")]).reset_index(drop=True)
 
 
-def _build_payments(src, company, kind, label, payment_date, id_col, invoice_nos=None):
+def _build_payments(src, company, kind, label, payment_date, id_col, invoice_nos=None, contract_col=None):
     if not len(src):
         return pd.DataFrame()
     out = _passthrough(src)
@@ -431,7 +450,11 @@ def _build_payments(src, company, kind, label, payment_date, id_col, invoice_nos
     bases, refs, seen = [], [], {}
     for i in range(n):
         ident = src[id_col].iloc[i] if id_col and id_col in src else None
-        base = make_ref_no(company, kind, invoice_number=ident, contract=ident, seq=i + 1)
+        # GA: the Ref No's contract fallback is the dashed ContractID (a separate
+        # column) so a blank Payment Invoice Number doesn't yield a bare 'GA-'.
+        # For other companies contract_col is None and this collapses to ident.
+        contract_ident = src[contract_col].iloc[i] if contract_col and contract_col in src else ident
+        base = make_ref_no(company, kind, invoice_number=ident, contract=contract_ident, seq=i + 1)
         bases.append(base)
         # a clinic paying twice in one remittance would collide; suffix to keep SaasAnt-unique
         if base in seen:
