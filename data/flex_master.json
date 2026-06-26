@@ -432,7 +432,7 @@
       "monthly_finance_payment": 921.84,
       "monthly_threshold": 1900.0,
       "quarterly_threshold": 5700.0,
-      "calendar_spread": "March-April-May",
+      "calendar_spread": "May-June-July",
       "contract_greatamerica": "022-1997773-000",
       "contract_oneplace": null,
       "contract_newlane": null,
@@ -440,9 +440,9 @@
       "support_ema_end": "2025-03-22",
       "hardware_ema_end": "2029-07-22",
       "active": true,
-      "notes": "calendar_spread corrected May-June-July->March-April-May (2026-06-26): the pr-vets group all close in May; the prior value pooled this clinic into the anchor's quarter while its own quarter never trued up.",
-      "group_id": "pr-vets",
-      "parent_clinic_id": "Clinica Veterinaria Gardenville"
+      "notes": "Standalone clinic (NOT pr-vets) — quarter ends in April (May-June-July cadence: Jan/Apr/Jul/Oct). Removed from the Gardenville group 2026-06-26 per Alexander Jordain; an earlier same-day group assignment + March-April-May calendar were incorrect.",
+      "group_id": null,
+      "parent_clinic_id": null
     },
     {
       "clinic_name": "Crossroads Animal Hospital TX",
