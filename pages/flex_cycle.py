@@ -721,6 +721,36 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                         f":material/check_circle: {_rec_lead}. Re-uploading the same file won't "
                         "double-post. Use **◀ Back to Setup** below to process the next file."
                     )
+                    # Next step (Acct SOP-2): now that the batch is recorded, match the
+                    # finance company's deposit in the QBO bank feed. Shown HERE
+                    # (post-record) rather than on the review step — it's the operator's
+                    # next action only once the payments are actually in.
+                    _sop2_meta = flex_finance.COMPANY_META.get(company, {})
+                    _bank = _sop2_meta.get("bank_feed", "the bank feed")
+                    _label_pairs = " · ".join(
+                        f"**{m['bank_feed']}** = {c}"
+                        for c, m in flex_finance.COMPANY_META.items()
+                        if m.get("bank_feed")
+                    )
+                    _batch_total = 0.0
+                    for _r in all_rows:
+                        try:
+                            _v = float(_r.get("amount"))
+                            if _v == _v:   # skip NaN
+                                _batch_total += _v
+                        except (TypeError, ValueError):
+                            pass
+                    st.warning(
+                        f"**Next step — Acct SOP-2: match the bank feed in QBO.**  \n"
+                        f"Import the SaasAnt files you downloaded for this batch, then open "
+                        f"**the bank feed** in QBO and match the deposit against the receive "
+                        f"payments you just created. It posts under {company}'s bank-feed label: "
+                        f"**{_bank}**. Confirm the deposit equals this batch's total of "
+                        f"**${_batch_total:,.2f}**; if there's a mismatch, stop and reconcile "
+                        f"before posting the next remittance.  \n"
+                        f":blue[Bank-feed labels: {_label_pairs}]",
+                        icon=":material/account_balance:",
+                    )
                 else:
                     st.success(
                         ":material/check_circle: **All payments in this file are already in the "
@@ -1025,34 +1055,9 @@ the next. After all uploads, the combined total should match the bank-feed depos
                         "the ledger won't persist past the session — set GITHUB_TOKEN in secrets."
                     )
 
-            # Next-step reminder for Acct SOP-2: bank-feed matching in QBO.
-            # NOTE: `meta` is defined earlier in the upload-step branch but not here,
-            # so look it up locally from the company in scope on the review step.
-            sop2_meta = flex_finance.COMPANY_META.get(company, {})
-            st.divider()
-            _bank = sop2_meta.get("bank_feed", "the bank feed")
-            # Build the bank-feed-label crosswalk from COMPANY_META so it can't
-            # drift out of sync with the labels (as it did when GreatAmerica was
-            # corrected to "Account Services").
-            _label_pairs = " · ".join(
-                f"**{m['bank_feed']}** = {c}"
-                for c, m in flex_finance.COMPANY_META.items()
-                if m.get("bank_feed")
-            )
-            # st.warning gives the yellow call-to-action box appropriate for a
-            # "you still have work to do in QBO" reminder. The bank-feed-label
-            # crosswalk at the bottom uses :blue[] so the label names stand
-            # out from the body copy.
-            st.warning(
-                f"**Next step — Acct SOP-2: match the bank feed in QBO.**  \n"
-                f"After the SaasAnt files above are imported to QBO, open **the bank feed** in QBO "
-                f"and match the deposit against the receive payments you just created. The deposit "
-                f"shows up under the finance company's bank-feed label — for this batch: **{_bank}**. "
-                f"Confirm the deposit amount equals the **Total** shown on this page; if there's a "
-                f"mismatch, stop and reconcile before posting the next remittance.  \n"
-                f":blue[Bank-feed labels: {_label_pairs}]",
-                icon=":material/account_balance:",
-            )
+            # (Acct SOP-2 bank-feed-matching reminder moved to the recorded state
+            # above — it's the next step only AFTER the batch is written, not while
+            # the operator is still reviewing/downloading.)
 
             # Bottom-of-page "Set up new import" — same handler as the top-card button,
             # for operators who've scrolled all the way down and don't want to scroll back.
