@@ -340,17 +340,25 @@ def record_batch(
         if fp in existing:
             continue
         existing.add(fp)
-        data["payments"].append({
+        entry = {
             "fingerprint": fp,
             "company": company,
             "kind": p["kind"],
             "contract": str(p.get("contract", "")),
             "qb_customer": p.get("qb_customer", ""),
             "payment_date": _date_iso(p["payment_date"]),
-            "applies_to": p.get("applies_to") or default_applies_to(p["payment_date"]),
-            "amount": round(float(p["amount"]), 2),
-            "recorded_at": now_iso,
-        })
+        }
+        # Coverage month is a finance-PAYMENT concept (Stage 1 flex/scan rows);
+        # it's meaningless on Stage 2/3 emission records (credit_memo,
+        # unused_invoice), so only stamp it there.
+        at = p.get("applies_to")
+        if not at and p["kind"] in ("flex", "scan"):
+            at = default_applies_to(p["payment_date"])
+        if at:
+            entry["applies_to"] = at
+        entry["amount"] = round(float(p["amount"]), 2)
+        entry["recorded_at"] = now_iso
+        data["payments"].append(entry)
         added += 1
     msg = f"Ledger: +{added} {company} payments ({filename})"
     ok, _ = store.save_json(LEDGER_PATH, data, msg, sha=sha)
