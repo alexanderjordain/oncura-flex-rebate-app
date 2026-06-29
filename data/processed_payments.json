@@ -113,7 +113,6 @@
       "contract": "040010151336",
       "qb_customer": "Waldorf Emergency Care",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -124,7 +123,6 @@
       "contract": "040010159710",
       "qb_customer": "TVC-Driftwood Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 933.15,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -135,7 +133,6 @@
       "contract": "040010163214",
       "qb_customer": "Marin City Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 895.92,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -146,7 +143,6 @@
       "contract": "040010147515",
       "qb_customer": "Abell Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -157,7 +153,6 @@
       "contract": "040010149759",
       "qb_customer": "VETFORPET Wellness & Emergency Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -168,7 +163,6 @@
       "contract": "040010149791",
       "qb_customer": "Desert Ark Vet Care - North",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -179,7 +173,6 @@
       "contract": "040010150418",
       "qb_customer": "Reata Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -190,7 +183,6 @@
       "contract": "040010150489",
       "qb_customer": "TVC - Kindness Small Animal Hospital - TX",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 901.81,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -201,7 +193,6 @@
       "contract": "040010151349",
       "qb_customer": "West Hollywood Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -212,7 +203,6 @@
       "contract": "040010151378",
       "qb_customer": "Chenango Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -223,7 +213,6 @@
       "contract": "040010151569",
       "qb_customer": "TLC Pet Hospital NM",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -234,7 +223,6 @@
       "contract": "040010152681",
       "qb_customer": "The Scaredy Cat Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -245,7 +233,6 @@
       "contract": "040010153855",
       "qb_customer": "Trinity Pet Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -256,7 +243,6 @@
       "contract": "040010157958",
       "qb_customer": "South Bay Veterinary Group - Charles St",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -267,7 +253,6 @@
       "contract": "040010159231",
       "qb_customer": "TVC-Luv N Care Animal Hospital - Longwood",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -278,7 +263,6 @@
       "contract": "040010159244",
       "qb_customer": "Luv-N-Care Animal Hospital of Windermere",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -289,7 +273,6 @@
       "contract": "040010159299",
       "qb_customer": "Town and Country Animal Hospital - TN",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 918.68,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -300,7 +283,6 @@
       "contract": "040010159406",
       "qb_customer": "Miller Mobile Veterinary Services & Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -311,7 +293,6 @@
       "contract": "040010159671",
       "qb_customer": "On Point Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -322,7 +303,6 @@
       "contract": "040010162493",
       "qb_customer": "Sycamore Veterinary Services",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.55,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -333,7 +313,6 @@
       "contract": "040010163557",
       "qb_customer": "Berkeley Veterinary Clinic",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -344,7 +323,6 @@
       "contract": "040010164909",
       "qb_customer": "Animal Care Experts",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 887.56,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -355,7 +333,6 @@
       "contract": "040010169768",
       "qb_customer": "Bridges Professional Park Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -366,7 +343,6 @@
       "contract": "040010170294",
       "qb_customer": "Encanto Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -377,7 +353,6 @@
       "contract": "040010171099",
       "qb_customer": "Silicon Valley Pet Clinic",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 895.92,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -388,7 +363,6 @@
       "contract": "040010172166",
       "qb_customer": "Lake Road Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -399,7 +373,6 @@
       "contract": "040010172988",
       "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -410,7 +383,6 @@
       "contract": "040010173246",
       "qb_customer": "Animal Medical Center of Redlands",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 895.92,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -421,7 +393,6 @@
       "contract": "040010175668",
       "qb_customer": "Animal Health Center of Santa Clara",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -432,7 +403,6 @@
       "contract": "000000015324",
       "qb_customer": "Kenyon Veterinary Clinic",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 445.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -443,7 +413,6 @@
       "contract": "000000015346",
       "qb_customer": "Urban Pet Hospital (San Fran)",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -454,7 +423,6 @@
       "contract": "000000015559",
       "qb_customer": "Animal Care Hospital of Walnut Creek",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -465,7 +433,6 @@
       "contract": "000000016025",
       "qb_customer": "Mount Pleasant Animal Hospital - SC",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -476,7 +443,6 @@
       "contract": "000000016207",
       "qb_customer": "Adel Veterinary Clinic",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 145.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -487,7 +453,6 @@
       "contract": "000000016457",
       "qb_customer": "Ashland Terrace Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -498,7 +463,6 @@
       "contract": "000000016511",
       "qb_customer": "Clover Basin Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 355.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -509,7 +473,6 @@
       "contract": "000000016728",
       "qb_customer": "Riverstone Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 355.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -520,7 +483,6 @@
       "contract": "000000016731",
       "qb_customer": "Baytown Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 355.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -531,7 +493,6 @@
       "contract": "000000017351",
       "qb_customer": "River Road Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 355.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -542,7 +503,6 @@
       "contract": "000000018761",
       "qb_customer": "Oak Tree Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 355.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -553,7 +513,6 @@
       "contract": "000000020140",
       "qb_customer": "Wheaton Way Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 395.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -564,7 +523,6 @@
       "contract": "000000020405",
       "qb_customer": "Risius Family Veterinary Services",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 395.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -575,7 +533,6 @@
       "contract": "040010127920",
       "qb_customer": "Easthaven Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 595.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -586,7 +543,6 @@
       "contract": "000000015452",
       "qb_customer": "Crescent Springs Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -597,7 +553,6 @@
       "contract": "000000015570",
       "qb_customer": "Heritage Animal Hospital - MI",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 445.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -608,7 +563,6 @@
       "contract": "000000015720",
       "qb_customer": "Banister Animal Hospital AAHA",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -619,7 +573,6 @@
       "contract": "000000015917",
       "qb_customer": "Searsport Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -630,7 +583,6 @@
       "contract": "000000016021",
       "qb_customer": "Alpha Veterinary Care",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -641,7 +593,6 @@
       "contract": "000000016191",
       "qb_customer": "Jockey Hollow Veterinary Practice",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 145.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -652,7 +603,6 @@
       "contract": "000000016218",
       "qb_customer": "Dougherty Veterinary Clinic",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -663,7 +613,6 @@
       "contract": "000000016230",
       "qb_customer": "Monticello Veterinary Partners DBA Monticello Veterinary Practice",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -674,7 +623,6 @@
       "contract": "000000016590",
       "qb_customer": "Deepwoods Veterinary Services",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 175.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -685,7 +633,6 @@
       "contract": "000000016798",
       "qb_customer": "Round Top Animal Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 535.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -696,7 +643,6 @@
       "contract": "000000017185",
       "qb_customer": "TVC - Altmeyer Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 355.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -707,7 +653,6 @@
       "contract": "000000018552",
       "qb_customer": "Daly City Pet Hospital, Inc. dba City Pet Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 395.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -718,7 +663,6 @@
       "contract": "000000020507",
       "qb_customer": "Vista Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 395.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -729,7 +673,6 @@
       "contract": "000000020698",
       "qb_customer": "Whole Health Veterinary Care",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 395.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -740,7 +683,6 @@
       "contract": "040010167650",
       "qb_customer": "Winterfield Veterinary Hospital",
       "payment_date": "2026-05-03",
-      "applies_to": "2026-04",
       "amount": 295.0,
       "recorded_at": "2026-06-05T17:39:43"
     },
@@ -751,7 +693,6 @@
       "contract": "41025077",
       "qb_customer": "Love Animal Hospital and Urgent Care",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -762,7 +703,6 @@
       "contract": "41253898",
       "qb_customer": "Love Animal Hospital and Urgent Care",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -773,7 +713,6 @@
       "contract": "41459776",
       "qb_customer": "Love Animal Hospital and Urgent Care",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -784,7 +723,6 @@
       "contract": "41723574",
       "qb_customer": "Clinica Veterinaria Acuario",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -795,7 +733,6 @@
       "contract": "41726711",
       "qb_customer": "TVC - Foster Veterinary Clinic",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -806,7 +743,6 @@
       "contract": "41727452",
       "qb_customer": "TVC - Harborside Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 928.64,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -817,7 +753,6 @@
       "contract": "41727587",
       "qb_customer": "Delmar Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 794.29,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -828,7 +763,6 @@
       "contract": "41728491",
       "qb_customer": "Galloway Village Veterinary",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 896.98,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -839,7 +773,6 @@
       "contract": "41731304",
       "qb_customer": "State Line Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 896.98,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -850,7 +783,6 @@
       "contract": "41731552",
       "qb_customer": "TLC Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 896.98,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -861,7 +793,6 @@
       "contract": "41732307",
       "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 1000.69,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -872,7 +803,6 @@
       "contract": "41732340",
       "qb_customer": "West Charleston Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 1235.08,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -883,7 +813,6 @@
       "contract": "41732360",
       "qb_customer": "Crossroads Animal Hospital TX",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 939.08,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -894,7 +823,6 @@
       "contract": "41732397",
       "qb_customer": "CityVet Preston Forest",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 784.1,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -905,7 +833,6 @@
       "contract": "41732432",
       "qb_customer": "CityVet Whiterock",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 621.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -916,7 +843,6 @@
       "contract": "41732528",
       "qb_customer": "Hospital Veterinario Condado",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -927,7 +853,6 @@
       "contract": "41732529",
       "qb_customer": "Clinica Veterinaria Gardenville",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -938,7 +863,6 @@
       "contract": "41732530",
       "qb_customer": "Northwest Animal Hospital - Grapevine",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 928.64,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -949,7 +873,6 @@
       "contract": "41732552",
       "qb_customer": "Clinica Veterinaria Diaz Umpierre",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -960,7 +883,6 @@
       "contract": "41732553",
       "qb_customer": "Doctor Pet Puerto Nuevo",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -971,7 +893,6 @@
       "contract": "41732600",
       "qb_customer": "The Animal Hospital of Telluride",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 896.98,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -982,7 +903,6 @@
       "contract": "41732624",
       "qb_customer": "Riverdale Integrative Veterinary Care",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -993,7 +913,6 @@
       "contract": "41732690",
       "qb_customer": "Riverlin Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -1004,7 +923,6 @@
       "contract": "41732695",
       "qb_customer": "Cedar Veterinary Clinic",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -1015,7 +933,6 @@
       "contract": "41732770",
       "qb_customer": "Orchard Lake Animal Hospital",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 896.98,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -1026,7 +943,6 @@
       "contract": "41732813",
       "qb_customer": "La Canada Pet Clinic",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -1037,7 +953,6 @@
       "contract": "41732839",
       "qb_customer": "Ridgeview Animal Clinic",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 920.8,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -1048,7 +963,6 @@
       "contract": "41732853",
       "qb_customer": "Logan County Animal Clinic",
       "payment_date": "2026-05-05",
-      "applies_to": "2026-04",
       "amount": 920.8,
       "recorded_at": "2026-06-05T17:40:12"
     },
@@ -1059,7 +973,6 @@
       "contract": "41722573",
       "qb_customer": "Allen Veterinary Hospital",
       "payment_date": "2026-05-12",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:53"
     },
@@ -1070,7 +983,6 @@
       "contract": "41724002",
       "qb_customer": "Clark Veterinary Hospital",
       "payment_date": "2026-05-12",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:40:53"
     },
@@ -1081,7 +993,6 @@
       "contract": "41732542",
       "qb_customer": "TVC- Berkley Pet Hospital",
       "payment_date": "2026-05-19",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:41:32"
     },
@@ -1092,7 +1003,6 @@
       "contract": "41983392",
       "qb_customer": "Day Hollow Animal Hospital",
       "payment_date": "2026-05-19",
-      "applies_to": "2026-04",
       "amount": 939.08,
       "recorded_at": "2026-06-05T17:41:32"
     },
@@ -1103,7 +1013,6 @@
       "contract": "41983426",
       "qb_customer": "A Caring Vet",
       "payment_date": "2026-05-19",
-      "applies_to": "2026-04",
       "amount": 912.68,
       "recorded_at": "2026-06-05T17:41:32"
     },
@@ -1114,7 +1023,6 @@
       "contract": "41983601",
       "qb_customer": "TVC- Berkley Pet Hospital",
       "payment_date": "2026-05-19",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:41:32"
     },
@@ -1125,7 +1033,6 @@
       "contract": "41463840",
       "qb_customer": "Woodland Veterinary Clinic - CO",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 935.08,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1136,7 +1043,6 @@
       "contract": "41732375",
       "qb_customer": "Woodland Veterinary Clinic - CO",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 935.08,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1147,7 +1053,6 @@
       "contract": "41732700",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 804.56,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1158,7 +1063,6 @@
       "contract": "41732851",
       "qb_customer": "Roseville Animal Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1169,7 +1073,6 @@
       "contract": "41983401",
       "qb_customer": "Woodland Veterinary Clinic - CO",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 935.08,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1180,7 +1083,6 @@
       "contract": "41983700",
       "qb_customer": "River Trail Animal Hospital - Tulsa",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 1843.67,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1191,7 +1093,6 @@
       "contract": "41983798",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 804.56,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1202,7 +1103,6 @@
       "contract": "41983979",
       "qb_customer": "Roseville Animal Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -2196,7 +2096,6 @@
       "contract": "040010179004",
       "qb_customer": "Best Friends Pet Hospital - CA",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2207,7 +2106,6 @@
       "contract": "040010159710",
       "qb_customer": "TVC-Driftwood Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 933.15,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2218,7 +2116,6 @@
       "contract": "040010151336",
       "qb_customer": "Waldorf Emergency Care",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2229,7 +2126,6 @@
       "contract": "040010163214",
       "qb_customer": "Marin City Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 895.92,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2240,7 +2136,6 @@
       "contract": "040010159299",
       "qb_customer": "Town and Country Animal Hospital - TN",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 918.68,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2251,7 +2146,6 @@
       "contract": "040010147515",
       "qb_customer": "Abell Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2262,7 +2156,6 @@
       "contract": "040010164909",
       "qb_customer": "Animal Care Experts",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 887.56,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2273,7 +2166,6 @@
       "contract": "040010175668",
       "qb_customer": "Animal Health Center of Santa Clara",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2284,7 +2176,6 @@
       "contract": "040010150489",
       "qb_customer": "TVC - Kindness Small Animal Hospital - TX",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 901.81,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2295,7 +2186,6 @@
       "contract": "040010163557",
       "qb_customer": "Berkeley Veterinary Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2306,7 +2196,6 @@
       "contract": "040010151378",
       "qb_customer": "Chenango Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2317,7 +2206,6 @@
       "contract": "040010169768",
       "qb_customer": "Bridges Professional Park Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2328,7 +2216,6 @@
       "contract": "040010149791",
       "qb_customer": "Desert Ark Vet Care - North",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2339,7 +2226,6 @@
       "contract": "040010159244",
       "qb_customer": "Luv-N-Care Animal Hospital of Windermere",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2350,7 +2236,6 @@
       "contract": "040010159231",
       "qb_customer": "TVC-Luv N Care Animal Hospital - Longwood",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2361,7 +2246,6 @@
       "contract": "040010172166",
       "qb_customer": "Lake Road Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2372,7 +2256,6 @@
       "contract": "040010159406",
       "qb_customer": "Miller Mobile Veterinary Services & Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2383,7 +2266,6 @@
       "contract": "040010151349",
       "qb_customer": "West Hollywood Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2394,7 +2276,6 @@
       "contract": "040010159671",
       "qb_customer": "On Point Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2405,7 +2286,6 @@
       "contract": "040010152681",
       "qb_customer": "The Scaredy Cat Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2416,7 +2296,6 @@
       "contract": "040010172988",
       "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2427,7 +2306,6 @@
       "contract": "040010150418",
       "qb_customer": "Reata Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2438,7 +2316,6 @@
       "contract": "040010173246",
       "qb_customer": "Animal Medical Center of Redlands",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 895.92,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2449,7 +2326,6 @@
       "contract": "040010171099",
       "qb_customer": "Silicon Valley Pet Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 895.92,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2460,7 +2336,6 @@
       "contract": "040010162493",
       "qb_customer": "Sycamore Veterinary Services",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.55,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2471,7 +2346,6 @@
       "contract": "040010157958",
       "qb_customer": "South Bay Veterinary Group - Charles St",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2482,7 +2356,6 @@
       "contract": "040010151569",
       "qb_customer": "TLC Pet Hospital NM",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2493,7 +2366,6 @@
       "contract": "040010149759",
       "qb_customer": "VETFORPET Wellness & Emergency Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2504,7 +2376,6 @@
       "contract": "040010170294",
       "qb_customer": "Encanto Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2515,7 +2386,6 @@
       "contract": "040010153855",
       "qb_customer": "Trinity Pet Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2526,7 +2396,6 @@
       "contract": "000000016457",
       "qb_customer": "Ashland Terrace Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2537,7 +2406,6 @@
       "contract": "000000018761",
       "qb_customer": "Oak Tree Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 355.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2548,7 +2416,6 @@
       "contract": "000000016025",
       "qb_customer": "Mount Pleasant Animal Hospital - SC",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2559,7 +2426,6 @@
       "contract": "000000016731",
       "qb_customer": "Baytown Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 355.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2570,7 +2436,6 @@
       "contract": "000000020140",
       "qb_customer": "Wheaton Way Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 395.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2581,7 +2446,6 @@
       "contract": "000000016511",
       "qb_customer": "Clover Basin Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 355.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2592,7 +2456,6 @@
       "contract": "000000016207",
       "qb_customer": "Adel Veterinary Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 145.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2603,7 +2466,6 @@
       "contract": "040010127920",
       "qb_customer": "Easthaven Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 595.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2614,7 +2476,6 @@
       "contract": "000000015324",
       "qb_customer": "Kenyon Veterinary Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 445.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2625,7 +2486,6 @@
       "contract": "000000020405",
       "qb_customer": "Risius Family Veterinary Services",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 395.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2636,7 +2496,6 @@
       "contract": "000000017351",
       "qb_customer": "River Road Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 355.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2647,7 +2506,6 @@
       "contract": "000000016728",
       "qb_customer": "Riverstone Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 355.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2658,7 +2516,6 @@
       "contract": "000000015346",
       "qb_customer": "Urban Pet Hospital (San Fran)",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2669,7 +2526,6 @@
       "contract": "000000015559",
       "qb_customer": "Animal Care Hospital of Walnut Creek",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2680,7 +2536,6 @@
       "contract": "000000016021",
       "qb_customer": "Alpha Veterinary Care",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2691,7 +2546,6 @@
       "contract": "000000020698",
       "qb_customer": "Whole Health Veterinary Care",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 395.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2702,7 +2556,6 @@
       "contract": "000000018552",
       "qb_customer": "Daly City Pet Hospital, Inc. dba City Pet Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 395.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2713,7 +2566,6 @@
       "contract": "000000016218",
       "qb_customer": "Dougherty Veterinary Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2724,7 +2576,6 @@
       "contract": "000000016798",
       "qb_customer": "Round Top Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 535.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2735,7 +2586,6 @@
       "contract": "000000015570",
       "qb_customer": "Heritage Animal Hospital - MI",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 445.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2746,7 +2596,6 @@
       "contract": "040010167650",
       "qb_customer": "Winterfield Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2757,7 +2606,6 @@
       "contract": "000000016590",
       "qb_customer": "Deepwoods Veterinary Services",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 175.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2768,7 +2616,6 @@
       "contract": "000000016191",
       "qb_customer": "Jockey Hollow Veterinary Practice",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 145.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2779,7 +2626,6 @@
       "contract": "000000016230",
       "qb_customer": "Monticello Veterinary Partners DBA Monticello Veterinary Practice",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2790,7 +2636,6 @@
       "contract": "000000015452",
       "qb_customer": "Crescent Springs Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2801,7 +2646,6 @@
       "contract": "000000017185",
       "qb_customer": "TVC - Altmeyer Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 355.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2812,7 +2656,6 @@
       "contract": "000000015917",
       "qb_customer": "Searsport Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2823,7 +2666,6 @@
       "contract": "000000015720",
       "qb_customer": "Banister Animal Hospital AAHA",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 295.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2834,7 +2676,6 @@
       "contract": "000000020507",
       "qb_customer": "Vista Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 395.0,
       "recorded_at": "2026-06-09T16:21:04"
     },
@@ -2845,7 +2686,6 @@
       "contract": "41732700",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": -804.56,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2856,7 +2696,6 @@
       "contract": "41966728",
       "qb_customer": "Allen Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2867,7 +2706,6 @@
       "contract": "41968755",
       "qb_customer": "Clinica Veterinaria Acuario",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2878,7 +2716,6 @@
       "contract": "41975581",
       "qb_customer": "SVP Lynn Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2889,7 +2726,6 @@
       "contract": "41975988",
       "qb_customer": "TVC - Harborside Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 928.64,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2900,7 +2736,6 @@
       "contract": "41976226",
       "qb_customer": "Delmar Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 794.29,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2911,7 +2746,6 @@
       "contract": "41977835",
       "qb_customer": "Galloway Village Veterinary",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 896.98,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2922,7 +2756,6 @@
       "contract": "41981977",
       "qb_customer": "State Line Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 896.98,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2933,7 +2766,6 @@
       "contract": "41982323",
       "qb_customer": "TLC Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 896.98,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2944,7 +2776,6 @@
       "contract": "41983322",
       "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 1000.69,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2955,7 +2786,6 @@
       "contract": "41983360",
       "qb_customer": "West Charleston Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 1235.08,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2966,7 +2796,6 @@
       "contract": "41983385",
       "qb_customer": "Crossroads Animal Hospital TX",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 939.08,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2977,7 +2806,6 @@
       "contract": "41983429",
       "qb_customer": "CityVet Preston Forest",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 784.1,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2988,7 +2816,6 @@
       "contract": "41983440",
       "qb_customer": "Goodfriends Veterinary Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 935.08,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -2999,7 +2826,6 @@
       "contract": "41983477",
       "qb_customer": "CityVet Whiterock",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 621.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3010,7 +2836,6 @@
       "contract": "41983585",
       "qb_customer": "Hospital Veterinario Condado",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3021,7 +2846,6 @@
       "contract": "41983586",
       "qb_customer": "Clinica Veterinaria Gardenville",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3032,7 +2856,6 @@
       "contract": "41983587",
       "qb_customer": "Northwest Animal Hospital - Grapevine",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 928.64,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3043,7 +2866,6 @@
       "contract": "41983617",
       "qb_customer": "Clinica Veterinaria Diaz Umpierre",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3054,7 +2876,6 @@
       "contract": "41983618",
       "qb_customer": "Doctor Pet Puerto Nuevo",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3065,7 +2886,6 @@
       "contract": "41983678",
       "qb_customer": "The Animal Hospital of Telluride",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 896.98,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3076,7 +2896,6 @@
       "contract": "41983697",
       "qb_customer": "Riverdale Integrative Veterinary Care",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3087,7 +2906,6 @@
       "contract": "41983785",
       "qb_customer": "Riverlin Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3098,7 +2916,6 @@
       "contract": "41983792",
       "qb_customer": "Cedar Veterinary Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3109,7 +2926,6 @@
       "contract": "41983798",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": -804.56,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3120,7 +2936,6 @@
       "contract": "41983883",
       "qb_customer": "Orchard Lake Animal Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 896.98,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3131,7 +2946,6 @@
       "contract": "41983936",
       "qb_customer": "Liberty Veterinary Hospital",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 896.98,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3142,7 +2956,6 @@
       "contract": "41983950",
       "qb_customer": "La Canada Pet Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3153,7 +2966,6 @@
       "contract": "41983966",
       "qb_customer": "Ridgeview Animal Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 920.8,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3164,7 +2976,6 @@
       "contract": "41983981",
       "qb_customer": "Logan County Animal Clinic",
       "payment_date": "2026-06-01",
-      "applies_to": "2026-05",
       "amount": 920.8,
       "recorded_at": "2026-06-09T17:20:49"
     },
@@ -3175,7 +2986,6 @@
       "contract": "42901",
       "qb_customer": "TVC - Ark of Socorro Veterinary Clinic",
       "payment_date": "2026-06-09",
-      "applies_to": "2026-05",
       "amount": 811.25,
       "recorded_at": "2026-06-17T17:43:27"
     },
@@ -3186,7 +2996,6 @@
       "contract": "43234",
       "qb_customer": "Ark Animal Hospital - CA",
       "payment_date": "2026-06-09",
-      "applies_to": "2026-05",
       "amount": 611.25,
       "recorded_at": "2026-06-17T17:43:27"
     },
@@ -3197,7 +3006,6 @@
       "contract": "43612",
       "qb_customer": "Minnesota Veterinary Hospital",
       "payment_date": "2026-06-09",
-      "applies_to": "2026-05",
       "amount": 811.25,
       "recorded_at": "2026-06-17T17:43:27"
     },
@@ -3208,7 +3016,6 @@
       "contract": "41732700",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-06-09",
-      "applies_to": "2026-05",
       "amount": 804.56,
       "recorded_at": "2026-06-17T18:41:44"
     },
@@ -3219,7 +3026,6 @@
       "contract": "41974746",
       "qb_customer": "TVC - Foster Veterinary Clinic",
       "payment_date": "2026-06-09",
-      "applies_to": "2026-05",
       "amount": 921.84,
       "recorded_at": "2026-06-17T18:41:44"
     },
@@ -3230,7 +3036,6 @@
       "contract": "41983798",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-06-09",
-      "applies_to": "2026-05",
       "amount": 804.56,
       "recorded_at": "2026-06-17T18:41:44"
     },
@@ -3827,7 +3632,6 @@
       "contract": "022-2012503-000",
       "qb_customer": "St. Michael Veterinary Clinic",
       "payment_date": "2026-05-12",
-      "applies_to": "2026-04",
       "amount": 870.14,
       "recorded_at": "2026-06-26T19:52:58"
     },
@@ -3848,7 +3652,6 @@
       "contract": "040010151336",
       "qb_customer": "Waldorf Emergency Care",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3859,7 +3662,6 @@
       "contract": "040010159710",
       "qb_customer": "TVC-Driftwood Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 933.15,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3870,7 +3672,6 @@
       "contract": "040010163214",
       "qb_customer": "Marin City Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 895.92,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3881,7 +3682,6 @@
       "contract": "040010159299",
       "qb_customer": "Town and Country Animal Hospital - TN",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 918.68,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3892,7 +3692,6 @@
       "contract": "040010147515",
       "qb_customer": "Abell Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3903,7 +3702,6 @@
       "contract": "040010149759",
       "qb_customer": "VETFORPET Wellness & Emergency Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3914,7 +3712,6 @@
       "contract": "040010149791",
       "qb_customer": "Desert Ark Vet Care - North",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3925,7 +3722,6 @@
       "contract": "040010150418",
       "qb_customer": "Reata Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3936,7 +3732,6 @@
       "contract": "040010150489",
       "qb_customer": "TVC - Kindness Small Animal Hospital - TX",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 901.81,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3947,7 +3742,6 @@
       "contract": "040010151349",
       "qb_customer": "West Hollywood Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3958,7 +3752,6 @@
       "contract": "040010151378",
       "qb_customer": "Chenango Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3969,7 +3762,6 @@
       "contract": "040010151569",
       "qb_customer": "TLC Pet Hospital NM",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3980,7 +3772,6 @@
       "contract": "040010152681",
       "qb_customer": "The Scaredy Cat Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -3991,7 +3782,6 @@
       "contract": "040010153855",
       "qb_customer": "Trinity Pet Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4002,7 +3792,6 @@
       "contract": "040010157958",
       "qb_customer": "South Bay Veterinary Group - Charles St",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4013,7 +3802,6 @@
       "contract": "040010159231",
       "qb_customer": "TVC-Luv N Care Animal Hospital - Longwood",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4024,7 +3812,6 @@
       "contract": "040010159244",
       "qb_customer": "Luv-N-Care Animal Hospital of Windermere",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4035,7 +3822,6 @@
       "contract": "040010159406",
       "qb_customer": "Miller Mobile Veterinary Services & Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4046,7 +3832,6 @@
       "contract": "040010159671",
       "qb_customer": "On Point Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4057,7 +3842,6 @@
       "contract": "040010162493",
       "qb_customer": "Sycamore Veterinary Services",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.55,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4068,7 +3852,6 @@
       "contract": "040010163557",
       "qb_customer": "Berkeley Veterinary Clinic",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4079,7 +3862,6 @@
       "contract": "040010164909",
       "qb_customer": "Animal Care Experts",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 887.56,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4090,7 +3872,6 @@
       "contract": "040010169412",
       "qb_customer": "Longleaf Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4101,7 +3882,6 @@
       "contract": "040010169768",
       "qb_customer": "Bridges Professional Park Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4112,7 +3892,6 @@
       "contract": "040010170294",
       "qb_customer": "Encanto Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4123,7 +3902,6 @@
       "contract": "040010171099",
       "qb_customer": "Silicon Valley Pet Clinic",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 895.92,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4134,7 +3912,6 @@
       "contract": "040010172166",
       "qb_customer": "Lake Road Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4145,7 +3922,6 @@
       "contract": "040010172988",
       "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4156,7 +3932,6 @@
       "contract": "040010173246",
       "qb_customer": "Animal Medical Center of Redlands",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 895.92,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4167,7 +3942,6 @@
       "contract": "040010175668",
       "qb_customer": "Animal Health Center of Santa Clara",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4178,7 +3952,6 @@
       "contract": "040010179004",
       "qb_customer": "Best Friends Pet Hospital - CA",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4189,7 +3962,6 @@
       "contract": "000000018333",
       "qb_customer": "Ark Animal Hospital - CA",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4200,7 +3972,6 @@
       "contract": "000000015324",
       "qb_customer": "Kenyon Veterinary Clinic",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 445.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4211,7 +3982,6 @@
       "contract": "000000015346",
       "qb_customer": "Urban Pet Hospital (San Fran)",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4222,7 +3992,6 @@
       "contract": "000000015559",
       "qb_customer": "Animal Care Hospital of Walnut Creek",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4233,7 +4002,6 @@
       "contract": "000000016025",
       "qb_customer": "Mount Pleasant Animal Hospital - SC",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4244,7 +4012,6 @@
       "contract": "000000016207",
       "qb_customer": "Adel Veterinary Clinic",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 145.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4255,7 +4022,6 @@
       "contract": "000000016457",
       "qb_customer": "Ashland Terrace Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4266,7 +4032,6 @@
       "contract": "000000016502",
       "qb_customer": "Blairs Ferry Pet Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 145.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4277,7 +4042,6 @@
       "contract": "000000016511",
       "qb_customer": "Clover Basin Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4288,7 +4052,6 @@
       "contract": "000000016728",
       "qb_customer": "Riverstone Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4299,7 +4062,6 @@
       "contract": "000000016731",
       "qb_customer": "Baytown Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4310,7 +4072,6 @@
       "contract": "000000017351",
       "qb_customer": "River Road Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4321,7 +4082,6 @@
       "contract": "000000018761",
       "qb_customer": "Oak Tree Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4332,7 +4092,6 @@
       "contract": "000000020140",
       "qb_customer": "Wheaton Way Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 395.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4343,7 +4102,6 @@
       "contract": "000000020405",
       "qb_customer": "Risius Family Veterinary Services",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 395.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4354,7 +4112,6 @@
       "contract": "040010127920",
       "qb_customer": "Easthaven Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 595.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4365,7 +4122,6 @@
       "contract": "000000014937",
       "qb_customer": "Heartland Veterinary Partners DBA Harper Woods Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4376,7 +4132,6 @@
       "contract": "000000014962",
       "qb_customer": "Pet Dominion Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4387,7 +4142,6 @@
       "contract": "000000014963",
       "qb_customer": "Beaufort Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4398,7 +4152,6 @@
       "contract": "000000015452",
       "qb_customer": "Crescent Springs Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4409,7 +4162,6 @@
       "contract": "000000015570",
       "qb_customer": "Heritage Animal Hospital - MI",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 445.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4420,7 +4172,6 @@
       "contract": "000000015720",
       "qb_customer": "Banister Animal Hospital AAHA",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4431,7 +4182,6 @@
       "contract": "000000015917",
       "qb_customer": "Searsport Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4442,7 +4192,6 @@
       "contract": "000000016021",
       "qb_customer": "Alpha Veterinary Care",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4453,7 +4202,6 @@
       "contract": "000000016191",
       "qb_customer": "Jockey Hollow Veterinary Practice",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 145.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4464,7 +4212,6 @@
       "contract": "000000016218",
       "qb_customer": "Dougherty Veterinary Clinic",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4475,7 +4222,6 @@
       "contract": "000000016230",
       "qb_customer": "Monticello Veterinary Partners DBA Monticello Veterinary Practice",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4486,7 +4232,6 @@
       "contract": "000000016590",
       "qb_customer": "Deepwoods Veterinary Services",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 175.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4497,7 +4242,6 @@
       "contract": "000000016798",
       "qb_customer": "Round Top Animal Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 535.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4508,7 +4252,6 @@
       "contract": "000000017185",
       "qb_customer": "TVC - Altmeyer Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 355.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4519,7 +4262,6 @@
       "contract": "000000018552",
       "qb_customer": "Daly City Pet Hospital, Inc. dba City Pet Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 395.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4530,7 +4272,6 @@
       "contract": "000000020507",
       "qb_customer": "Vista Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 395.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4541,7 +4282,6 @@
       "contract": "000000020698",
       "qb_customer": "Whole Health Veterinary Care",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 395.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
@@ -4552,7 +4292,6 @@
       "contract": "040010167650",
       "qb_customer": "Winterfield Veterinary Hospital",
       "payment_date": "2026-04-07",
-      "applies_to": "2026-03",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
     },
