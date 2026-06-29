@@ -141,12 +141,17 @@ def test_trueup_ym_for_coverage():
 
 
 def test_coverage_month_per_company():
-    # NewLane covers the prior month; every other company the received month.
+    # NewLane and OnePlace (pass-throughs) cover the prior month; GreatAmerica
+    # and FPLeasing cover the received month.
     assert ledger.coverage_month("NewLane", "2026-04-03") == "2026-03"
+    assert ledger.coverage_month("OnePlace", "2026-04-07") == "2026-03"   # Pass-Thru March file
+    assert ledger.coverage_month("OnePlace", "2026-05-03") == "2026-04"
     assert ledger.coverage_month("GreatAmerica", "2026-05-26") == "2026-05"
     assert ledger.coverage_month("FPLeasing", "2026-06-09") == "2026-06"
-    assert ledger.coverage_month("OnePlace", "2026-05-03") == "2026-05"
     assert ledger.coverage_month("NewLane", "junk") == ""
+    # OnePlace is labeled prior-month but still attributed by received date.
+    assert ledger.uses_coverage("OnePlace") is False
+    assert ledger._attribution_ym({"company": "OnePlace", "payment_date": "2026-04-07"}) == (2026, 4)
 
 
 def test_attribution_newlane_uses_coverage_others_use_payment_date():

@@ -68,13 +68,18 @@ def _add_month(year: int, month: int, delta: int):
     return idx // 12, idx % 12 + 1
 
 
-# ── COVERAGE / ATTRIBUTION MONTH (NewLane only) ───────────────────────────────
-# NewLane pass-through remittances arrive on irregular days, covering the month
-# BEFORE we receive them, so we attribute NewLane by an explicit "applies-to"
-# (coverage) month: Stage 2 and Stage 3 count it in the true-up cycle =
-# coverage + 1 (the month we book the cash). Every other finance company
-# (OnePlace, GreatAmerica, FPLeasing) is attributed by the received payment_date
-# exactly as before — no coverage field, no shift.
+# ── COVERAGE / ATTRIBUTION MONTH ──────────────────────────────────────────────
+# NewLane and OnePlace are pass-throughs whose remittance covers the month BEFORE
+# we receive it (received - 1) — that's the "coverage month" shown in the audit
+# log and the monthly checklist. GreatAmerica and FPLeasing cover the RECEIVED
+# month.
+_PRIOR_MONTH_COVERAGE = {"newlane", "oneplace"}
+
+# Of those, only NewLane is also ATTRIBUTED by coverage (Stage 2/3 count it in
+# coverage + 1) and gets a coverage picker in Stage 1 — its pass-through timing
+# is irregular enough to need the explicit month. OnePlace (and everyone else) is
+# attributed by the received payment_date; for OnePlace that lands in the same
+# month as coverage + 1, so prior-month coverage is labeling only.
 _COVERAGE_COMPANIES = {"newlane"}
 
 
@@ -97,12 +102,12 @@ def default_applies_to(received_date) -> str:
 
 def coverage_month(company, received_date) -> str:
     """The month ('YYYY-MM') a finance payment is FOR — used for labeling/display
-    (the audit coverage column and the monthly checklist). NewLane covers the
-    PRIOR month (received - 1); every other company covers the RECEIVED month.
-    '' on unparseable input. This is labeling only — ledger attribution flows
-    through _attribution_ym."""
-    if uses_coverage(company):
-        return default_applies_to(received_date)          # received - 1 (NewLane)
+    (the audit coverage column and the monthly checklist). NewLane and OnePlace
+    cover the PRIOR month (received - 1); GreatAmerica and FPLeasing cover the
+    RECEIVED month. '' on unparseable input. Labeling only — ledger attribution
+    flows through _attribution_ym."""
+    if (company or "").strip().lower() in _PRIOR_MONTH_COVERAGE:
+        return default_applies_to(received_date)          # received - 1
     parsed = _ym_of(_date_iso(received_date))
     return f"{parsed[0]:04d}-{parsed[1]:02d}" if parsed else ""
 
