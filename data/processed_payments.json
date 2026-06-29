@@ -119,6 +119,14 @@
       "uploaded_at": "2026-06-29T19:53:11",
       "row_count": 3,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-06-16"
+    },
+    {
+      "sha256": "47faa62152a2ac5222f859925a2eabbe902b6158f6eba430b91c3a30c563711b",
+      "filename": "Remittance Detail Downloadable (18).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T19:59:39",
+      "row_count": 1,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-06-23"
     }
   ],
   "payments": [
@@ -4747,6 +4755,16 @@
       "payment_date": "2026-06-16",
       "amount": 912.68,
       "recorded_at": "2026-06-29T19:53:11"
+    },
+    {
+      "fingerprint": "0d49a888db51661df26e87423a2382cd22f9a5daf553af2e6d4ed799a37babbe",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42237027",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-06-23",
+      "amount": 1843.67,
+      "recorded_at": "2026-06-29T19:59:39"
     }
   ]
 }
