@@ -117,12 +117,16 @@ if audit_summary["entry_count"]:
                 _day = int(_pay_date[8:10])  # "YYYY-MM-DD" -> DD
             except ValueError:
                 _day = ""
-        # NewLane is attributed by its COVERAGE month (received - 1); show it,
-        # derived from the received date so it stays consistent with the ledger
-        # and the checklist (and corrects any stale stored value). Every other
-        # company is attributed by the received date, so it has no coverage.
-        _coverage = (ledger.default_applies_to(_pay_date)
-                     if ledger.uses_coverage(_params.get("company")) else "")
+        # Coverage month each finance payment is FOR — display only, derived from
+        # the received date (does NOT affect ledger attribution). NewLane covers
+        # the PRIOR month (received - 1); GreatAmerica (and the others) cover the
+        # received month. Blank for period-level entries with no payment date.
+        if not _pay_date:
+            _coverage = ""
+        elif ledger.uses_coverage(_params.get("company")):
+            _coverage = ledger.default_applies_to(_pay_date)   # received - 1 (NewLane)
+        else:
+            _coverage = _pay_date[:7]                          # received month (YYYY-MM)
         rows.append({
             "timestamp": e.get("timestamp", "")[:19],
             "cycle_type": e.get("cycle_type"),
