@@ -105,12 +105,26 @@ if audit_summary["entry_count"]:
         out_total = sum(o.get("total") or 0 for o in outs)
         out_rows = sum(o.get("row_count") or 0 for o in outs)
         out_names = ", ".join(o.get("name", "") for o in outs if o.get("name"))
+        # Stage 1 entries carry the finance company and the full payment date in
+        # params (year/month already mirror that date). Surface the company and
+        # the day-of-month; both stay blank for cycle types that have neither
+        # (Stage 2/3 are period-level and span all companies).
+        _params = e.get("params") or {}
+        _pay_date = str(_params.get("payment_date") or "")
+        _day = ""
+        if len(_pay_date) >= 10:
+            try:
+                _day = int(_pay_date[8:10])  # "YYYY-MM-DD" -> DD
+            except ValueError:
+                _day = ""
         rows.append({
             "timestamp": e.get("timestamp", "")[:19],
             "cycle_type": e.get("cycle_type"),
             "approver": e.get("approver"),
+            "finance_company": _params.get("company", ""),
             "year": e.get("year"),
             "month": e.get("month"),
+            "day": _day,
             "output_rows": out_rows,
             "output_total": f"${out_total:,.2f}" if out_total else "",
             "output_files": out_names,
