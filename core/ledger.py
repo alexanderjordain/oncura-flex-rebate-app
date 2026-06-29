@@ -95,6 +95,18 @@ def default_applies_to(received_date) -> str:
     return f"{py:04d}-{pm:02d}"
 
 
+def coverage_month(company, received_date) -> str:
+    """The month ('YYYY-MM') a finance payment is FOR — used for labeling/display
+    (the audit coverage column and the monthly checklist). NewLane covers the
+    PRIOR month (received - 1); every other company covers the RECEIVED month.
+    '' on unparseable input. This is labeling only — ledger attribution flows
+    through _attribution_ym."""
+    if uses_coverage(company):
+        return default_applies_to(received_date)          # received - 1 (NewLane)
+    parsed = _ym_of(_date_iso(received_date))
+    return f"{parsed[0]:04d}-{parsed[1]:02d}" if parsed else ""
+
+
 def trueup_ym_for_coverage(applies_to):
     """(year, month) a coverage month ('YYYY-MM') trues up in (= coverage + 1).
     None on junk."""

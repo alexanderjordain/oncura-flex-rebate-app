@@ -140,6 +140,15 @@ def test_trueup_ym_for_coverage():
     assert ledger.trueup_ym_for_coverage("garbage") is None
 
 
+def test_coverage_month_per_company():
+    # NewLane covers the prior month; every other company the received month.
+    assert ledger.coverage_month("NewLane", "2026-04-03") == "2026-03"
+    assert ledger.coverage_month("GreatAmerica", "2026-05-26") == "2026-05"
+    assert ledger.coverage_month("FPLeasing", "2026-06-09") == "2026-06"
+    assert ledger.coverage_month("OnePlace", "2026-05-03") == "2026-05"
+    assert ledger.coverage_month("NewLane", "junk") == ""
+
+
 def test_attribution_newlane_uses_coverage_others_use_payment_date():
     # NewLane: coverage + 1, regardless of the received date.
     assert ledger._attribution_ym(
