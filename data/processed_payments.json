@@ -167,6 +167,14 @@
       "uploaded_at": "2026-06-29T20:11:27",
       "row_count": 4,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-03-31"
+    },
+    {
+      "sha256": "8ab485b128417f5ed3d01f5adcf3631c94c7dfcb540e47e68d2426f234d00a94",
+      "filename": "Remittance Detail Downloadable (24).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:13:18",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-03-24"
     }
   ],
   "payments": [
@@ -4985,6 +4993,36 @@
       "payment_date": "2026-03-31",
       "amount": 921.84,
       "recorded_at": "2026-06-29T20:11:27"
+    },
+    {
+      "fingerprint": "77f00d23f636c486f99eea3a3bd832fa4fccaa7d7a570b839c97483c9bdd36d3",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41255175",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "2026-03-24",
+      "amount": 920.8,
+      "recorded_at": "2026-06-29T20:13:18"
+    },
+    {
+      "fingerprint": "aba8f224a819c48625f591d7530bf0fe7e34c4cb309073458fee21aa838b38d6",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41442745",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "2026-03-24",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:13:18"
+    },
+    {
+      "fingerprint": "3e6ba41e4501de4812be2529b7afd02cafe5464c31d15ca99156484e90e38351",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41465648",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "2026-03-24",
+      "amount": 920.8,
+      "recorded_at": "2026-06-29T20:13:18"
     }
   ]
 }
