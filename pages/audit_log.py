@@ -13,6 +13,8 @@ doesn't carry over to Settings or other pages.
 """
 from __future__ import annotations
 
+import calendar
+import collections
 import datetime as dt
 
 import pandas as pd
@@ -235,6 +237,72 @@ else:
             _label: st.column_config.CheckboxColumn(_label, disabled=True)
             for _, _label in MONTHLY_TASKS
         },
+    )
+
+    # ── Stage 1 remittance completeness ───────────────────────────────────────
+    # The checkmarks above are binary (">=1 entry"); they don't show whether
+    # every expected remittance is in. Track receipts per COVERAGE month per
+    # finance partner against the expected cadence: NewLane, OnePlace and FP
+    # Leasing send one a month; GreatAmerica sends one per Tuesday of the month.
+    # A partner is only "expected" from the first coverage month it ever reported
+    # (so months before it joined show "-" rather than a false gap).
+    def _tuesdays_in(_yy, _mm):
+        return sum(1 for _w in calendar.monthcalendar(_yy, _mm) if _w[calendar.TUESDAY])
+
+    _s1_companies = [("NewLane", "NewLane"), ("OnePlace", "OnePlace"),
+                     ("GreatAmerica", "GreatAmerica"), ("FPLeasing", "FP Leasing")]
+    _s1_received: dict = collections.defaultdict(collections.Counter)
+    for _e in audit.list_entries():
+        if _e.get("cycle_type") != "stage1_finance_payment":
+            continue
+        _pr = _e.get("params") or {}
+        _co = _pr.get("company", "")
+        _cov = _pr.get("applies_to") or ledger.coverage_month(_co, _pr.get("payment_date", ""))
+        if not _cov:
+            continue
+        try:
+            _key = (int(_cov[:4]), int(_cov[5:7]))
+        except (ValueError, IndexError):
+            continue
+        _s1_received[_key][_co] += 1
+
+    # Earliest coverage month each partner has reported = when it joined.
+    _active_from: dict = {}
+    for _km, _ctr in _s1_received.items():
+        for _co in _ctr:
+            if _co not in _active_from or _km < _active_from[_co]:
+                _active_from[_co] = _km
+
+    st.markdown("##### Stage 1 remittance completeness")
+    st.caption(
+        "Receipts per **coverage** month vs expected, per finance partner — NewLane, "
+        "OnePlace and FP Leasing send one a month; GreatAmerica one per Tuesday. "
+        "\"-\" means that partner hadn't started reporting yet. **Complete** is checked "
+        "only when every active partner's expected remittances are in."
+    )
+    _crows = []
+    for (_y, _m) in _months:
+        _rcvd = _s1_received.get((_y, _m), {})
+        _crow = {"Month": f"{dt.date(_y, _m, 1):%b %Y}"}
+        _complete, _any_expected = True, False
+        for _co, _lbl in _s1_companies:
+            _from = _active_from.get(_co)
+            if _from is None or (_y, _m) < _from:
+                _crow[_lbl] = "—"          # partner not on the program yet
+                continue
+            _any_expected = True
+            _want = _tuesdays_in(_y, _m) if _co == "GreatAmerica" else 1
+            _got = _rcvd.get(_co, 0)
+            _crow[_lbl] = f"{_got}/{_want}"
+            if _got < _want:
+                _complete = False
+        _crow["Complete"] = _complete and _any_expected
+        _crows.append(_crow)
+    st.dataframe(
+        pd.DataFrame(_crows),
+        use_container_width=True,
+        hide_index=True,
+        column_config={"Complete": st.column_config.CheckboxColumn("Complete", disabled=True)},
     )
 
     # Current-month nudge for the well-defined core tasks (Stage 1/2/3-recapture).
