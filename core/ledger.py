@@ -15,10 +15,10 @@ Schema (data/processed_payments.json):
                   payment_date, applies_to, amount, recorded_at}, ...]
   }
 
-`applies_to` ("YYYY-MM") is the COVERAGE month a finance payment is for. Stage 2
-and Stage 3 attribute it to the true-up cycle = coverage + 1 (see _attribution_ym),
-so irregular finance-remittance timing lands in the right quarter regardless of
-the literal received date.
+`applies_to` ("YYYY-MM") is the COVERAGE month a NewLane payment is for; Stage 2
+and Stage 3 attribute NewLane by coverage + 1 (see _attribution_ym) so its
+irregular pass-through timing lands in the right quarter. Only NewLane carries
+it — every other finance company is attributed by the received payment_date.
 
 Fingerprint = sha256("{company_lower}|{kind}|{contract}|{payment_date_iso}|{amount_cents}").
 """
@@ -68,51 +68,36 @@ def _add_month(year: int, month: int, delta: int):
     return idx // 12, idx % 12 + 1
 
 
-# ── COVERAGE / ATTRIBUTION MONTH ──────────────────────────────────────────────
-# Finance remittances (esp. NewLane pass-throughs) arrive on irregular days and
-# generally cover the month BEFORE the month we receive them (a payment landing
-# ~the 2nd of March is February's). We tag each payment with an "applies-to"
-# (coverage) month and attribute it to the true-up cycle = coverage + 1 (the
-# month we book the cash). That way an early 2/26 arrival and an on-time 3/02
-# arrival both fold into the same quarter instead of splitting at the boundary.
-# A receipt in the last week of a month is treated as the next cycle landing
-# early, so it covers the CURRENT month. Operators override the coverage month
-# in Stage 1 for off-cadence remittances.
-_LAST_WEEK_DAY = 25
-
-# Companies that pay ~the start of the month, so a receipt in the last week is
-# the NEXT cycle landing early and should shift forward a month. Confirmed from
-# the ledger's received-day pattern: NewLane (days 3/9), OnePlace (1/3/7) and
-# FPLeasing (9) all cluster early-month. GreatAmerica pays on varied days
-# (1,5,9,12,19,26), so a GA last-week receipt is just that month's payment — it
-# must NOT shift. Unknown companies default to NO shift (attribution = received
-# month), the safe/legacy behavior; add them here once their cadence is known.
-_START_OF_MONTH_COMPANIES = {"newlane", "oneplace", "fpleasing"}
+# ── COVERAGE / ATTRIBUTION MONTH (NewLane only) ───────────────────────────────
+# NewLane pass-through remittances arrive on irregular days, covering the month
+# BEFORE we receive them, so we attribute NewLane by an explicit "applies-to"
+# (coverage) month: Stage 2 and Stage 3 count it in the true-up cycle =
+# coverage + 1 (the month we book the cash). Every other finance company
+# (OnePlace, GreatAmerica, FPLeasing) is attributed by the received payment_date
+# exactly as before — no coverage field, no shift.
+_COVERAGE_COMPANIES = {"newlane"}
 
 
-def _shifts_on_last_week(company) -> bool:
-    return (company or "").strip().lower() in _START_OF_MONTH_COMPANIES
+def uses_coverage(company) -> bool:
+    """True if this finance company is attributed by an explicit coverage month
+    (NewLane) instead of the received payment_date."""
+    return (company or "").strip().lower() in _COVERAGE_COMPANIES
 
 
-def default_applies_to(received_date, company="") -> str:
-    """Best-guess coverage month ('YYYY-MM') for a payment received on
-    `received_date`. Normally the PRIOR month. For a start-of-month-cadence
-    company, a last-week arrival (day >= 25) is the next cycle landing early, so
-    it covers the CURRENT month. '' on unparseable input. Operators override in
-    Stage 1 for off-cadence remittances."""
+def default_applies_to(received_date) -> str:
+    """Best-guess coverage month ('YYYY-MM') for a NewLane payment: the month
+    BEFORE the received date. '' on unparseable input. Stage 1 defaults the
+    picker to last calendar month; this is just the record_batch safety net."""
     parsed = _ym_of(_date_iso(received_date))
     if not parsed:
         return ""
-    y, m, d = parsed
-    if d is not None and d >= _LAST_WEEK_DAY and _shifts_on_last_week(company):
-        return f"{y:04d}-{m:02d}"
-    py, pm = _add_month(y, m, -1)
+    py, pm = _add_month(parsed[0], parsed[1], -1)
     return f"{py:04d}-{pm:02d}"
 
 
 def trueup_ym_for_coverage(applies_to):
     """(year, month) a coverage month ('YYYY-MM') trues up in (= coverage + 1).
-    None on junk. Public so Stage 1 can preview the attribution to the operator."""
+    None on junk."""
     parsed = _ym_of(applies_to)
     if not parsed:
         return None
@@ -122,21 +107,19 @@ def trueup_ym_for_coverage(applies_to):
 def _attribution_ym(payment: dict):
     """The (year, month) Stage 2 / Stage 3 count this FLEX payment in.
 
-    Uses the stored `applies_to` (coverage) + 1 when present; otherwise derives
-    it from payment_date + company with the same last-week normalization
-    default_applies_to uses — so legacy rows with no `applies_to` attribute
-    exactly as if backfilled. None on unparseable input.
+    NewLane: the coverage month (`applies_to`) + 1 when present. Every other
+    company — and any NewLane row missing a coverage month — uses the
+    payment_date month, the original received-date behavior. None on
+    unparseable input.
     """
-    ym = trueup_ym_for_coverage(payment.get("applies_to"))
-    if ym:
-        return ym
+    if uses_coverage(payment.get("company")):
+        ym = trueup_ym_for_coverage(payment.get("applies_to"))
+        if ym:
+            return ym
     parsed = _ym_of(_date_iso(payment.get("payment_date", "")))
     if not parsed:
         return None
-    y, m, d = parsed
-    if d is not None and d >= _LAST_WEEK_DAY and _shifts_on_last_week(payment.get("company")):
-        return _add_month(y, m, 1)
-    return y, m
+    return parsed[0], parsed[1]
 
 
 # A re-upload of the same payment sometimes carries a date a day or two off the
@@ -363,13 +346,14 @@ def record_batch(
             "qb_customer": p.get("qb_customer", ""),
             "payment_date": _date_iso(p["payment_date"]),
         }
-        # Coverage month is a finance-PAYMENT concept (Stage 1 flex/scan rows);
-        # it's meaningless on Stage 2/3 emission records (credit_memo,
-        # unused_invoice), so only stamp it there.
-        at = p.get("applies_to")
-        if not at and p["kind"] in ("flex", "scan"):
-            at = default_applies_to(p["payment_date"], company)
-        if at:
+        # Coverage month is NewLane-only (its flex/scan rows). Every other
+        # company is attributed by payment_date, and Stage 2/3 emission records
+        # (credit_memo, unused_invoice) have no coverage concept — so stamp it
+        # only on NewLane finance rows.
+        at = p.get("applies_to") or ""
+        if not at and uses_coverage(company) and p["kind"] in ("flex", "scan"):
+            at = default_applies_to(p["payment_date"])
+        if at and uses_coverage(company):
             entry["applies_to"] = at
         entry["amount"] = round(float(p["amount"]), 2)
         entry["recorded_at"] = now_iso

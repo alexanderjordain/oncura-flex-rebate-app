@@ -231,7 +231,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             "Lock in the company and dates for this batch. The file uploader "
             "appears on the next step once these are set."
         )
-        mc1, mc2, mc3 = st.columns([1, 1, 1])
+        mc1, mc2 = st.columns([1, 1])
         company_options = ["NewLane", "OnePlace", "GreatAmerica", "FPLeasing"]
         company = mc1.selectbox(
             "Finance company", company_options,
@@ -244,31 +244,34 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             key="remit_pay_date_w",
         )
 
-        # "Applies to month" — which month these payments are for. Auto-fills
-        # from the payment date (prior month, or the current month for a
-        # start-of-month company's last-week arrival). Stage 3 trues it up the
-        # FOLLOWING month; that detail stays in the tooltip to keep the control
-        # simple. Operators change it only for an off-schedule remittance.
-        _auto_applies = ledger.default_applies_to(pay_date, company)
-        _idx0 = pay_date.year * 12 + (pay_date.month - 1)
-        _opts = {f"{(_idx0+d)//12:04d}-{(_idx0+d)%12+1:02d}" for d in range(-6, 4)}
-        _opts.add(_auto_applies)
-        # Keep any prior selection in the option list so changing the payment
-        # date later can't leave the selectbox holding an out-of-range value.
-        if SS.get("remit_applies_to_w"):
-            _opts.add(SS["remit_applies_to_w"])
-        _month_opts = sorted(m for m in _opts if m)
-        _def_idx = _month_opts.index(_auto_applies) if _auto_applies in _month_opts else 0
-        applies_to = mc3.selectbox(
-            "Applies to month",
-            options=_month_opts,
-            index=_def_idx,
-            format_func=lambda s: dt.date(int(s[:4]), int(s[5:7]), 1).strftime("%B %Y"),
-            key="remit_applies_to_w",
-            help="Which month these payments are for. Auto-fills from the payment "
-                 "date; Stage 3 trues them up the following month. Change it only "
-                 "if this remittance arrived off its usual schedule.",
-        )
+        # "Applies to month" — NewLane ONLY. NewLane pass-throughs arrive on
+        # irregular days covering the PRIOR month, so we attribute them by an
+        # explicit coverage month (Stage 3 trues up coverage + 1). Defaults to
+        # last calendar month; the operator changes it only for an off-schedule
+        # remittance. Every other company is attributed by the received date, so
+        # no field appears for them.
+        applies_to = ""
+        if ledger.uses_coverage(company):
+            _cur = dt.date.today()
+            _cur_idx = _cur.year * 12 + (_cur.month - 1)
+            _last_month = f"{(_cur_idx-1)//12:04d}-{(_cur_idx-1)%12+1:02d}"  # current month - 1
+            _opts = {f"{(_cur_idx+d)//12:04d}-{(_cur_idx+d)%12+1:02d}" for d in range(-6, 2)}
+            _opts.add(_last_month)
+            if SS.get("remit_applies_to_w"):
+                _opts.add(SS["remit_applies_to_w"])
+            _month_opts = sorted(_opts)
+            _def_idx = _month_opts.index(_last_month) if _last_month in _month_opts else 0
+            ac, _ = st.columns([1, 1])
+            applies_to = ac.selectbox(
+                "Applies to month",
+                options=_month_opts,
+                index=_def_idx,
+                format_func=lambda s: dt.date(int(s[:4]), int(s[5:7]), 1).strftime("%B %Y"),
+                key="remit_applies_to_w",
+                help="Which month this NewLane remittance is for. Defaults to last "
+                     "month; Stage 3 trues it up the following month. Change it only "
+                     "if the remittance arrived off its usual schedule.",
+            )
         SS["remit_applies_to"] = applies_to
 
         if company == "GreatAmerica":
@@ -325,9 +328,9 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         company = SS.get("remit_company", "NewLane")
         pay_date = SS.get("remit_pay_date", dt.date.today())
         inv_date = pay_date
-        # Coverage month set on the setup step (falls back to the received-date
-        # default if missing). Stage 3 attributes by coverage + 1.
-        applies_to = SS.get("remit_applies_to") or ledger.default_applies_to(pay_date, company)
+        # Coverage month (NewLane only) set on the setup step; every other
+        # company is attributed by the received date, so it carries none.
+        applies_to = SS.get("remit_applies_to", "") if ledger.uses_coverage(company) else ""
         if company == "GreatAmerica":
             start_inv = 50000
             split = "all_flex"

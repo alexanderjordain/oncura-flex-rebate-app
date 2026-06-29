@@ -120,18 +120,13 @@ def test_default_applies_to_prior_month_normal():
     assert ledger.default_applies_to(dt.date(2026, 1, 5)) == "2025-12"
 
 
-def test_default_applies_to_last_week_shifts_only_for_start_of_month_cos():
-    # For a start-of-month-cadence company (NewLane), a last-week arrival is the
-    # next cycle landing early -> covers the CURRENT month. So a NewLane 2/26 and
-    # an on-time 3/02 BOTH cover Feb.
-    assert ledger.default_applies_to(dt.date(2026, 2, 26), "NewLane") == "2026-02"
-    assert ledger.default_applies_to(dt.date(2026, 2, 28), "OnePlace") == "2026-02"
-    assert ledger.default_applies_to(dt.date(2026, 3, 2), "NewLane") == "2026-02"
-    # GreatAmerica pays across the month, so a 2/26 GA receipt is NOT shifted —
-    # it covers the prior month like any normal arrival (attribution = received).
-    assert ledger.default_applies_to(dt.date(2026, 2, 26), "GreatAmerica") == "2026-01"
-    # Unknown / no company also does not shift (safe default).
+def test_default_applies_to_is_always_prior_month():
+    # Coverage is always the month before the received date — no last-week shift.
+    # (Stage 1 defaults the NewLane picker to last calendar month; this helper is
+    # only the record_batch safety net.)
     assert ledger.default_applies_to(dt.date(2026, 2, 26)) == "2026-01"
+    assert ledger.default_applies_to(dt.date(2026, 2, 2)) == "2026-01"
+    assert ledger.default_applies_to("2026-12-03") == "2026-11"
 
 
 def test_default_applies_to_junk():
@@ -145,21 +140,22 @@ def test_trueup_ym_for_coverage():
     assert ledger.trueup_ym_for_coverage("garbage") is None
 
 
-def test_attribution_uses_applies_to_plus_one():
-    # Stored coverage Feb -> trues up in March, regardless of received date.
-    assert ledger._attribution_ym({"applies_to": "2026-02", "payment_date": "2026-02-26"}) == (2026, 3)
-    assert ledger._attribution_ym({"applies_to": "2026-02", "payment_date": "2026-03-02"}) == (2026, 3)
+def test_attribution_newlane_uses_coverage_others_use_payment_date():
+    # NewLane: coverage + 1, regardless of the received date.
+    assert ledger._attribution_ym(
+        {"company": "NewLane", "applies_to": "2026-02", "payment_date": "2026-02-26"}) == (2026, 3)
+    # Non-NewLane: the payment_date month, even if a stray coverage value is present.
+    assert ledger._attribution_ym(
+        {"company": "OnePlace", "applies_to": "2026-02", "payment_date": "2026-05-03"}) == (2026, 5)
+    assert ledger._attribution_ym(
+        {"company": "GreatAmerica", "payment_date": "2026-05-26"}) == (2026, 5)
 
 
-def test_attribution_falls_back_to_payment_date():
-    # Legacy row with no applies_to: derive from payment_date + company with the
-    # same last-week normalization. A NewLane early 2/26 and on-time 3/02 -> March.
-    assert ledger._attribution_ym({"payment_date": "2026-02-26", "company": "NewLane"}) == (2026, 3)
-    assert ledger._attribution_ym({"payment_date": "2026-03-02", "company": "NewLane"}) == (2026, 3)
-    # GreatAmerica 2/26 does NOT shift -> attribution = received month (Feb).
-    assert ledger._attribution_ym({"payment_date": "2026-02-26", "company": "GreatAmerica"}) == (2026, 2)
-    # Early/mid-month received -> attribution = received month regardless of co.
-    assert ledger._attribution_ym({"payment_date": "2026-03-15", "company": "NewLane"}) == (2026, 3)
+def test_attribution_newlane_without_coverage_uses_payment_date():
+    # A NewLane row missing a coverage month falls back to the received month;
+    # no last-week shift.
+    assert ledger._attribution_ym({"company": "NewLane", "payment_date": "2026-02-26"}) == (2026, 2)
+    assert ledger._attribution_ym({"company": "NewLane", "payment_date": "2026-03-02"}) == (2026, 3)
     assert ledger._attribution_ym({"payment_date": "junk"}) is None
 
 
@@ -222,3 +218,17 @@ def test_record_batch_stores_applies_to(monkeypatch):
                    "payment_date": dt.date(2026, 3, 2), "amount": 300}],
     )
     assert saved["data"]["payments"][0]["applies_to"] == "2026-02"
+
+
+def test_record_batch_skips_applies_to_for_non_newlane(monkeypatch):
+    saved: dict = {}
+    monkeypatch.setattr(ledger, "load", lambda: ({"files": [], "payments": []}, None))
+    monkeypatch.setattr(ledger.store, "save_json",
+                        lambda path, data, msg, sha=None: (saved.update(data=data) or (True, None)))
+    # OnePlace / GA / FP carry no coverage month, even if one is passed in.
+    ledger.record_batch(
+        file_content=None, filename="f.xlsx", company="OnePlace",
+        payments=[{"kind": "flex", "contract": "A", "qb_customer": "C",
+                   "payment_date": dt.date(2026, 5, 3), "amount": 300, "applies_to": "2026-04"}],
+    )
+    assert "applies_to" not in saved["data"]["payments"][0]
