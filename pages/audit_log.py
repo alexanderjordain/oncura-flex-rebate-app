@@ -160,10 +160,12 @@ st.divider()
 # ═════════════════════════════════════════════════════════════════════════════
 st.subheader("Monthly task checklist")
 st.caption(
-    "What's been recorded for each month, straight from the audit log — a check means "
-    "at least one entry of that type exists for that month. Stage 1, 2, and 3 are the "
-    "monthly close tasks; the **Rebate Cycle** runs on its own cadence, so a blank Rebate "
-    "cell is not necessarily a miss. **Stage 3** runs for whichever calendar group's "
+    "What's been recorded for each month, straight from the audit log. **Stage 1 · "
+    "Payments** is checked only when **every expected remittance for that coverage month "
+    "is in** (the completeness table below shows the per-partner detail). The other "
+    "columns are checked when at least one entry of that type exists. Stage 1, 2, and 3 "
+    "are the monthly close tasks; the **Rebate Cycle** runs on its own cadence, so a blank "
+    "Rebate cell is not necessarily a miss. **Stage 3** runs for whichever calendar group's "
     "quarter closes that month, and the **overage** entry only appears when a clinic "
     "actually went over — so a blank overage cell can be legitimate too."
 )
@@ -222,38 +224,17 @@ else:
         _y, _m = (_y + 1, 1) if _m == 12 else (_y, _m + 1)
     _months.reverse()  # most recent first
 
-    _rows = []
-    for (_y, _m) in _months:
-        _present = _done.get((_y, _m), set())
-        _row = {"Month": f"{dt.date(_y, _m, 1):%b %Y}"}
-        for _ct, _label in MONTHLY_TASKS:
-            _row[_label] = _ct in _present
-        _rows.append(_row)
-    st.dataframe(
-        pd.DataFrame(_rows),
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            _label: st.column_config.CheckboxColumn(_label, disabled=True)
-            for _, _label in MONTHLY_TASKS
-        },
-    )
-
-    # ── Stage 1 remittance completeness ───────────────────────────────────────
-    # The checkmarks above are binary (">=1 entry"); they don't show whether
-    # every expected remittance is in. Track receipts per COVERAGE month per
-    # finance partner against the expected cadence: NewLane, OnePlace and FP
-    # Leasing send one a month; GreatAmerica sends one per Tuesday of the month.
-    # A partner is only "expected" from the first coverage month it ever reported
-    # (so months before it joined show "-" rather than a false gap).
+    # Stage 1 completeness data — drives BOTH the Stage 1 checkbox and the detail
+    # table below. NewLane, OnePlace and FP Leasing send one remittance a month;
+    # GreatAmerica sends one per Tuesday. A partner is only "expected" from the
+    # first coverage month it ever reported (so months before it joined show "-").
+    # Count DISTINCT remittance dates (not import batches — a re-upload keeps the
+    # same date and dedups in the ledger, so counting dates avoids double-counting).
     def _tuesdays_in(_yy, _mm):
         return sum(1 for _w in calendar.monthcalendar(_yy, _mm) if _w[calendar.TUESDAY])
 
     _s1_companies = [("NewLane", "NewLane"), ("OnePlace", "OnePlace"),
                      ("GreatAmerica", "GreatAmerica"), ("FPLeasing", "FP Leasing")]
-    # Count DISTINCT remittance dates per partner per coverage month — NOT import
-    # batches. A re-uploaded remittance carries the same date (and dedups in the
-    # ledger), so counting dates avoids double-counting it as two receipts.
     _s1_received: dict = collections.defaultdict(lambda: collections.defaultdict(set))
     for _e in audit.list_entries():
         if _e.get("cycle_type") != "stage1_finance_payment":
@@ -276,30 +257,62 @@ else:
             if _co not in _active_from or _km < _active_from[_co]:
                 _active_from[_co] = _km
 
+    def _s1_expected(_co, _yy, _mm):
+        return _tuesdays_in(_yy, _mm) if _co == "GreatAmerica" else 1
+
+    def _s1_complete(_yy, _mm):
+        """True when every active partner's expected remittances are in for the
+        (yy, mm) coverage month — drives the Stage 1 checkbox + the detail table."""
+        _r = _s1_received.get((_yy, _mm), {})
+        _any = False
+        for _c, _ in _s1_companies:
+            _f = _active_from.get(_c)
+            if _f is None or (_yy, _mm) < _f:
+                continue
+            _any = True
+            if len(_r.get(_c, set())) < _s1_expected(_c, _yy, _mm):
+                return False
+        return _any
+
+    # Checklist: Stage 1 reflects COMPLETION (every expected remittance in); the
+    # other tasks are period-level, so a single recorded entry marks them done.
+    _rows = []
+    for (_y, _m) in _months:
+        _present = _done.get((_y, _m), set())
+        _row = {"Month": f"{dt.date(_y, _m, 1):%b %Y}"}
+        for _ct, _label in MONTHLY_TASKS:
+            _row[_label] = (_s1_complete(_y, _m) if _ct == "stage1_finance_payment"
+                            else _ct in _present)
+        _rows.append(_row)
+    st.dataframe(
+        pd.DataFrame(_rows),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            _label: st.column_config.CheckboxColumn(_label, disabled=True)
+            for _, _label in MONTHLY_TASKS
+        },
+    )
+
+    # ── Stage 1 remittance completeness (per-partner detail) ──────────────────
     st.markdown("##### Stage 1 remittance completeness")
     st.caption(
-        "Receipts per **coverage** month vs expected, per finance partner — NewLane, "
-        "OnePlace and FP Leasing send one a month; GreatAmerica one per Tuesday. "
-        "\"-\" means that partner hadn't started reporting yet. **Complete** is checked "
-        "only when every active partner's expected remittances are in."
+        "The per-partner detail behind the Stage 1 checkbox — receipts per "
+        "**coverage** month vs expected. NewLane, OnePlace and FP Leasing send one a "
+        "month; GreatAmerica one per Tuesday. \"-\" means that partner hadn't started "
+        "reporting yet. **Complete** matches the Stage 1 checkbox above."
     )
     _crows = []
     for (_y, _m) in _months:
         _rcvd = _s1_received.get((_y, _m), {})
         _crow = {"Month": f"{dt.date(_y, _m, 1):%b %Y}"}
-        _complete, _any_expected = True, False
         for _co, _lbl in _s1_companies:
             _from = _active_from.get(_co)
             if _from is None or (_y, _m) < _from:
                 _crow[_lbl] = "—"          # partner not on the program yet
                 continue
-            _any_expected = True
-            _want = _tuesdays_in(_y, _m) if _co == "GreatAmerica" else 1
-            _got = len(_rcvd.get(_co, set()))   # distinct remittance dates
-            _crow[_lbl] = f"{_got}/{_want}"
-            if _got < _want:
-                _complete = False
-        _crow["Complete"] = _complete and _any_expected
+            _crow[_lbl] = f"{len(_rcvd.get(_co, set()))}/{_s1_expected(_co, _y, _m)}"
+        _crow["Complete"] = _s1_complete(_y, _m)
         _crows.append(_crow)
     st.dataframe(
         pd.DataFrame(_crows),
