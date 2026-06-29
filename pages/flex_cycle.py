@@ -380,6 +380,14 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         else:
             file_bytes = up.getvalue()
             prior_file = ledger.check_file_seen(file_bytes)
+            # Payment date the matched prior file is affiliated with — pulled from
+            # the file record's note ("Stage 1 / <co> / pay_date=YYYY-MM-DD"). Lets
+            # the dedup messages name WHICH remittance the match is, so the operator
+            # can tell e.g. the 3/31 file apart from the 3/17 one (and spot a file
+            # that was recorded under the wrong date).
+            _prior_affil = ""
+            if prior_file and "pay_date=" in (prior_file.get("note") or ""):
+                _prior_affil = prior_file["note"].split("pay_date=", 1)[1].strip()[:10]
             # Did we record THIS exact file earlier in this session? Tracked in
             # session state (keyed by file hash) so the "already recorded" state
             # is deterministic and does NOT depend on the just-written ledger
@@ -446,9 +454,10 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             if hard_dupe_risk:
                 _extra_hash_note = ""
                 if prior_file:
+                    _affil_clause = f" (payments dated {_prior_affil})" if _prior_affil else ""
                     _extra_hash_note = (
-                        f"  \nThis exact file was previously processed on "
-                        f"{prior_file.get('uploaded_at', '?')[:10]} "
+                        f"  \nThis exact file{_affil_clause} was previously entered in the "
+                        f"ledger on {prior_file.get('uploaded_at', '?')[:10]} "
                         f"(`{prior_file.get('filename', '?')}`)."
                     )
                 _month_clause = (
@@ -480,9 +489,10 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 # Same bytes seen before but no month overlap in the ledger — this
                 # means the prior import was rolled back / cleared. Note quietly;
                 # row-level dedup will handle whatever the operator intends.
+                _affil_clause = f", payments dated {_prior_affil}" if _prior_affil else ""
                 st.info(
                     f":material/info: This file's bytes were uploaded before "
-                    f"({prior_file.get('uploaded_at', '?')[:10]}) but no payments "
+                    f"({prior_file.get('uploaded_at', '?')[:10]}{_affil_clause}) but no payments "
                     f"from its months are currently in the ledger — proceeding.",
                 )
 
