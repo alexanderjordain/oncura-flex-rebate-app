@@ -159,6 +159,14 @@
       "uploaded_at": "2026-06-29T20:08:32",
       "row_count": 4,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-04-07"
+    },
+    {
+      "sha256": "94b93654a07dfac35ec2376f73816036d08b19dbe9699fe46ce2409aad83e9d9",
+      "filename": "Remittance Detail Downloadable (23).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:11:27",
+      "row_count": 4,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-03-31"
     }
   ],
   "payments": [
@@ -4937,6 +4945,46 @@
       "payment_date": "2026-04-07",
       "amount": 921.84,
       "recorded_at": "2026-06-29T20:08:32"
+    },
+    {
+      "fingerprint": "7a951d686c2146a4c71d51a65308745b843ba0318c349b5c6f7c294d45db6b47",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41254608",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-03-31",
+      "amount": 935.08,
+      "recorded_at": "2026-06-29T20:11:27"
+    },
+    {
+      "fingerprint": "c85cb3ac89f1f6c911d7b24e2f8dd2da478e6e6efd70fecab2e19ed3966e7c77",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41255173",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-03-31",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:11:27"
+    },
+    {
+      "fingerprint": "3482e911a84ea3e825d2e54adc67d7c8533a9564dc0858ec9141188aa1fcac98",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41464006",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-03-31",
+      "amount": 912.68,
+      "recorded_at": "2026-06-29T20:11:27"
+    },
+    {
+      "fingerprint": "0ff92f1074cf58e5231a841485a5430bf84877c9af195af1a8e8256b677f6ae3",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41465647",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-03-31",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:11:27"
     }
   ]
 }
