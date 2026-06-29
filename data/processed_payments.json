@@ -111,6 +111,14 @@
       "uploaded_at": "2026-06-29T17:37:02",
       "row_count": 18,
       "note": "Stage 1 / NewLane / pay_date=2026-02-26"
+    },
+    {
+      "sha256": "6e34111c791f519ea9f777ce13be6d0cd43cea9e24f61665bbe04b3674bc7447",
+      "filename": "Remittance Detail Downloadable (17).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T19:53:11",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-06-16"
     }
   ],
   "payments": [
@@ -4709,6 +4717,36 @@
       "applies_to": "2026-02",
       "amount": 360.0,
       "recorded_at": "2026-06-29T17:37:02"
+    },
+    {
+      "fingerprint": "bc669fc8fbf3ce83765f14405186b0519212543f6bcd26564ed8b49b1ed8c643",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41969637",
+      "qb_customer": "Clark Veterinary Hospital",
+      "payment_date": "2026-06-16",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T19:53:11"
+    },
+    {
+      "fingerprint": "534fef8272df8812c235dbceaeca969909ea409bdb8bbb557eb1d3c1c6cba3fc",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42236857",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-06-16",
+      "amount": 939.08,
+      "recorded_at": "2026-06-29T19:53:11"
+    },
+    {
+      "fingerprint": "08ea5e74cc96dba4fa1094307fce2d6e581b5a6d5e90663d9cb7beb18232e48d",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42236877",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-06-16",
+      "amount": 912.68,
+      "recorded_at": "2026-06-29T19:53:11"
     }
   ]
 }
