@@ -251,7 +251,10 @@ else:
 
     _s1_companies = [("NewLane", "NewLane"), ("OnePlace", "OnePlace"),
                      ("GreatAmerica", "GreatAmerica"), ("FPLeasing", "FP Leasing")]
-    _s1_received: dict = collections.defaultdict(collections.Counter)
+    # Count DISTINCT remittance dates per partner per coverage month — NOT import
+    # batches. A re-uploaded remittance carries the same date (and dedups in the
+    # ledger), so counting dates avoids double-counting it as two receipts.
+    _s1_received: dict = collections.defaultdict(lambda: collections.defaultdict(set))
     for _e in audit.list_entries():
         if _e.get("cycle_type") != "stage1_finance_payment":
             continue
@@ -264,7 +267,7 @@ else:
             _key = (int(_cov[:4]), int(_cov[5:7]))
         except (ValueError, IndexError):
             continue
-        _s1_received[_key][_co] += 1
+        _s1_received[_key][_co].add(str(_pr.get("payment_date") or "")[:10])
 
     # Earliest coverage month each partner has reported = when it joined.
     _active_from: dict = {}
@@ -292,7 +295,7 @@ else:
                 continue
             _any_expected = True
             _want = _tuesdays_in(_y, _m) if _co == "GreatAmerica" else 1
-            _got = _rcvd.get(_co, 0)
+            _got = len(_rcvd.get(_co, set()))   # distinct remittance dates
             _crow[_lbl] = f"{_got}/{_want}"
             if _got < _want:
                 _complete = False
