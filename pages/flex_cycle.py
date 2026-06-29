@@ -231,7 +231,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             "Lock in the company and dates for this batch. The file uploader "
             "appears on the next step once these are set."
         )
-        mc1, mc2 = st.columns([1, 2])
+        mc1, mc2, mc3 = st.columns([1, 1, 1])
         company_options = ["NewLane", "OnePlace", "GreatAmerica", "FPLeasing"]
         company = mc1.selectbox(
             "Finance company", company_options,
@@ -244,40 +244,32 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             key="remit_pay_date_w",
         )
 
-        # Coverage / "applies-to" month — which month these payments are FOR.
-        # Finance remittances arrive on irregular days and generally cover the
-        # month BEFORE they're received, so we default coverage to (received - 1),
-        # or the current month for a last-week arrival. Stage 3 trues up the
-        # coverage month + 1 (the month we book the cash), so an early 2/26 and an
-        # on-time 3/02 fold into the same quarter. See core/ledger.default_applies_to.
+        # "Applies to month" — which month these payments are for. Auto-fills
+        # from the payment date (prior month, or the current month for a
+        # start-of-month company's last-week arrival). Stage 3 trues it up the
+        # FOLLOWING month; that detail stays in the tooltip to keep the control
+        # simple. Operators change it only for an off-schedule remittance.
         _auto_applies = ledger.default_applies_to(pay_date, company)
-        applies_override = st.checkbox(
-            "These payments cover a different month than the default",
-            value=bool(SS.get("remit_applies_override")),
-            key="remit_applies_override_w",
-            help="Leave unchecked for the usual cadence. Default coverage = the "
-                 "month before the received date (or the current month if received "
-                 "in the last week). Stage 3 trues up the coverage month + 1.",
+        _idx0 = pay_date.year * 12 + (pay_date.month - 1)
+        _opts = {f"{(_idx0+d)//12:04d}-{(_idx0+d)%12+1:02d}" for d in range(-6, 4)}
+        _opts.add(_auto_applies)
+        # Keep any prior selection in the option list so changing the payment
+        # date later can't leave the selectbox holding an out-of-range value.
+        if SS.get("remit_applies_to_w"):
+            _opts.add(SS["remit_applies_to_w"])
+        _month_opts = sorted(m for m in _opts if m)
+        _def_idx = _month_opts.index(_auto_applies) if _auto_applies in _month_opts else 0
+        applies_to = mc3.selectbox(
+            "Applies to month",
+            options=_month_opts,
+            index=_def_idx,
+            format_func=lambda s: dt.date(int(s[:4]), int(s[5:7]), 1).strftime("%B %Y"),
+            key="remit_applies_to_w",
+            help="Which month these payments are for. Auto-fills from the payment "
+                 "date; Stage 3 trues them up the following month. Change it only "
+                 "if this remittance arrived off its usual schedule.",
         )
-        if applies_override:
-            _ay, _am = (int(_auto_applies[:4]), int(_auto_applies[5:7])) \
-                if _auto_applies else (pay_date.year, pay_date.month)
-            _ad = st.date_input(
-                "Coverage month (pick any day in it)",
-                value=SS.get("remit_applies_date") or dt.date(_ay, _am, 1),
-                key="remit_applies_date_w",
-            )
-            applies_to = f"{_ad.year:04d}-{_ad.month:02d}"
-            SS["remit_applies_date"] = _ad
-        else:
-            applies_to = _auto_applies
-        SS["remit_applies_override"] = applies_override
         SS["remit_applies_to"] = applies_to
-        if applies_to:
-            _tym = ledger.trueup_ym_for_coverage(applies_to)
-            _cov = dt.date(int(applies_to[:4]), int(applies_to[5:7]), 1).strftime("%B %Y")
-            _tu = dt.date(_tym[0], _tym[1], 1).strftime("%B %Y") if _tym else "?"
-            st.caption(f":material/event_available: Covers **{_cov}** → trues up in the **{_tu}** cycle.")
 
         if company == "GreatAmerica":
             # GA is all-flex (Maintenance only) -> no scan invoices, so the starting
@@ -349,17 +341,19 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         # Diagnostic: prominently display the values being used so a mismatch with
         # what the operator picked is immediately visible. (Bug guard — the user
         # reported files coming out labeled NewLane regardless of selection.)
+        _covname = ""
+        if applies_to:
+            try:
+                _covname = dt.date(int(applies_to[:4]), int(applies_to[5:7]), 1).strftime("%b %Y")
+            except (ValueError, IndexError):
+                _covname = ""
         st.info(
             f":material/info: **Processing as:** company=**{company}**, "
-            f"payment date=**{pay_date}**, starting invoice #=**{start_inv if company != 'GreatAmerica' else '—'}**. "
+            f"payment date=**{pay_date}**" + (f" (applies to **{_covname}**)" if _covname else "") + ", "
+            f"starting invoice #=**{start_inv if company != 'GreatAmerica' else '—'}**. "
             "If any of these are wrong, click **◀ Back to setup** below.",
             icon=":material/checklist:",
         )
-        if applies_to:
-            _tym = ledger.trueup_ym_for_coverage(applies_to)
-            _cov = dt.date(int(applies_to[:4]), int(applies_to[5:7]), 1).strftime("%b %Y")
-            _tu = dt.date(_tym[0], _tym[1], 1).strftime("%b %Y") if _tym else "?"
-            st.caption(f":material/event_available: Coverage month **{_cov}** → trues up in the **{_tu}** cycle.")
 
         # Setup recap
         with st.container(border=True):
