@@ -117,12 +117,18 @@ if audit_summary["entry_count"]:
                 _day = int(_pay_date[8:10])  # "YYYY-MM-DD" -> DD
             except ValueError:
                 _day = ""
+        # NewLane is attributed by its COVERAGE month (received - 1); show it,
+        # derived from the received date so it stays consistent with the ledger
+        # and the checklist (and corrects any stale stored value). Every other
+        # company is attributed by the received date, so it has no coverage.
+        _coverage = (ledger.default_applies_to(_pay_date)
+                     if ledger.uses_coverage(_params.get("company")) else "")
         rows.append({
             "timestamp": e.get("timestamp", "")[:19],
             "cycle_type": e.get("cycle_type"),
             "approver": e.get("approver"),
             "finance_company": _params.get("company", ""),
-            "coverage": _params.get("applies_to", ""),
+            "coverage": _coverage,
             "year": e.get("year"),
             "month": e.get("month"),
             "day": _day,
@@ -178,6 +184,18 @@ for _e in audit.list_entries():
     _y, _m, _ct = _e.get("year"), _e.get("month"), _e.get("cycle_type")
     if _y is None or _m is None or _ct not in _TASK_TYPES:
         continue
+    # NewLane Stage 1 rows are filed by COVERAGE month (received - 1), not the
+    # received month — so an April-received NewLane remittance covering March
+    # checks March, and a month with no NewLane file covering it stays blank.
+    # Other companies / cycle types stay on their recorded target period.
+    _pr = _e.get("params") or {}
+    if _ct == "stage1_finance_payment" and ledger.uses_coverage(_pr.get("company")):
+        _cov = ledger.default_applies_to(_pr.get("payment_date", ""))
+        if _cov:
+            try:
+                _y, _m = int(_cov[:4]), int(_cov[5:7])
+            except (ValueError, IndexError):
+                pass
     try:
         _done.setdefault((int(_y), int(_m)), set()).add(_ct)
     except (TypeError, ValueError):

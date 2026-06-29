@@ -4519,7 +4519,7 @@
       "contract": "APP0000107553",
       "qb_customer": "Pine Tree Veterinary Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 799.05,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4530,7 +4530,7 @@
       "contract": "APP0000090246",
       "qb_customer": "South Central Veterinary Clinic",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 906.81,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4541,7 +4541,7 @@
       "contract": "APP0000037956",
       "qb_customer": "Airport Pet Clinic",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 360.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4552,7 +4552,7 @@
       "contract": "APP0000091531",
       "qb_customer": "Pinnacle Animal Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 400.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4563,7 +4563,7 @@
       "contract": "APP0000114265",
       "qb_customer": "Bay Street Animal Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 1015.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4574,7 +4574,7 @@
       "contract": "APP0000116330",
       "qb_customer": "Advanced Veterinary Medical Center El Sobrante",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 300.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4585,7 +4585,7 @@
       "contract": "APP0000129285",
       "qb_customer": "Flamingo Pet Clinic",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 800.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4596,7 +4596,7 @@
       "contract": "APP0000015711",
       "qb_customer": "Animal Health Care Center of Madison",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 150.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4607,7 +4607,7 @@
       "contract": "APP0000037938",
       "qb_customer": "Erickson Veterinary Hospital Inc.",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 360.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4618,7 +4618,7 @@
       "contract": "APP0000068074",
       "qb_customer": "Berkeley Animal Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 400.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4629,7 +4629,7 @@
       "contract": "APP0000115082",
       "qb_customer": "Johnson City Veterinary",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 460.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4640,7 +4640,7 @@
       "contract": "APP0000028881",
       "qb_customer": "Rainbow Veterinary Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 300.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4651,7 +4651,7 @@
       "contract": "APP0000023539",
       "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 600.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4662,7 +4662,7 @@
       "contract": "APP0000030154",
       "qb_customer": "Kendall Pointe Animal Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 300.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4673,7 +4673,7 @@
       "contract": "APP0000035269",
       "qb_customer": "Abbey Veterinary Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 180.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4684,7 +4684,7 @@
       "contract": "APP0000035665",
       "qb_customer": "Points East Veterinary Specialty Hospital",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 360.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4695,7 +4695,7 @@
       "contract": "APP0000027436",
       "qb_customer": "LA Veterinary Center",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 300.0,
       "recorded_at": "2026-06-29T16:52:57"
     },
@@ -4706,7 +4706,7 @@
       "contract": "APP0000037908",
       "qb_customer": "Family Pet Hospital - Stockton",
       "payment_date": "2026-02-26",
-      "applies_to": "2026-02",
+      "applies_to": "2026-01",
       "amount": 360.0,
       "recorded_at": "2026-06-29T16:52:57"
     }
