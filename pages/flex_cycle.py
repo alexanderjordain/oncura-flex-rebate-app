@@ -1011,6 +1011,42 @@ the next. After all uploads, the combined total should match the bank-feed depos
             # used on the wizard pages — keeps the reset action out of the visual
             # foreground but easy to find when needed.
             st.divider()
+
+            # Leave-guard: don't let an unrecorded batch be abandoned silently.
+            # Resetting with rows still un-recorded would skip the sign-off — no
+            # audit entry and no dedup protection (a re-upload wouldn't be caught).
+            # So the reset opens a blocking modal: record first, or discard.
+            _s1_unrecorded = len(rows_to_record) > 0
+
+            def _do_s1_reset():
+                for k in ("remit_file", "remit_file_override",
+                          "remit_cust_col", "remit_amt_col", "remit_id_col",
+                          "remit_reissue_ack", "remit_leave_guard"):
+                    SS.pop(k, None)
+                SS["remit_step"] = 0
+
+            @st.dialog("This batch isn't recorded yet", width="large", dismissible=False)
+            def _s1_leave_modal():
+                st.info(
+                    "**You haven't recorded this batch to the ledger.** Leave now and it "
+                    "won't be signed off or audited, and a future re-upload of the same "
+                    "payments won't be caught as a duplicate. Scroll up and **Mark … as "
+                    "imported** to record it, or discard this batch and start fresh.",
+                    icon=":material/warning:",
+                )
+                _gb, _ds = st.columns(2)
+                if _gb.button("← Go back & record", key="s1_guard_back",
+                              type="primary", use_container_width=True):
+                    SS.pop("remit_leave_guard", None)
+                    st.rerun()
+                if _ds.button("Discard this batch & start fresh", key="s1_guard_discard",
+                              use_container_width=True):
+                    _do_s1_reset()
+                    st.rerun()
+
+            if SS.get("remit_leave_guard"):
+                _s1_leave_modal()
+
             reset_col, _ = st.columns([1, 4])
             if reset_col.button(
                 "◀ Back to Setup",
@@ -1018,11 +1054,10 @@ the next. After all uploads, the combined total should match the bank-feed depos
                 use_container_width=True,
                 help="Clear the uploaded file and return to the setup step — use this between back-to-back remittances.",
             ):
-                for k in ("remit_file", "remit_file_override",
-                          "remit_cust_col", "remit_amt_col", "remit_id_col",
-                          "remit_reissue_ack"):
-                    SS.pop(k, None)
-                SS["remit_step"] = 0
+                if _s1_unrecorded:
+                    SS["remit_leave_guard"] = True
+                else:
+                    _do_s1_reset()
                 st.rerun()
 
 
@@ -1352,6 +1387,40 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
         # operator who's scrolled down doesn't have to scroll back up. Bottom-left
         # narrow column to match the Back/Next nav pattern elsewhere.
         st.divider()
+
+        # Leave-guard: don't let un-recorded credit memos be abandoned silently.
+        # Resetting with credit memos still un-recorded would skip the sign-off
+        # (no audit entry, and re-running the month could re-issue them). So the
+        # reset opens a blocking modal: record first, or discard.
+        _s2_unrecorded = not df.empty
+
+        def _do_s2_reset():
+            for k in ("cred_year", "cred_month", "cred_start_ref", "cred_leave_guard"):
+                SS.pop(k, None)
+            SS["cred_step"] = 0
+
+        @st.dialog("These credit memos aren't recorded yet", width="large", dismissible=False)
+        def _s2_leave_modal():
+            st.info(
+                "**You haven't recorded these credit memos to the ledger.** Leave now and "
+                "they won't be signed off or audited, and re-running this month could "
+                "re-issue them. Scroll up and **Mark … as generated** to record them, or "
+                "discard and start a new month.",
+                icon=":material/warning:",
+            )
+            _gb, _ds = st.columns(2)
+            if _gb.button("← Go back & record", key="s2_guard_back",
+                          type="primary", use_container_width=True):
+                SS.pop("cred_leave_guard", None)
+                st.rerun()
+            if _ds.button("Discard & start a new month", key="s2_guard_discard",
+                          use_container_width=True):
+                _do_s2_reset()
+                st.rerun()
+
+        if SS.get("cred_leave_guard"):
+            _s2_leave_modal()
+
         reset_col, _ = st.columns([1, 4])
         if reset_col.button(
             "◀ Back to Setup",
@@ -1359,9 +1428,10 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
             use_container_width=True,
             help="Reset year/month/start-ref and return to the setup step — use this when moving on to the next month.",
         ):
-            for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
-                SS.pop(k, None)
-            SS["cred_step"] = 0
+            if _s2_unrecorded:
+                SS["cred_leave_guard"] = True
+            else:
+                _do_s2_reset()
             st.rerun()
 
 # ═══════════════════════════════════════════════════════════════════════════════
