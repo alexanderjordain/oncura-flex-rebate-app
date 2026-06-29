@@ -12,8 +12,13 @@ Schema (data/processed_payments.json):
   {
     "files":    [{sha256, filename, company, uploaded_at, row_count, note}, ...],
     "payments": [{fingerprint, company, kind, contract, qb_customer,
-                  payment_date, amount, recorded_at}, ...]
+                  payment_date, applies_to, amount, recorded_at}, ...]
   }
+
+`applies_to` ("YYYY-MM") is the COVERAGE month a finance payment is for. Stage 2
+and Stage 3 attribute it to the true-up cycle = coverage + 1 (see _attribution_ym),
+so irregular finance-remittance timing lands in the right quarter regardless of
+the literal received date.
 
 Fingerprint = sha256("{company_lower}|{kind}|{contract}|{payment_date_iso}|{amount_cents}").
 """
@@ -44,6 +49,79 @@ def _date_iso(d) -> str:
     if hasattr(d, "isoformat"):
         return d.isoformat()
     return str(d)[:10]
+
+
+def _ym_of(date_iso):
+    """Parse 'YYYY-MM[-DD]' -> (year, month, day|None). None on junk."""
+    try:
+        parts = str(date_iso)[:10].split("-")
+        y, m = int(parts[0]), int(parts[1])
+        d = int(parts[2]) if len(parts) > 2 and parts[2] else None
+        return y, m, d
+    except (ValueError, IndexError, TypeError):
+        return None
+
+
+def _add_month(year: int, month: int, delta: int):
+    """Shift (year, month) by `delta` months. Months 1-12; handles year rollover."""
+    idx = year * 12 + (month - 1) + delta
+    return idx // 12, idx % 12 + 1
+
+
+# ── COVERAGE / ATTRIBUTION MONTH ──────────────────────────────────────────────
+# Finance remittances (esp. NewLane pass-throughs) arrive on irregular days and
+# generally cover the month BEFORE the month we receive them (a payment landing
+# ~the 2nd of March is February's). We tag each payment with an "applies-to"
+# (coverage) month and attribute it to the true-up cycle = coverage + 1 (the
+# month we book the cash). That way an early 2/26 arrival and an on-time 3/02
+# arrival both fold into the same quarter instead of splitting at the boundary.
+# A receipt in the last week of a month is treated as the next cycle landing
+# early, so it covers the CURRENT month. Operators override the coverage month
+# in Stage 1 for off-cadence remittances.
+_LAST_WEEK_DAY = 25
+
+
+def default_applies_to(received_date) -> str:
+    """Best-guess coverage month ('YYYY-MM') for a payment received on
+    `received_date`: the prior month normally, or the current month for a
+    last-week arrival (day >= 25). '' on unparseable input."""
+    parsed = _ym_of(_date_iso(received_date))
+    if not parsed:
+        return ""
+    y, m, d = parsed
+    if d is not None and d >= _LAST_WEEK_DAY:
+        return f"{y:04d}-{m:02d}"
+    py, pm = _add_month(y, m, -1)
+    return f"{py:04d}-{pm:02d}"
+
+
+def trueup_ym_for_coverage(applies_to):
+    """(year, month) a coverage month ('YYYY-MM') trues up in (= coverage + 1).
+    None on junk. Public so Stage 1 can preview the attribution to the operator."""
+    parsed = _ym_of(applies_to)
+    if not parsed:
+        return None
+    return _add_month(parsed[0], parsed[1], 1)
+
+
+def _attribution_ym(payment: dict):
+    """The (year, month) Stage 2 / Stage 3 count this FLEX payment in.
+
+    Uses the stored `applies_to` (coverage) + 1 when present; otherwise derives
+    it from payment_date with the same last-week normalization default_applies_to
+    uses — so legacy rows with no `applies_to` attribute exactly as if backfilled.
+    None on unparseable input.
+    """
+    ym = trueup_ym_for_coverage(payment.get("applies_to"))
+    if ym:
+        return ym
+    parsed = _ym_of(_date_iso(payment.get("payment_date", "")))
+    if not parsed:
+        return None
+    y, m, d = parsed
+    if d is not None and d >= _LAST_WEEK_DAY:
+        return _add_month(y, m, 1)
+    return y, m
 
 
 # A re-upload of the same payment sometimes carries a date a day or two off the
@@ -269,6 +347,7 @@ def record_batch(
             "contract": str(p.get("contract", "")),
             "qb_customer": p.get("qb_customer", ""),
             "payment_date": _date_iso(p["payment_date"]),
+            "applies_to": p.get("applies_to") or default_applies_to(p["payment_date"]),
             "amount": round(float(p["amount"]), 2),
             "recorded_at": now_iso,
         })
@@ -279,48 +358,47 @@ def record_batch(
 
 
 def flex_payments_for_month(year: int, month: int) -> list[dict]:
-    """All ledger rows with kind='flex' and payment_date in (year, month)."""
+    """All ledger rows with kind='flex' whose ATTRIBUTION month (coverage + 1)
+    is (year, month). Attribution normalizes irregular finance-payment timing so
+    a remittance lands in the cycle it's for, not the literal received date —
+    see _attribution_ym."""
     data, _ = load()
-    out = []
-    for p in data.get("payments", []):
-        if p.get("kind") != "flex":
-            continue
-        pd_str = str(p.get("payment_date", ""))
-        try:
-            y, m, *_ = pd_str.split("-")
-            if int(y) == year and int(m) == month:
-                out.append(p)
-        except (ValueError, AttributeError):
-            continue
-    return out
+    return [
+        p for p in data.get("payments", [])
+        if p.get("kind") == "flex" and _attribution_ym(p) == (year, month)
+    ]
 
 
 def flex_payments_in_window(start_date, end_date) -> list[dict]:
-    """All ledger rows with kind='flex' and payment_date in [start_date, end_date].
+    """All ledger rows with kind='flex' whose ATTRIBUTION month (coverage + 1)
+    falls within the [start_date, end_date] window's months.
 
-    Date-range version of `flex_payments_for_month`. Used by Stage 3 to fetch
-    every FLEX payment in the closing quarter window so the ledger-aware
-    inclusion filter can decide which clinics are actually on the program
-    this quarter (vs. stale `active=true` entries that nobody updated).
+    Used by Stage 3 to fetch every FLEX payment in the closing quarter so the
+    ledger-aware inclusion filter can decide which clinics are actually on the
+    program this quarter. Grouping by attribution (not the literal payment_date)
+    keeps an early/late finance remittance in the quarter it's for.
 
     `start_date` / `end_date` accept anything with .isoformat() or a "YYYY-MM-DD"
-    string — same shape as ledger payment_date values.
+    string. Comparison is month-granular (the window always spans full calendar
+    months at a quarter boundary), via (year, month) tuples so year rollover is
+    handled.
     """
     def _norm(d):
         if hasattr(d, "isoformat"):
             return d.isoformat()[:10]
         return str(d)[:10]
-    start_iso = _norm(start_date)
-    end_iso = _norm(end_date)
+    sp = _ym_of(_norm(start_date))
+    ep = _ym_of(_norm(end_date))
+    if not sp or not ep:
+        return []
+    start_ym, end_ym = (sp[0], sp[1]), (ep[0], ep[1])
     data, _ = load()
     out = []
     for p in data.get("payments", []):
         if p.get("kind") != "flex":
             continue
-        pd_str = str(p.get("payment_date", ""))[:10]
-        if not pd_str:
-            continue
-        if start_iso <= pd_str <= end_iso:
+        ym = _attribution_ym(p)
+        if ym and start_ym <= ym <= end_ym:
             out.append(p)
     return out
 

@@ -122,6 +122,7 @@ if audit_summary["entry_count"]:
             "cycle_type": e.get("cycle_type"),
             "approver": e.get("approver"),
             "finance_company": _params.get("company", ""),
+            "coverage": _params.get("applies_to", ""),
             "year": e.get("year"),
             "month": e.get("month"),
             "day": _day,

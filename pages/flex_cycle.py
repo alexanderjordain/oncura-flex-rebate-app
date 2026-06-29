@@ -239,10 +239,45 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             key="remit_company_w",
         )
         pay_date = mc2.date_input(
-            "Payment date",
+            "Payment date (received)",
             value=SS["remit_pay_date"],
             key="remit_pay_date_w",
         )
+
+        # Coverage / "applies-to" month — which month these payments are FOR.
+        # Finance remittances arrive on irregular days and generally cover the
+        # month BEFORE they're received, so we default coverage to (received - 1),
+        # or the current month for a last-week arrival. Stage 3 trues up the
+        # coverage month + 1 (the month we book the cash), so an early 2/26 and an
+        # on-time 3/02 fold into the same quarter. See core/ledger.default_applies_to.
+        _auto_applies = ledger.default_applies_to(pay_date)
+        applies_override = st.checkbox(
+            "These payments cover a different month than the default",
+            value=bool(SS.get("remit_applies_override")),
+            key="remit_applies_override_w",
+            help="Leave unchecked for the usual cadence. Default coverage = the "
+                 "month before the received date (or the current month if received "
+                 "in the last week). Stage 3 trues up the coverage month + 1.",
+        )
+        if applies_override:
+            _ay, _am = (int(_auto_applies[:4]), int(_auto_applies[5:7])) \
+                if _auto_applies else (pay_date.year, pay_date.month)
+            _ad = st.date_input(
+                "Coverage month (pick any day in it)",
+                value=SS.get("remit_applies_date") or dt.date(_ay, _am, 1),
+                key="remit_applies_date_w",
+            )
+            applies_to = f"{_ad.year:04d}-{_ad.month:02d}"
+            SS["remit_applies_date"] = _ad
+        else:
+            applies_to = _auto_applies
+        SS["remit_applies_override"] = applies_override
+        SS["remit_applies_to"] = applies_to
+        if applies_to:
+            _tym = ledger.trueup_ym_for_coverage(applies_to)
+            _cov = dt.date(int(applies_to[:4]), int(applies_to[5:7]), 1).strftime("%B %Y")
+            _tu = dt.date(_tym[0], _tym[1], 1).strftime("%B %Y") if _tym else "?"
+            st.caption(f":material/event_available: Covers **{_cov}** → trues up in the **{_tu}** cycle.")
 
         if company == "GreatAmerica":
             # GA is all-flex (Maintenance only) -> no scan invoices, so the starting
@@ -298,6 +333,9 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         company = SS.get("remit_company", "NewLane")
         pay_date = SS.get("remit_pay_date", dt.date.today())
         inv_date = pay_date
+        # Coverage month set on the setup step (falls back to the received-date
+        # default if missing). Stage 3 attributes by coverage + 1.
+        applies_to = SS.get("remit_applies_to") or ledger.default_applies_to(pay_date)
         if company == "GreatAmerica":
             start_inv = 50000
             split = "all_flex"
@@ -317,6 +355,11 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             "If any of these are wrong, click **◀ Back to setup** below.",
             icon=":material/checklist:",
         )
+        if applies_to:
+            _tym = ledger.trueup_ym_for_coverage(applies_to)
+            _cov = dt.date(int(applies_to[:4]), int(applies_to[5:7]), 1).strftime("%b %Y")
+            _tu = dt.date(_tym[0], _tym[1], 1).strftime("%b %Y") if _tym else "?"
+            st.caption(f":material/event_available: Coverage month **{_cov}** → trues up in the **{_tu}** cycle.")
 
         # Setup recap
         with st.container(border=True):
@@ -556,6 +599,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                         "contract": contract,
                         "qb_customer": df["Customer"].iloc[i] if "Customer" in df.columns else "",
                         "payment_date": pay_date,
+                        "applies_to": applies_to,
                         "amount": amt_val,
                     })
                 return out
@@ -951,6 +995,7 @@ the next. After all uploads, the combined total should match the bank-feed depos
                     params={
                         "company": company,
                         "payment_date": pay_date.isoformat(),
+                        "applies_to": applies_to,
                         "invoice_date": inv_date.isoformat(),
                         "start_invoice_no": start_inv,
                         "skipped_already_seen": len(seen_fps),

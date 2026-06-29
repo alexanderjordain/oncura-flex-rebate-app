@@ -108,3 +108,109 @@ def test_flex_payments_for_month_filters_kind():
         assert apr[0]["fingerprint"] == "c"
     finally:
         ledger.load = orig_load
+
+
+# ── Coverage ("applies-to") month + attribution (coverage + 1) ────────────────
+
+def test_default_applies_to_prior_month_normal():
+    # Received early/mid month -> covers the PRIOR month.
+    assert ledger.default_applies_to(dt.date(2026, 3, 2)) == "2026-02"
+    assert ledger.default_applies_to("2026-03-15") == "2026-02"
+    # January received -> prior month is the prior YEAR.
+    assert ledger.default_applies_to(dt.date(2026, 1, 5)) == "2025-12"
+
+
+def test_default_applies_to_last_week_is_current_month():
+    # A last-week arrival (day >= 25) is the next cycle landing early, so it
+    # covers the CURRENT (received) month. 2/26 and 3/02 therefore BOTH cover Feb.
+    assert ledger.default_applies_to(dt.date(2026, 2, 26)) == "2026-02"
+    assert ledger.default_applies_to(dt.date(2026, 2, 28)) == "2026-02"
+    assert ledger.default_applies_to(dt.date(2026, 3, 2)) == "2026-02"
+
+
+def test_default_applies_to_junk():
+    assert ledger.default_applies_to("not-a-date") == ""
+    assert ledger.default_applies_to("") == ""
+
+
+def test_trueup_ym_for_coverage():
+    assert ledger.trueup_ym_for_coverage("2026-02") == (2026, 3)
+    assert ledger.trueup_ym_for_coverage("2026-12") == (2027, 1)   # year rollover
+    assert ledger.trueup_ym_for_coverage("garbage") is None
+
+
+def test_attribution_uses_applies_to_plus_one():
+    # Stored coverage Feb -> trues up in March, regardless of received date.
+    assert ledger._attribution_ym({"applies_to": "2026-02", "payment_date": "2026-02-26"}) == (2026, 3)
+    assert ledger._attribution_ym({"applies_to": "2026-02", "payment_date": "2026-03-02"}) == (2026, 3)
+
+
+def test_attribution_falls_back_to_payment_date():
+    # Legacy row with no applies_to: derive from payment_date with the same
+    # last-week normalization, so an early 2/26 and an on-time 3/02 both -> March.
+    assert ledger._attribution_ym({"payment_date": "2026-02-26"}) == (2026, 3)
+    assert ledger._attribution_ym({"payment_date": "2026-03-02"}) == (2026, 3)
+    # Early/mid-month received -> attribution = received month (legacy behavior).
+    assert ledger._attribution_ym({"payment_date": "2026-03-15"}) == (2026, 3)
+    assert ledger._attribution_ym({"payment_date": "junk"}) is None
+
+
+def test_flex_payments_grouped_by_attribution_not_received():
+    # Two payments for Feb coverage: one received 2/26 (early), one 3/02 (on time).
+    # Both must land in the MARCH true-up cycle, not split across Feb/Mar.
+    data = {"files": [], "payments": [
+        {"fingerprint": "early", "kind": "flex", "payment_date": "2026-02-26",
+         "applies_to": "2026-02", "amount": 300, "company": "NewLane", "contract": "A", "qb_customer": "C"},
+        {"fingerprint": "ontime", "kind": "flex", "payment_date": "2026-03-02",
+         "applies_to": "2026-02", "amount": 300, "company": "NewLane", "contract": "B", "qb_customer": "D"},
+    ]}
+    orig = ledger.load
+    ledger.load = lambda: (data, None)
+    try:
+        mar = ledger.flex_payments_for_month(2026, 3)
+        assert {p["fingerprint"] for p in mar} == {"early", "ontime"}
+        assert ledger.flex_payments_for_month(2026, 2) == []   # neither lands in Feb
+    finally:
+        ledger.load = orig
+
+
+def test_flex_payments_in_window_uses_attribution():
+    # Coverage Feb -> attribution March -> inside a Mar-May quarter window.
+    # Coverage Jan -> attribution Feb -> OUTSIDE it (the boundary the fix protects).
+    data = {"files": [], "payments": [
+        {"fingerprint": "in", "kind": "flex", "payment_date": "2026-02-26",
+         "applies_to": "2026-02", "amount": 300, "company": "NewLane", "contract": "A", "qb_customer": "C"},
+        {"fingerprint": "out", "kind": "flex", "payment_date": "2026-01-30",
+         "applies_to": "2026-01", "amount": 300, "company": "NewLane", "contract": "B", "qb_customer": "D"},
+    ]}
+    orig = ledger.load
+    ledger.load = lambda: (data, None)
+    try:
+        win = ledger.flex_payments_in_window("2026-03-01", "2026-05-31")
+        assert {p["fingerprint"] for p in win} == {"in"}
+    finally:
+        ledger.load = orig
+
+
+def test_record_batch_stores_applies_to(monkeypatch):
+    saved: dict = {}
+    monkeypatch.setattr(ledger, "load", lambda: ({"files": [], "payments": []}, None))
+    monkeypatch.setattr(ledger.store, "save_json",
+                        lambda path, data, msg, sha=None: (saved.update(data=data) or (True, None)))
+    # Explicit applies_to is stored verbatim.
+    _, added, _ = ledger.record_batch(
+        file_content=None, filename="f.xlsx", company="NewLane",
+        payments=[{"kind": "flex", "contract": "A", "qb_customer": "C",
+                   "payment_date": dt.date(2026, 3, 2), "amount": 300, "applies_to": "2026-02"}],
+    )
+    assert added == 1
+    assert saved["data"]["payments"][0]["applies_to"] == "2026-02"
+    # Omitted applies_to is defaulted from payment_date (3/02 -> covers Feb).
+    saved.clear()
+    monkeypatch.setattr(ledger, "load", lambda: ({"files": [], "payments": []}, None))
+    ledger.record_batch(
+        file_content=None, filename="f2.xlsx", company="NewLane",
+        payments=[{"kind": "flex", "contract": "Z", "qb_customer": "C",
+                   "payment_date": dt.date(2026, 3, 2), "amount": 300}],
+    )
+    assert saved["data"]["payments"][0]["applies_to"] == "2026-02"
