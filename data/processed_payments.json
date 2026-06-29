@@ -175,6 +175,14 @@
       "uploaded_at": "2026-06-29T20:13:18",
       "row_count": 3,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-03-24"
+    },
+    {
+      "sha256": "298aab1e072d8c6d77bddfb2fd6270148e9d4c6cd341294bd09540b29671d35d",
+      "filename": "Remittance Detail Downloadable (26).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:17:30",
+      "row_count": 5,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-03-10"
     }
   ],
   "payments": [
@@ -5023,6 +5031,56 @@
       "payment_date": "2026-03-24",
       "amount": 920.8,
       "recorded_at": "2026-06-29T20:13:18"
+    },
+    {
+      "fingerprint": "47baf26054e881e95b13c824e2c0bc6f7ff5c1134ec1f0378bad6a8873d1c19c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2013338-000",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-03-10",
+      "amount": 896.98,
+      "recorded_at": "2026-06-29T20:17:30"
+    },
+    {
+      "fingerprint": "a55b9a38dad1586b656f4b9a6a006108b7c7a2b29c1bbc1bdfd8f56efe7b79cd",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41237843",
+      "qb_customer": "Allen Veterinary Hospital",
+      "payment_date": "2026-03-10",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:17:30"
+    },
+    {
+      "fingerprint": "2549767f031d6cc1a7e7e59bd6a636a8651f17df9172fd7b1d9e426fe9d11e35",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41249073",
+      "qb_customer": "Galloway Village Veterinary",
+      "payment_date": "2026-03-10",
+      "amount": 896.98,
+      "recorded_at": "2026-06-29T20:17:30"
+    },
+    {
+      "fingerprint": "4cf8dac4d87c74acd1257696c7a6dc4c336de7171d536775632559f1d083adf3",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41254650",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "2026-03-10",
+      "amount": 935.08,
+      "recorded_at": "2026-06-29T20:17:30"
+    },
+    {
+      "fingerprint": "0fbb0aa9c1896028a81f545ead2ef9d99c5062190fb148c081e9aebf489ecf5b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41255162",
+      "qb_customer": "Ridgeview Animal Clinic",
+      "payment_date": "2026-03-10",
+      "amount": 920.8,
+      "recorded_at": "2026-06-29T20:17:30"
     }
   ]
 }
