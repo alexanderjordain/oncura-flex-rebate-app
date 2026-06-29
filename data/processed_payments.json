@@ -127,6 +127,14 @@
       "uploaded_at": "2026-06-29T19:59:39",
       "row_count": 1,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-06-23"
+    },
+    {
+      "sha256": "1f352a3a5b05e832d2d100aac7b68d4c07ae0cc32d650a5496d588e924166a9c",
+      "filename": "Remittance Detail Downloadable (19).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:04:34",
+      "row_count": 4,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-04-28"
     }
   ],
   "payments": [
@@ -4765,6 +4773,46 @@
       "payment_date": "2026-06-23",
       "amount": 1843.67,
       "recorded_at": "2026-06-29T19:59:39"
+    },
+    {
+      "fingerprint": "3d6ce560fafcd113b64e1f1caae6bb8f68112825e42a0672d2d40865de287ed9",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "40783761",
+      "qb_customer": "Love Animal Hospital and Urgent Care",
+      "payment_date": "2026-04-28",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:04:34"
+    },
+    {
+      "fingerprint": "710e152b0865a5b6cc9ad78369c6ec388fa07a8c8a3156ba1b8d9e7e4270c7a5",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41727196",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "2026-04-28",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:04:34"
+    },
+    {
+      "fingerprint": "75f75491fca6f36c59af49031c00db2657888c17692f8989f49b5b20246b67ae",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732401",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "2026-04-28",
+      "amount": 935.08,
+      "recorded_at": "2026-06-29T20:04:34"
+    },
+    {
+      "fingerprint": "fad10e48d03c7ecb9e52b5ffb2ae023d2716d2302681151f6432d30c62e4636f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732627",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-04-28",
+      "amount": 1843.67,
+      "recorded_at": "2026-06-29T20:04:34"
     }
   ]
 }
