@@ -1179,32 +1179,10 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 f"gray **Legacy mode** expander further down.",
                 icon=":material/warning:",
             )
-            # No payments → no credit memos → nothing else to render. Show the legacy
-            # bootstrap expander (in case this IS the first run after migration) and
-            # the bottom 'Set up new month' reset, then stop. Skips the empty df preview,
-            # SaasAnt instructions, initials card, and Mark button — all of which would
-            # otherwise render with zero rows.
-            with st.expander(":gray[*legacy bootstrap (rarely used)*]"):
-                st.caption(
-                    "Use only when the processed-payments ledger is empty for the target month "
-                    "(e.g., first run after migration). This generates one credit memo per active clinic "
-                    "regardless of payment status — the legacy behavior."
-                )
-                if st.checkbox("Show legacy active-list import", key="cred_legacy_show_nopay"):
-                    df_legacy, next_ref_legacy = flex_credits.build_import(
-                        flex_clinics, year, month, start_ref,
-                    )
-                    if df_legacy.empty:
-                        st.info("No active clinics with a non-zero monthly_credit.")
-                    else:
-                        st.dataframe(df_legacy, use_container_width=True, height=300)
-                        st.download_button(
-                            "Download legacy credit memos (xlsx)",
-                            saasant.to_xlsx_bytes(df_legacy, f"FlexCredits{mname}{year}Legacy"),
-                            file_name=f"FlexCredits_{mname}_{year}_Legacy.xlsx",
-                            key="cred_legacy_dl_nopay",
-                        )
-                        st.caption(f"Next available reference number after this batch: {next_ref_legacy}")
+            # No payments → no credit memos → nothing else to render. Show the
+            # bottom 'Set up new month' reset, then stop. Skips the empty df
+            # preview, SaasAnt instructions, initials card, and Mark button — all
+            # of which would otherwise render with zero rows.
             st.divider()
             reset_col, _ = st.columns([1, 4])
             if reset_col.button(
@@ -1213,7 +1191,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                 use_container_width=True,
                 help="Reset year/month/start-ref and return to the setup step.",
             ):
-                for k in ("cred_year", "cred_month", "cred_start_ref", "cred_legacy_show"):
+                for k in ("cred_year", "cred_month", "cred_start_ref"):
                     SS.pop(k, None)
                 SS["cred_step"] = 0
                 st.rerun()
@@ -1355,32 +1333,6 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
                         f"Recorded {added} locally (no GitHub commit). "
                         "Set GITHUB_TOKEN in secrets for persistent dedup on Cloud."
                     )
-
-        # ── Legacy bootstrap mode ──────────────────────────────────────────────────
-        with st.expander(":gray[*legacy bootstrap (rarely used)*]"):
-            st.caption(
-                "Use only when the processed-payments ledger is empty for the target month "
-                "(e.g., first run after migration). This generates one credit memo per active clinic "
-                "regardless of payment status — the legacy behavior."
-            )
-            if st.checkbox("Show legacy active-list import", key="cred_legacy_show"):
-                df_legacy, next_ref_legacy = flex_credits.build_import(
-                    flex_clinics, year, month, start_ref,
-                )
-                l1, l2 = st.columns(2)
-                l1.metric("Legacy credit memos", len(df_legacy))
-                l2.metric(
-                    "Legacy total",
-                    f"${df_legacy['Product/Service Amount'].sum():,.2f}" if not df_legacy.empty else "$0.00",
-                )
-                st.dataframe(df_legacy, use_container_width=True, height=300)
-                st.download_button(
-                    "Download LEGACY credit-memo import",
-                    saasant.to_xlsx_bytes(df_legacy, f"FlexCreditsLEGACY{mname}{year}"),
-                    file_name=f"FlexCredits_LEGACY_{mname}_{year}.xlsx",
-                    disabled=df_legacy.empty,
-                    key="cred_dl_legacy",
-                )
 
         st.divider()
         with st.expander(":gray[Uploading to SaasAnt — reference]", expanded=False):
