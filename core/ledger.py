@@ -80,16 +80,31 @@ def _add_month(year: int, month: int, delta: int):
 # in Stage 1 for off-cadence remittances.
 _LAST_WEEK_DAY = 25
 
+# Companies that pay ~the start of the month, so a receipt in the last week is
+# the NEXT cycle landing early and should shift forward a month. Confirmed from
+# the ledger's received-day pattern: NewLane (days 3/9), OnePlace (1/3/7) and
+# FPLeasing (9) all cluster early-month. GreatAmerica pays on varied days
+# (1,5,9,12,19,26), so a GA last-week receipt is just that month's payment — it
+# must NOT shift. Unknown companies default to NO shift (attribution = received
+# month), the safe/legacy behavior; add them here once their cadence is known.
+_START_OF_MONTH_COMPANIES = {"newlane", "oneplace", "fpleasing"}
 
-def default_applies_to(received_date) -> str:
+
+def _shifts_on_last_week(company) -> bool:
+    return (company or "").strip().lower() in _START_OF_MONTH_COMPANIES
+
+
+def default_applies_to(received_date, company="") -> str:
     """Best-guess coverage month ('YYYY-MM') for a payment received on
-    `received_date`: the prior month normally, or the current month for a
-    last-week arrival (day >= 25). '' on unparseable input."""
+    `received_date`. Normally the PRIOR month. For a start-of-month-cadence
+    company, a last-week arrival (day >= 25) is the next cycle landing early, so
+    it covers the CURRENT month. '' on unparseable input. Operators override in
+    Stage 1 for off-cadence remittances."""
     parsed = _ym_of(_date_iso(received_date))
     if not parsed:
         return ""
     y, m, d = parsed
-    if d is not None and d >= _LAST_WEEK_DAY:
+    if d is not None and d >= _LAST_WEEK_DAY and _shifts_on_last_week(company):
         return f"{y:04d}-{m:02d}"
     py, pm = _add_month(y, m, -1)
     return f"{py:04d}-{pm:02d}"
@@ -108,9 +123,9 @@ def _attribution_ym(payment: dict):
     """The (year, month) Stage 2 / Stage 3 count this FLEX payment in.
 
     Uses the stored `applies_to` (coverage) + 1 when present; otherwise derives
-    it from payment_date with the same last-week normalization default_applies_to
-    uses — so legacy rows with no `applies_to` attribute exactly as if backfilled.
-    None on unparseable input.
+    it from payment_date + company with the same last-week normalization
+    default_applies_to uses — so legacy rows with no `applies_to` attribute
+    exactly as if backfilled. None on unparseable input.
     """
     ym = trueup_ym_for_coverage(payment.get("applies_to"))
     if ym:
@@ -119,7 +134,7 @@ def _attribution_ym(payment: dict):
     if not parsed:
         return None
     y, m, d = parsed
-    if d is not None and d >= _LAST_WEEK_DAY:
+    if d is not None and d >= _LAST_WEEK_DAY and _shifts_on_last_week(payment.get("company")):
         return _add_month(y, m, 1)
     return y, m
 
@@ -353,7 +368,7 @@ def record_batch(
         # unused_invoice), so only stamp it there.
         at = p.get("applies_to")
         if not at and p["kind"] in ("flex", "scan"):
-            at = default_applies_to(p["payment_date"])
+            at = default_applies_to(p["payment_date"], company)
         if at:
             entry["applies_to"] = at
         entry["amount"] = round(float(p["amount"]), 2)

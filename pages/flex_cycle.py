@@ -250,7 +250,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         # or the current month for a last-week arrival. Stage 3 trues up the
         # coverage month + 1 (the month we book the cash), so an early 2/26 and an
         # on-time 3/02 fold into the same quarter. See core/ledger.default_applies_to.
-        _auto_applies = ledger.default_applies_to(pay_date)
+        _auto_applies = ledger.default_applies_to(pay_date, company)
         applies_override = st.checkbox(
             "These payments cover a different month than the default",
             value=bool(SS.get("remit_applies_override")),
@@ -335,7 +335,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         inv_date = pay_date
         # Coverage month set on the setup step (falls back to the received-date
         # default if missing). Stage 3 attributes by coverage + 1.
-        applies_to = SS.get("remit_applies_to") or ledger.default_applies_to(pay_date)
+        applies_to = SS.get("remit_applies_to") or ledger.default_applies_to(pay_date, company)
         if company == "GreatAmerica":
             start_inv = 50000
             split = "all_flex"

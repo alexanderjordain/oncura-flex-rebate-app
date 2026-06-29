@@ -120,12 +120,18 @@ def test_default_applies_to_prior_month_normal():
     assert ledger.default_applies_to(dt.date(2026, 1, 5)) == "2025-12"
 
 
-def test_default_applies_to_last_week_is_current_month():
-    # A last-week arrival (day >= 25) is the next cycle landing early, so it
-    # covers the CURRENT (received) month. 2/26 and 3/02 therefore BOTH cover Feb.
-    assert ledger.default_applies_to(dt.date(2026, 2, 26)) == "2026-02"
-    assert ledger.default_applies_to(dt.date(2026, 2, 28)) == "2026-02"
-    assert ledger.default_applies_to(dt.date(2026, 3, 2)) == "2026-02"
+def test_default_applies_to_last_week_shifts_only_for_start_of_month_cos():
+    # For a start-of-month-cadence company (NewLane), a last-week arrival is the
+    # next cycle landing early -> covers the CURRENT month. So a NewLane 2/26 and
+    # an on-time 3/02 BOTH cover Feb.
+    assert ledger.default_applies_to(dt.date(2026, 2, 26), "NewLane") == "2026-02"
+    assert ledger.default_applies_to(dt.date(2026, 2, 28), "OnePlace") == "2026-02"
+    assert ledger.default_applies_to(dt.date(2026, 3, 2), "NewLane") == "2026-02"
+    # GreatAmerica pays across the month, so a 2/26 GA receipt is NOT shifted —
+    # it covers the prior month like any normal arrival (attribution = received).
+    assert ledger.default_applies_to(dt.date(2026, 2, 26), "GreatAmerica") == "2026-01"
+    # Unknown / no company also does not shift (safe default).
+    assert ledger.default_applies_to(dt.date(2026, 2, 26)) == "2026-01"
 
 
 def test_default_applies_to_junk():
@@ -146,12 +152,14 @@ def test_attribution_uses_applies_to_plus_one():
 
 
 def test_attribution_falls_back_to_payment_date():
-    # Legacy row with no applies_to: derive from payment_date with the same
-    # last-week normalization, so an early 2/26 and an on-time 3/02 both -> March.
-    assert ledger._attribution_ym({"payment_date": "2026-02-26"}) == (2026, 3)
-    assert ledger._attribution_ym({"payment_date": "2026-03-02"}) == (2026, 3)
-    # Early/mid-month received -> attribution = received month (legacy behavior).
-    assert ledger._attribution_ym({"payment_date": "2026-03-15"}) == (2026, 3)
+    # Legacy row with no applies_to: derive from payment_date + company with the
+    # same last-week normalization. A NewLane early 2/26 and on-time 3/02 -> March.
+    assert ledger._attribution_ym({"payment_date": "2026-02-26", "company": "NewLane"}) == (2026, 3)
+    assert ledger._attribution_ym({"payment_date": "2026-03-02", "company": "NewLane"}) == (2026, 3)
+    # GreatAmerica 2/26 does NOT shift -> attribution = received month (Feb).
+    assert ledger._attribution_ym({"payment_date": "2026-02-26", "company": "GreatAmerica"}) == (2026, 2)
+    # Early/mid-month received -> attribution = received month regardless of co.
+    assert ledger._attribution_ym({"payment_date": "2026-03-15", "company": "NewLane"}) == (2026, 3)
     assert ledger._attribution_ym({"payment_date": "junk"}) is None
 
 

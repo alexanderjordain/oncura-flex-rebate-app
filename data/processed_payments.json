@@ -1125,7 +1125,7 @@
       "contract": "41463840",
       "qb_customer": "Woodland Veterinary Clinic - CO",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 935.08,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1136,7 +1136,7 @@
       "contract": "41732375",
       "qb_customer": "Woodland Veterinary Clinic - CO",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 935.08,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1147,7 +1147,7 @@
       "contract": "41732700",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 804.56,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1158,7 +1158,7 @@
       "contract": "41732851",
       "qb_customer": "Roseville Animal Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1169,7 +1169,7 @@
       "contract": "41983401",
       "qb_customer": "Woodland Veterinary Clinic - CO",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 935.08,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1180,7 +1180,7 @@
       "contract": "41983700",
       "qb_customer": "River Trail Animal Hospital - Tulsa",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 1843.67,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1191,7 +1191,7 @@
       "contract": "41983798",
       "qb_customer": "Northwest Pet Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 804.56,
       "recorded_at": "2026-06-05T17:42:02"
     },
@@ -1202,7 +1202,7 @@
       "contract": "41983979",
       "qb_customer": "Roseville Animal Hospital",
       "payment_date": "2026-05-26",
-      "applies_to": "2026-05",
+      "applies_to": "2026-04",
       "amount": 921.84,
       "recorded_at": "2026-06-05T17:42:02"
     },
