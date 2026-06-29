@@ -143,6 +143,14 @@
       "uploaded_at": "2026-06-29T20:05:44",
       "row_count": 3,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-04-21"
+    },
+    {
+      "sha256": "73f433f22178aabd8125e632bf0b61fa6e1c474958006c97818ec914e7b78a17",
+      "filename": "Remittance Detail Downloadable (21).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:06:52",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-04-14"
     }
   ],
   "payments": [
@@ -4851,6 +4859,36 @@
       "payment_date": "2026-04-21",
       "amount": 870.14,
       "recorded_at": "2026-06-29T20:05:44"
+    },
+    {
+      "fingerprint": "04495352e0702d34227115c5781fe693c7e302909aabd400a89c9da5dc08db03",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2013338-000",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-04-14",
+      "amount": 896.98,
+      "recorded_at": "2026-06-29T20:06:52"
+    },
+    {
+      "fingerprint": "77354e3752c625ea94ad45e6576fa2ecd5a739b6c80f3463f3499bcdd469a80a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41465210",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-04-14",
+      "amount": 804.56,
+      "recorded_at": "2026-06-29T20:06:52"
+    },
+    {
+      "fingerprint": "2691ee7b581101642e2533bfb33d499e53379db1454a45138612e6987846238f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732396",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-04-14",
+      "amount": 912.68,
+      "recorded_at": "2026-06-29T20:06:52"
     }
   ]
 }
