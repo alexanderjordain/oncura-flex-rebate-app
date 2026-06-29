@@ -666,7 +666,14 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             skip_fps = set(seen_fps) | reissue_fps
 
             if skip_fps:
-                if seen_fps:
+                # The yellow 'removed from downloads' note only helps on a PARTIAL
+                # dedup — some rows survive and the operator should know why the
+                # download shrank. When EVERY row is deduped, the green 'Recorded /
+                # already in the ledger' message below says it more clearly; and
+                # right after a this-session record, 'already contains' reads as
+                # pre-existing, so showing both is redundant and misleading.
+                _all_skipped = bool(all_fps) and all(fp in skip_fps for fp in all_fps)
+                if seen_fps and not _all_skipped:
                     sk_flex = sum(1 for fp in all_fps[:len(flex_rows)] if fp in seen_fps)
                     sk_scan = sum(1 for fp in all_fps[len(flex_rows):] if fp in seen_fps)
                     st.warning(
