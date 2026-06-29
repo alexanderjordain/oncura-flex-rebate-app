@@ -3569,6 +3569,16 @@
       "payment_date": "2026-05-12",
       "amount": 870.14,
       "recorded_at": "2026-06-26T19:52:58"
+    },
+    {
+      "fingerprint": "d5ddd6d5b41d00f0c406dedac16101e0bf41c836b7f6a819bba2e96ebbd14b42",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "74f3756ae780fa4f237b5e6822d4c241879737a9377366edeed022145680aee7",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "05/31/2026",
+      "amount": 1029.86,
+      "recorded_at": "2026-06-29T14:19:19"
     }
   ]
 }
