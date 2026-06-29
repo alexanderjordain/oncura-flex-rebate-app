@@ -893,6 +893,31 @@
       ],
       "note": "1 new payment(s) recorded; 2 already in ledger",
       "entry_hash": "00805dd7097489da1c8af4efe1596cb4e3dc3c3c71aef71e6847e91666ff049c"
+    },
+    {
+      "id": "752070f4-057c-4926-9cfa-be5b7bf637e4",
+      "timestamp": "2026-06-29T14:19:21",
+      "cycle_type": "stage2_credit_memo",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 5,
+      "params": {
+        "start_ref": 50000,
+        "next_ref": 50074,
+        "payment_count": 74,
+        "skipped_unmapped": 0
+      },
+      "source_file": null,
+      "outputs": [
+        {
+          "name": "credit_memo_import",
+          "sha256": "88c27982659ec3259aff19f4b54446061caba5908310238b41a5d59650c7597d",
+          "row_count": 1,
+          "total": 1029.86
+        }
+      ],
+      "note": "1 new credit memo(s) recorded; 0 were already in ledger",
+      "entry_hash": "7ecb5a79b7b0d7152b6aacaa101f19dcbdca04f5656655f0c098506eaf09f174"
     }
   ]
 }
