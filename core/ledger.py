@@ -46,6 +46,25 @@ def _date_iso(d) -> str:
     return str(d)[:10]
 
 
+# A re-upload of the same payment sometimes carries a date a day or two off the
+# original (manual entry / a corrected remittance). check_possible_reissues
+# flags those within this window — half the span on EACH side, so a 5-day
+# window flags the existing date +/- 2 days (a 5/13 ledger row flags uploads
+# dated 5/11 through 5/15), and it spans a calendar-month boundary too.
+_REISSUE_WINDOW_DAYS = 5
+
+
+def _within_reissue_window(date_a, date_b) -> bool:
+    """True if two payment dates are within +/- (_REISSUE_WINDOW_DAYS // 2)
+    days of each other. Tolerant of bad/blank dates (returns False)."""
+    try:
+        a = dt.date.fromisoformat(_date_iso(date_a)[:10])
+        b = dt.date.fromisoformat(_date_iso(date_b)[:10])
+    except (ValueError, TypeError):
+        return False
+    return abs((a - b).days) <= _REISSUE_WINDOW_DAYS // 2
+
+
 def _normalize_contract(c) -> str:
     """Make the contract identifier stable across re-uploads.
 
@@ -186,8 +205,19 @@ def check_possible_reissues(company: str, payments: list[dict]) -> list[dict]:
                 return tuple(int(x) for x in str(prior_iso).split("-")[:2]) == inc_ym
             except (ValueError, AttributeError):
                 return False
-        date_diff = [m for m in matches
-                     if m.get("payment_date") != incoming_iso and _same_month(m.get("payment_date", ""))]
+        # Flag a ledger row as a possible reissue when it shares the contract +
+        # amount but a DIFFERENT date AND is either (a) in the same calendar
+        # month, or (b) within the +/- date window — the latter catches a
+        # re-upload whose date drifted a day or two even across a month
+        # boundary (e.g. 4/30 vs 5/02). Recurring monthly payments stay clear of
+        # both (next cycle is ~30 days out, a different month and well past the
+        # window).
+        date_diff = [
+            m for m in matches
+            if m.get("payment_date") != incoming_iso
+            and (_same_month(m.get("payment_date", ""))
+                 or _within_reissue_window(m.get("payment_date", ""), incoming_iso))
+        ]
         if date_diff:
             out.append({"incoming": p, "existing": date_diff})
     return out

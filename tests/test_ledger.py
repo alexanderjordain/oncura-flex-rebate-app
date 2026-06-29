@@ -49,6 +49,43 @@ def test_file_hash_distinguishes_byte_changes():
     assert ledger.file_hash(b"hello") == ledger.file_hash(b"hello")
 
 
+def test_within_reissue_window():
+    # +/- 2 days (a 5-day window) flags; a 5/13 row covers 5/11..5/15, and it
+    # spans a month boundary (4/30 vs 5/02). Beyond the window and the next
+    # monthly cycle do not.
+    assert ledger._within_reissue_window("2026-05-13", "2026-05-11")
+    assert ledger._within_reissue_window("2026-05-13", "2026-05-15")
+    assert ledger._within_reissue_window("2026-05-13", "2026-05-14")
+    assert ledger._within_reissue_window("2026-04-30", "2026-05-02")   # cross-month
+    assert not ledger._within_reissue_window("2026-05-13", "2026-05-18")  # 5 days out
+    assert not ledger._within_reissue_window("2026-05-13", "2026-06-13")  # next cycle
+    assert not ledger._within_reissue_window("", "2026-05-13")            # tolerant of junk
+
+
+def test_reissue_flags_near_dates_window():
+    led = {"files": [], "payments": [
+        {"kind": "flex", "payment_date": "2026-05-13", "amount": 921.84,
+         "company": "GreatAmerica", "contract": "AAA", "qb_customer": "C", "fingerprint": "1"},
+        {"kind": "flex", "payment_date": "2026-04-30", "amount": 870.14,
+         "company": "GreatAmerica", "contract": "BBB", "qb_customer": "D", "fingerprint": "2"},
+    ]}
+    orig = ledger.load
+    ledger.load = lambda: (led, None)
+    try:
+        def inc(contract, amount, date):
+            return [{"kind": "flex", "contract": contract, "amount": amount, "payment_date": date}]
+        # Same-month near-date (5/11 vs 5/13) -> flags.
+        assert ledger.check_possible_reissues("GreatAmerica", inc("AAA", 921.84, "2026-05-11"))
+        # Cross-month, within window (5/02 vs 4/30) -> flags (the gap the window fixes).
+        assert ledger.check_possible_reissues("GreatAmerica", inc("BBB", 870.14, "2026-05-02"))
+        # Next monthly cycle (6/13 vs 5/13) -> does NOT flag.
+        assert not ledger.check_possible_reissues("GreatAmerica", inc("AAA", 921.84, "2026-06-13"))
+        # Cross-month but beyond the window (5/07 vs 4/30) -> does NOT flag.
+        assert not ledger.check_possible_reissues("GreatAmerica", inc("BBB", 870.14, "2026-05-07"))
+    finally:
+        ledger.load = orig
+
+
 def test_flex_payments_for_month_filters_kind():
     # Direct test of the in-memory filter — doesn't touch persistence
     data = {
