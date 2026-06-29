@@ -118,9 +118,11 @@ if audit_summary["entry_count"]:
             except ValueError:
                 _day = ""
         # Coverage month each finance payment is FOR — display only (does NOT
-        # affect ledger attribution). NewLane = received - 1; everyone else =
-        # received month. Blank for period-level entries with no payment date.
-        _coverage = ledger.coverage_month(_params.get("company"), _pay_date) if _pay_date else ""
+        # affect ledger attribution). Prefer the coverage the operator recorded
+        # at import; otherwise derive it (NewLane = received - 1, everyone else =
+        # received month). Blank for period-level entries with no payment date.
+        _coverage = (_params.get("applies_to")
+                     or (ledger.coverage_month(_params.get("company"), _pay_date) if _pay_date else ""))
         rows.append({
             "timestamp": e.get("timestamp", "")[:19],
             "cycle_type": e.get("cycle_type"),
@@ -182,13 +184,14 @@ for _e in audit.list_entries():
     _y, _m, _ct = _e.get("year"), _e.get("month"), _e.get("cycle_type")
     if _y is None or _m is None or _ct not in _TASK_TYPES:
         continue
-    # Stage 1 rows are filed by their COVERAGE month (NewLane = received - 1,
-    # every other company = received month) — so an April-received NewLane
-    # remittance covering March checks March, and a month no file covers stays
-    # blank. Other cycle types stay on their recorded target period.
+    # Stage 1 rows are filed by their COVERAGE month — the coverage the operator
+    # recorded at import, else derived (NewLane = received - 1, every other
+    # company = received month). So an April-received NewLane remittance covering
+    # March checks March, and a month no file covers stays blank. Other cycle
+    # types stay on their recorded target period.
     _pr = _e.get("params") or {}
     if _ct == "stage1_finance_payment":
-        _cov = ledger.coverage_month(_pr.get("company"), _pr.get("payment_date", ""))
+        _cov = _pr.get("applies_to") or ledger.coverage_month(_pr.get("company"), _pr.get("payment_date", ""))
         if _cov:
             try:
                 _y, _m = int(_cov[:4]), int(_cov[5:7])
