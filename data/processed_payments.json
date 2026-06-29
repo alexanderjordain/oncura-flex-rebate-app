@@ -135,6 +135,14 @@
       "uploaded_at": "2026-06-29T20:04:34",
       "row_count": 4,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-04-28"
+    },
+    {
+      "sha256": "3ad2a3c6f080b72d342acf076246b3af1c29ef1c82df0a54c8f7b378355ca719",
+      "filename": "Remittance Detail Downloadable (20).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:05:44",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-04-21"
     }
   ],
   "payments": [
@@ -4813,6 +4821,36 @@
       "payment_date": "2026-04-28",
       "amount": 1843.67,
       "recorded_at": "2026-06-29T20:04:34"
+    },
+    {
+      "fingerprint": "1445373ade2f874796bcbf4e1132ab11d278a5daea37b8ea8a0d50a7fc492c72",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41464990",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-04-21",
+      "amount": 1843.67,
+      "recorded_at": "2026-06-29T20:05:44"
+    },
+    {
+      "fingerprint": "fb01c9105e52d0b341c076b23219ae2aca7c9ba51e14e67770f467971517f845",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732364",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-04-21",
+      "amount": 939.08,
+      "recorded_at": "2026-06-29T20:05:44"
+    },
+    {
+      "fingerprint": "62ca1f73be9c97b5c1c40b45f145f6eece9be6023c87966720ddc380c40f0eed",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41732782",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-04-21",
+      "amount": 870.14,
+      "recorded_at": "2026-06-29T20:05:44"
     }
   ]
 }
