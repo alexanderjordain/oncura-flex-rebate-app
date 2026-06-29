@@ -95,6 +95,14 @@
       "uploaded_at": "2026-06-29T14:54:43",
       "row_count": 66,
       "note": "Stage 1 / OnePlace / pay_date=2026-04-07"
+    },
+    {
+      "sha256": "84bb7b336bde462da3505771b8acef61a2c1d226834cfc496ff1c6ec40538a19",
+      "filename": "Consumable_2026-04-03_080006.xlsx",
+      "company": "NewLane",
+      "uploaded_at": "2026-06-29T14:56:20",
+      "row_count": 19,
+      "note": "Stage 1 / NewLane / pay_date=2026-04-03"
     }
   ],
   "payments": [
@@ -4237,6 +4245,196 @@
       "payment_date": "2026-04-07",
       "amount": 295.0,
       "recorded_at": "2026-06-29T14:54:43"
+    },
+    {
+      "fingerprint": "af0a5a75b3729f347db5df8ed767b44f0a284345513362383c78a64ad624fab7",
+      "company": "NewLane",
+      "kind": "flex",
+      "contract": "APP0000107553",
+      "qb_customer": "Pine Tree Veterinary Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 799.05,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "024d48805be113c01d5e835743d2c2c63c67a8b3494793832baf74e5b1b7d8c5",
+      "company": "NewLane",
+      "kind": "flex",
+      "contract": "APP0000090246",
+      "qb_customer": "South Central Veterinary Clinic",
+      "payment_date": "2026-04-03",
+      "amount": 906.81,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "e4c1b2e59cbf5d1021015d47c6cc3c3b130b11f43fa166676da0eeb2b9960ba7",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000037956",
+      "qb_customer": "Airport Pet Clinic",
+      "payment_date": "2026-04-03",
+      "amount": 360.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "8ef63fecbd8097fc53ee12996aa0f676c680d5e8cbf72d0fbc4b81bbc043e2f4",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000091531",
+      "qb_customer": "Pinnacle Animal Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 400.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "a4f734eea66f3cda8c30280f4ed13d5149b9c73b2106c903077ccce8025db03d",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000114265",
+      "qb_customer": "Bay Street Animal Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 1015.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "b9b254216f951ac4a91ea575a47dbac6609118547d598ed17af29e4beee76710",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000116330",
+      "qb_customer": "Advanced Veterinary Medical Center El Sobrante",
+      "payment_date": "2026-04-03",
+      "amount": 300.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "22547fcf53346603ec995ce33c2d6f470e1fd4f18982af225f723142fc14ba0b",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000129285",
+      "qb_customer": "Flamingo Pet Clinic",
+      "payment_date": "2026-04-03",
+      "amount": 800.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "82e6e20c74cad950e3de82d45d6b42f37242b0251e341abefb6eee682ce330cf",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000015711",
+      "qb_customer": "Animal Health Care Center of Madison",
+      "payment_date": "2026-04-03",
+      "amount": 150.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "6dbab75807a4925cbcf28272ddeef88cb5ec323c3d1041c3c246aa4c6ca54690",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000037938",
+      "qb_customer": "Erickson Veterinary Hospital Inc.",
+      "payment_date": "2026-04-03",
+      "amount": 360.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "8507355fd487a570e4a6e1dbb0fbd91618c990533fd73ac138d776507b0e5684",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000068074",
+      "qb_customer": "Berkeley Animal Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 400.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "e7f3acbfe29353db965830dba2708b58526c8dc42149d270a6b38a7d2b88456d",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000115082",
+      "qb_customer": "Johnson City Veterinary",
+      "payment_date": "2026-04-03",
+      "amount": 460.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "2cf8c0772dd000e0b9418c6e58065bc9105560559f847e918b537b09e6464313",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000028881",
+      "qb_customer": "Rainbow Veterinary Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 300.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "643e4797e903b50088be66805246534593e869b932388a0b6628d59c990150e0",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000030154",
+      "qb_customer": "Kendall Pointe Animal Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 300.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "898cad501cf354f78ac7dbe1aff42fdfc4739aef28372b5068c4f260ed2afcfb",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000035269",
+      "qb_customer": "Abbey Veterinary Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 180.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "7e1fc3f7ecf75526c82308abfa45421ae0b2e7c1cd8f005d527bf781cf006a50",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000130653",
+      "qb_customer": "Alona Animal Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 800.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "62c5d7c7967e3601af242251239d0a1e745764d0cae12d2ae4781cad82b8db4f",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000130209",
+      "qb_customer": "Sunset Cliffs Animal Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 800.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "0876c3f497efbe5c62b07eedeb5bee7e0261938f74803acecee929711b7bd2fc",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000035665",
+      "qb_customer": "Points East Veterinary Specialty Hospital",
+      "payment_date": "2026-04-03",
+      "amount": 360.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "0b23bfc611f92856fbebc11e601ffb44658fcd347066eb5878f29ade32701456",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000027436",
+      "qb_customer": "LA Veterinary Center",
+      "payment_date": "2026-04-03",
+      "amount": 300.0,
+      "recorded_at": "2026-06-29T14:56:20"
+    },
+    {
+      "fingerprint": "efdbd2ef74e7151c8a8c43314e72bf9d3502d4d60cf928983fe4cbb9b7554855",
+      "company": "NewLane",
+      "kind": "scan",
+      "contract": "APP0000037908",
+      "qb_customer": "Family Pet Hospital - Stockton",
+      "payment_date": "2026-04-03",
+      "amount": 360.0,
+      "recorded_at": "2026-06-29T14:56:20"
     }
   ]
 }
