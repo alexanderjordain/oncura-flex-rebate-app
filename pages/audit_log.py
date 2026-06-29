@@ -13,7 +13,6 @@ doesn't carry over to Settings or other pages.
 """
 from __future__ import annotations
 
-import calendar
 import collections
 import datetime as dt
 
@@ -161,9 +160,11 @@ st.divider()
 st.subheader("Monthly task checklist")
 st.caption(
     "What's been recorded for each month, straight from the audit log. **Stage 1 · "
-    "Payments** is checked only when **every expected remittance for that coverage month "
-    "is in** (the completeness table below shows the per-partner detail). The other "
-    "columns are checked when at least one entry of that type exists. Stage 1, 2, and 3 "
+    "Payments** is checked when **NewLane, OnePlace and FP Leasing have each reported for "
+    "that coverage month** (the completeness table below shows the per-partner detail). "
+    "GreatAmerica's cadence is irregular, so its count is shown there for manual cross-check "
+    "but doesn't gate the checkmark. The other columns are checked when at least one entry "
+    "of that type exists. Stage 1, 2, and 3 "
     "are the monthly close tasks; the **Rebate Cycle** runs on its own cadence, so a blank "
     "Rebate cell is not necessarily a miss. **Stage 3** runs for whichever calendar group's "
     "quarter closes that month, and the **overage** entry only appears when a clinic "
@@ -225,16 +226,17 @@ else:
     _months.reverse()  # most recent first
 
     # Stage 1 completeness data — drives BOTH the Stage 1 checkbox and the detail
-    # table below. NewLane, OnePlace and FP Leasing send one remittance a month;
-    # GreatAmerica sends one per Tuesday. A partner is only "expected" from the
-    # first coverage month it ever reported (so months before it joined show "-").
-    # Count DISTINCT remittance dates (not import batches — a re-upload keeps the
-    # same date and dedups in the ledger, so counting dates avoids double-counting).
-    def _tuesdays_in(_yy, _mm):
-        return sum(1 for _w in calendar.monthcalendar(_yy, _mm) if _w[calendar.TUESDAY])
-
+    # table below. NewLane, OnePlace and FP Leasing each send ONE remittance a
+    # month, so they gate "Complete". GreatAmerica's cadence is irregular
+    # (weekly-ish, and not always a Tuesday — e.g. a 3/13 deposit), so it can't be
+    # auto-targeted: its count is shown for the operator to cross-check against
+    # GA's own deposit report, but it does NOT gate the check. A partner is only
+    # counted from the first coverage month it ever reported (months before show
+    # "-"). Count DISTINCT remittance dates (a re-upload keeps the same date and
+    # dedups, so counting dates avoids double-counting).
     _s1_companies = [("NewLane", "NewLane"), ("OnePlace", "OnePlace"),
                      ("GreatAmerica", "GreatAmerica"), ("FPLeasing", "FP Leasing")]
+    _S1_GATING = {"NewLane", "OnePlace", "FPLeasing"}   # one a month; gate Complete
     _s1_received: dict = collections.defaultdict(lambda: collections.defaultdict(set))
     for _e in audit.list_entries():
         if _e.get("cycle_type") != "stage1_finance_payment":
@@ -257,20 +259,19 @@ else:
             if _co not in _active_from or _km < _active_from[_co]:
                 _active_from[_co] = _km
 
-    def _s1_expected(_co, _yy, _mm):
-        return _tuesdays_in(_yy, _mm) if _co == "GreatAmerica" else 1
-
     def _s1_complete(_yy, _mm):
-        """True when every active partner's expected remittances are in for the
-        (yy, mm) coverage month — drives the Stage 1 checkbox + the detail table."""
+        """True when every active GATING partner (NewLane / OnePlace / FP Leasing)
+        has reported for the (yy, mm) coverage month — drives the Stage 1 checkbox.
+        GreatAmerica is excluded: its irregular cadence is cross-checked manually,
+        not auto-gated."""
         _r = _s1_received.get((_yy, _mm), {})
         _any = False
-        for _c, _ in _s1_companies:
+        for _c in _S1_GATING:
             _f = _active_from.get(_c)
             if _f is None or (_yy, _mm) < _f:
                 continue
             _any = True
-            if len(_r.get(_c, set())) < _s1_expected(_c, _yy, _mm):
+            if not _r.get(_c):          # need >= 1 remittance that month
                 return False
         return _any
 
@@ -297,10 +298,11 @@ else:
     # ── Stage 1 remittance completeness (per-partner detail) ──────────────────
     st.markdown("##### Stage 1 remittance completeness")
     st.caption(
-        "The per-partner detail behind the Stage 1 checkbox — receipts per "
-        "**coverage** month vs expected. NewLane, OnePlace and FP Leasing send one a "
-        "month; GreatAmerica one per Tuesday. \"-\" means that partner hadn't started "
-        "reporting yet. **Complete** matches the Stage 1 checkbox above."
+        "The per-partner detail behind the Stage 1 checkbox — distinct remittances per "
+        "**coverage** month. NewLane, OnePlace and FP Leasing send one a month (shown "
+        "received/1) and gate **Complete**. GreatAmerica's cadence is irregular, so its "
+        "**count** is shown for you to cross-check against GA's deposit report — it does "
+        "not gate Complete. \"-\" means that partner hadn't started reporting yet."
     )
     _crows = []
     for (_y, _m) in _months:
@@ -311,7 +313,9 @@ else:
             if _from is None or (_y, _m) < _from:
                 _crow[_lbl] = "—"          # partner not on the program yet
                 continue
-            _crow[_lbl] = f"{len(_rcvd.get(_co, set()))}/{_s1_expected(_co, _y, _m)}"
+            _got = len(_rcvd.get(_co, set()))
+            # GA: count only (irregular cadence, no fixed target). Others: got/1.
+            _crow[_lbl] = str(_got) if _co == "GreatAmerica" else f"{_got}/1"
         _crow["Complete"] = _s1_complete(_y, _m)
         _crows.append(_crow)
     st.dataframe(
