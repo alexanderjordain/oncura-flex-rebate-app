@@ -151,6 +151,14 @@
       "uploaded_at": "2026-06-29T20:06:52",
       "row_count": 3,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-04-14"
+    },
+    {
+      "sha256": "0719fde73327d3c5cca87f1c65c7837596cacb2af3803d8910822638f46ac1a3",
+      "filename": "Remittance Detail Downloadable (22).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-06-29T20:08:32",
+      "row_count": 4,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-04-07"
     }
   ],
   "payments": [
@@ -4889,6 +4897,46 @@
       "payment_date": "2026-04-14",
       "amount": 912.68,
       "recorded_at": "2026-06-29T20:06:52"
+    },
+    {
+      "fingerprint": "45991f2540b73b22710889c3cd1b692a197ea56c1066a3d1bf307b2db36c6b5b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41420192",
+      "qb_customer": "Allen Veterinary Hospital",
+      "payment_date": "2026-04-07",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:08:32"
+    },
+    {
+      "fingerprint": "07cc405d83c1730a877bc271852240809d5bc8d515b6f233fdc1aed2fa568f5f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41440975",
+      "qb_customer": "TVC - Foster Veterinary Clinic",
+      "payment_date": "2026-04-07",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:08:32"
+    },
+    {
+      "fingerprint": "b837b4c8e9dd561f795f9bacb1db541b9922557e8fd2f6ec0d58837f99c11c4c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41448354",
+      "qb_customer": "Galloway Village Veterinary",
+      "payment_date": "2026-04-07",
+      "amount": 896.98,
+      "recorded_at": "2026-06-29T20:08:32"
+    },
+    {
+      "fingerprint": "0a66e33516d568f74d765026bdc17b8615db3075fa10ba09c15eea8720a07fca",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41465190",
+      "qb_customer": "Riverlin Animal Hospital",
+      "payment_date": "2026-04-07",
+      "amount": 921.84,
+      "recorded_at": "2026-06-29T20:08:32"
     }
   ]
 }
