@@ -166,7 +166,7 @@
       "company": "GreatAmerica",
       "uploaded_at": "2026-06-29T20:11:27",
       "row_count": 4,
-      "note": "Stage 1 / GreatAmerica / pay_date=2026-03-31"
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-03-17"
     },
     {
       "sha256": "8ab485b128417f5ed3d01f5adcf3631c94c7dfcb540e47e68d2426f234d00a94",
@@ -4971,42 +4971,42 @@
       "recorded_at": "2026-06-29T20:08:32"
     },
     {
-      "fingerprint": "7a951d686c2146a4c71d51a65308745b843ba0318c349b5c6f7c294d45db6b47",
+      "fingerprint": "5aa939d9ae0aabced639e4bf4dede68db4e923b022cbba22974acc028f7a0747",
       "company": "GreatAmerica",
       "kind": "flex",
       "contract": "41254608",
       "qb_customer": "Woodland Veterinary Clinic - CO",
-      "payment_date": "2026-03-31",
+      "payment_date": "2026-03-17",
       "amount": 935.08,
       "recorded_at": "2026-06-29T20:11:27"
     },
     {
-      "fingerprint": "c85cb3ac89f1f6c911d7b24e2f8dd2da478e6e6efd70fecab2e19ed3966e7c77",
+      "fingerprint": "ac856628b9dee220a2a90d41ec47c5ebe88cac63aa91d06a6196f2dbd7b48e1d",
       "company": "GreatAmerica",
       "kind": "flex",
       "contract": "41255173",
       "qb_customer": "Roseville Animal Hospital",
-      "payment_date": "2026-03-31",
+      "payment_date": "2026-03-17",
       "amount": 921.84,
       "recorded_at": "2026-06-29T20:11:27"
     },
     {
-      "fingerprint": "3482e911a84ea3e825d2e54adc67d7c8533a9564dc0858ec9141188aa1fcac98",
+      "fingerprint": "a0eb83c9836aa00c5b7ce619d70fa754b820e4c129643f96805dc1b8910d6156",
       "company": "GreatAmerica",
       "kind": "flex",
       "contract": "41464006",
       "qb_customer": "A Caring Vet",
-      "payment_date": "2026-03-31",
+      "payment_date": "2026-03-17",
       "amount": 912.68,
       "recorded_at": "2026-06-29T20:11:27"
     },
     {
-      "fingerprint": "0ff92f1074cf58e5231a841485a5430bf84877c9af195af1a8e8256b677f6ae3",
+      "fingerprint": "4e33f35b0ec0220413e0f2e4e21c72d31530dda99d07d16bbcf75fc43d32c193",
       "company": "GreatAmerica",
       "kind": "flex",
       "contract": "41465647",
       "qb_customer": "Roseville Animal Hospital",
-      "payment_date": "2026-03-31",
+      "payment_date": "2026-03-17",
       "amount": 921.84,
       "recorded_at": "2026-06-29T20:11:27"
     },
