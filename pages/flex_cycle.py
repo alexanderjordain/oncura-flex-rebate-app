@@ -710,16 +710,10 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             if fully_deduped:
                 if recorded_this_session:
                     _rec_n = SS["stage1_recorded_files"].get(this_file_hash, 0)
-                    _rec_lead = (
-                        f"**Recorded.** {_rec_n} payment(s) from this file were written to the "
-                        f"ledger + audit manifest this session"
-                        if _rec_n else
-                        "**Already in the ledger.** These payments were previously recorded — "
-                        "nothing new was written"
-                    )
+                    _rec_lead = "**Recorded.**" if _rec_n else "**Already in the ledger.**"
                     st.success(
-                        f":material/check_circle: {_rec_lead}. Re-uploading the same file won't "
-                        "double-post. Use **◀ Back to Setup** below to process the next file."
+                        f":material/check_circle: {_rec_lead} Use **◀ Back to Setup** below "
+                        "to process the next file."
                     )
                     # Next step (Acct SOP-2): now that the batch is recorded, match the
                     # finance company's deposit in the QBO bank feed. Shown HERE
