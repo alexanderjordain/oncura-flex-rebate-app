@@ -207,6 +207,14 @@
       "uploaded_at": "2026-06-29T21:30:38",
       "row_count": 25,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-03-31"
+    },
+    {
+      "sha256": "737b09999b10e31cd7a23ddaf59409a99abd4278592e687ee86c7550309c3f54",
+      "filename": "Remittance Detail Downloadable (32).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-07-01T14:13:58",
+      "row_count": 7,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-06-30"
     }
   ],
   "payments": [
@@ -5655,6 +5663,76 @@
       "payment_date": "2026-03-31",
       "amount": 920.8,
       "recorded_at": "2026-06-29T21:30:38"
+    },
+    {
+      "fingerprint": "eadfad2b8c930a42265b8decd007705ab19de03b914aaa1b1c55f311b11d8c64",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41731778",
+      "qb_customer": "Love Animal Hospital and Urgent Care",
+      "payment_date": "2026-06-30",
+      "amount": 921.84,
+      "recorded_at": "2026-07-01T14:13:58"
+    },
+    {
+      "fingerprint": "bd9da4fcb69419abd342c1459bdeb66bbd2e2f4a8eecf0e0370506679a40a8e3",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "41982690",
+      "qb_customer": "Love Animal Hospital and Urgent Care",
+      "payment_date": "2026-06-30",
+      "amount": 921.84,
+      "recorded_at": "2026-07-01T14:13:58"
+    },
+    {
+      "fingerprint": "13511702490053fb496827971d2ade033b95bcd2e564fdaa155107805b2cda3e",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42232225",
+      "qb_customer": "TVC - Foster Veterinary Clinic",
+      "payment_date": "2026-06-30",
+      "amount": 921.84,
+      "recorded_at": "2026-07-01T14:13:58"
+    },
+    {
+      "fingerprint": "89c81845dc06c0e49638575e0b5405d1f1fe63ee2ec12f2c521117e38d8f554a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42233922",
+      "qb_customer": "Galloway Village Veterinary",
+      "payment_date": "2026-06-30",
+      "amount": 896.98,
+      "recorded_at": "2026-07-01T14:13:58"
+    },
+    {
+      "fingerprint": "de0a15ed90c6d72e231417512cb4c2a9d52d1b2bf967566d6cf8756bc7ef6525",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42236881",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "2026-06-30",
+      "amount": 935.08,
+      "recorded_at": "2026-07-01T14:13:58"
+    },
+    {
+      "fingerprint": "2e93187aa95f52fee410622505ad334977aaa191bb0a03a9ad5322dd03c22e37",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42237123",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-06-30",
+      "amount": 870.14,
+      "recorded_at": "2026-07-01T14:13:58"
+    },
+    {
+      "fingerprint": "36fc8a2b9b87cec6bfac0e756d30da7d72461a254720f0c51b93b1f163076d07",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42237135",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-06-30",
+      "amount": 896.98,
+      "recorded_at": "2026-07-01T14:13:58"
     }
   ]
 }
