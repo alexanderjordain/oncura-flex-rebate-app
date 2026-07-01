@@ -449,6 +449,61 @@ def find_orphan_payments(flex_clinics, ledger_payments) -> list[dict]:
     return orphans
 
 
+def clinics_with_negative_payments(flex_clinics, ledger_payments) -> list[dict]:
+    """Roster clinics that have at least one NEGATIVE (reversal / clawback) FLEX
+    payment row in the supplied ledger window.
+
+    A reversal row (amount < 0) is a payment backed out WITHOUT an offsetting
+    credit memo, so the paid-vs-expected recapture math (which counts positive
+    payments only) can't see it — the account may need a MANUAL ADJUSTMENT.
+    Pure: takes the quarter's flex payment rows, returns one dict per affected
+    clinic with the summed negative amount, the row count, and the best contract
+    id resolved from the roster. Match by normalized contract first, then
+    qb_name / clinic_name (lowercased). Rows that resolve to no roster clinic are
+    still reported under their raw qb_customer / contract so nothing is silently
+    dropped.
+    """
+    by_contract, by_name = {}, {}
+    for c in flex_clinics:
+        for k in ("contract_oneplace", "contract_greatamerica", "contract_newlane"):
+            cv = _norm_contract(c.get(k))
+            if cv:
+                by_contract[cv] = c
+        for nm in (c.get("qb_name"), c.get("clinic_name")):
+            if nm:
+                by_name[str(nm).strip().lower()] = c
+
+    agg: dict = {}
+    for p in ledger_payments or []:
+        if p.get("kind") != "flex":
+            continue
+        try:
+            amt = float(p.get("amount") or 0)
+        except (TypeError, ValueError):
+            continue
+        if amt >= 0:
+            continue
+        pc = _norm_contract(p.get("contract"))
+        pqb = (p.get("qb_customer") or "").strip().lower()
+        clinic = (by_contract.get(pc) if pc else None) or by_name.get(pqb)
+        if clinic is not None:
+            name = clinic.get("qb_name") or clinic.get("clinic_name")
+            contract = (clinic.get("contract_number")
+                        or clinic.get("contract_greatamerica")
+                        or clinic.get("contract_oneplace")
+                        or clinic.get("contract_newlane"))
+            key = (name or "").strip().lower()
+        else:
+            name = p.get("qb_customer") or p.get("contract") or "(unknown)"
+            contract = p.get("contract")
+            key = str(name).strip().lower()
+        rec = agg.setdefault(key, {"clinic": name, "contract": contract,
+                                   "reversal_total": 0.0, "reversal_count": 0})
+        rec["reversal_total"] = round(rec["reversal_total"] + amt, 2)
+        rec["reversal_count"] += 1
+    return sorted(agg.values(), key=lambda r: (r["clinic"] or "").lower())
+
+
 def group_calendar_mismatches(flex_clinics) -> list[dict]:
     """Detect multi-clinic groups whose members don't all share the anchor's
     calendar_spread.

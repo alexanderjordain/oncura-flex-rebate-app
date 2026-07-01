@@ -483,7 +483,9 @@ def recapture_email(*, year: int, month: int,
 
 def recapture_zeroing_adjustments_email(*, year: int, month: int,
                                         underfunded: list[dict],
-                                        overfunded: list[dict]) -> tuple[str, str]:
+                                        overfunded: list[dict],
+                                        negatives: list[dict] | None = None,
+                                        ) -> tuple[str, str]:
     """Manual-adjustment worklist so every FLEX account nets to zero at quarter end.
 
     underfunded: clinics that paid FEWER than the expected payments — the posted
@@ -493,6 +495,11 @@ def recapture_zeroing_adjustments_email(*, year: int, month: int,
     overfunded: clinics that paid MORE than expected — recapture was auto-raised
       to absorb the extra credit. Each dict: {clinic, payments, true_up}. No
       action; listed for the record.
+    negatives: clinics with a NEGATIVE (reversal / clawback) FLEX payment this
+      quarter and no offsetting credit memo — the positive-only recapture can't
+      see them. Each dict: {clinic, contract, reversal_total, reversal_count}.
+      ACTION: verify the reversal and post a manual QBO adjustment if the account
+      doesn't net to zero.
     """
     month_name = dt.date(year, month, 1).strftime("%B")
     subj = (f"[Action Required] FLEX Recapture — Manual Adjustments to Zero "
@@ -532,6 +539,22 @@ def recapture_zeroing_adjustments_email(*, year: int, month: int,
             parts.append(
                 f"  - {r['clinic']} — {r['payments']} payments · "
                 f"true-up ${r['true_up']:,.2f}"
+            )
+        parts.append("")
+    if negatives:
+        parts += [
+            f"C. REVERSALS — verify + manually adjust ({len(negatives)}). These "
+            "clinics have a NEGATIVE (reversal / clawback) FLEX payment this quarter "
+            "with no offsetting credit memo. The recapture counts positive payments "
+            "only, so it can't see these — confirm each reversal is intentional and "
+            "post a MANUAL ADJUSTMENT if the account doesn't net to zero:",
+            "",
+        ]
+        for r in negatives:
+            contract = f" (contract {r['contract']})" if r.get("contract") else ""
+            parts.append(
+                f"  - {r['clinic']}{contract} — {r['reversal_count']} reversal "
+                f"row(s), -${abs(r['reversal_total']):,.2f}"
             )
         parts.append("")
     parts.append(

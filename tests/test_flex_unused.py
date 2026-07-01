@@ -460,3 +460,38 @@ def test_recapture_zeroing_adjustments_email_sections():
     assert "Manual Adjustments" in subj
     assert "Beta" in body and "invoice 50010" in body and "reduce by $1,900.00" in body
     assert "Alpha" in body and "NO action" in body and "$2,498.00" in body
+
+
+def test_clinics_with_negative_payments_detects_reversal():
+    clinics = [_clinic("Northwest Pet Hospital", contract_oneplace="40010149681")]
+    payments = [
+        {"kind": "flex", "qb_customer": "Northwest Pet Hospital",
+         "contract": "040010149681", "amount": 2000.0, "payment_date": "2026-04-15"},
+        {"kind": "flex", "qb_customer": "Northwest Pet Hospital",
+         "contract": "040010149681", "amount": -804.56, "payment_date": "2026-05-10"},
+    ]
+    out = flex_unused.clinics_with_negative_payments(clinics, payments)
+    assert len(out) == 1
+    assert out[0]["clinic"] == "Northwest Pet Hospital"
+    assert out[0]["reversal_total"] == -804.56
+    assert out[0]["reversal_count"] == 1
+
+
+def test_clinics_with_negative_payments_none_when_all_positive():
+    clinics = [_clinic("Alpha")]
+    payments = [{"kind": "flex", "qb_customer": "Alpha", "contract": "X",
+                 "amount": 1000.0, "payment_date": "2026-05-01"}]
+    assert flex_unused.clinics_with_negative_payments(clinics, payments) == []
+
+
+def test_recapture_zeroing_adjustments_email_negatives_section():
+    from core import accounting_handoff
+    subj, body = accounting_handoff.recapture_zeroing_adjustments_email(
+        year=2026, month=5, underfunded=[], overfunded=[],
+        negatives=[{"clinic": "Northwest Pet Hospital", "contract": "40010149681",
+                    "reversal_total": -804.56, "reversal_count": 1}],
+    )
+    assert "Northwest Pet Hospital" in body and "reversal" in body.lower()
+    assert "-$804.56" in body or "$-804.56" in body
+    # base sections still render when negatives is the only populated list
+    assert "zero balance" in body.lower()

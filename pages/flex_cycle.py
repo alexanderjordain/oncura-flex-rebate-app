@@ -2148,7 +2148,10 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 for r in recap_included
                 if r.get("pool_basis") == "ledger_over" and float(r.get("unused") or 0) > 0
             ]
-            if underfunded_rows or overfunded_rows:
+            negative_rows = flex_unused.clinics_with_negative_payments(
+                flex_clinics, ledger_payments_for_quarter,
+            )
+            if underfunded_rows or overfunded_rows or negative_rows:
                 st.divider()
                 st.markdown("#### Zero-out adjustments")
                 if underfunded_rows:
@@ -2166,9 +2169,26 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         "account zeros (no action; in the email for the record).",
                         icon=":material/info:",
                     )
+                if negative_rows:
+                    _neg_lines = "  \n".join(
+                        f"- {r['clinic']}"
+                        + (f" (contract {r['contract']})" if r.get("contract") else "")
+                        + f" — {r['reversal_count']} reversal row(s), -${abs(r['reversal_total']):,.2f}"
+                        for r in negative_rows
+                    )
+                    st.error(
+                        f":material/priority_high: **{len(negative_rows)} clinic(s) have a "
+                        "NEGATIVE (reversal) FLEX payment this quarter.** A payment was backed "
+                        "out without an offsetting credit memo, so the paid-vs-expected math "
+                        "(positive payments only) can't see it and the account may not zero. "
+                        "**Verify each reversal and post a MANUAL ADJUSTMENT** if the account "
+                        "doesn't net to zero after the recapture.  \n\n" + _neg_lines,
+                        icon=":material/priority_high:",
+                    )
                 _zsubj, _zbody = accounting_handoff.recapture_zeroing_adjustments_email(
                     year=rec_year, month=rec_month,
                     underfunded=underfunded_rows, overfunded=overfunded_rows,
+                    negatives=negative_rows,
                 )
                 accounting_handoff.render_handoff(
                     _zsubj, _zbody, key_prefix="recap_zeroing_email",
