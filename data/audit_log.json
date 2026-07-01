@@ -1417,6 +1417,37 @@
       ],
       "note": "25 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "0bd141118e2aa9c967373bb2f76039c8ab030021d4f6cf0b4dcba033e6c8bba7"
+    },
+    {
+      "id": "3ce19c9f-e269-463a-b5d5-4ed5b2bfd79a",
+      "timestamp": "2026-07-01T14:13:59",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 6,
+      "params": {
+        "company": "GreatAmerica",
+        "payment_date": "2026-06-30",
+        "applies_to": "",
+        "invoice_date": "2026-06-30",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Remittance Detail Downloadable (32).csv",
+        "sha256": "737b09999b10e31cd7a23ddaf59409a99abd4278592e687ee86c7550309c3f54",
+        "size_bytes": 1826
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "751a5e018b2a27fb718a5a432d55f22d8f091b73c661d55d8a4dbb727ef6634d",
+          "row_count": 7,
+          "total": 6364.7
+        }
+      ],
+      "note": "7 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "45c57f46d8b20d7b0c7ad7e4fc0469fe10a52b67f9d9ebb1afb8ea9d3c5a29ee"
     }
   ]
 }
