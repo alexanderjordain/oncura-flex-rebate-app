@@ -6473,6 +6473,136 @@
       "payment_date": "06/30/2026",
       "amount": 982.29,
       "recorded_at": "2026-07-01T14:29:50"
+    },
+    {
+      "fingerprint": "54a3a72e658013c1768a47cf827df77bae07c778bec0e209f0896a41cb41b365",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "A Caring Vet",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "06/30/2026",
+      "amount": 5822.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "d6c5f04281d8e0d11eddddd7ca21ee21b6c893991cbd9edfce114da3d52314ba",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Animal Care Experts",
+      "qb_customer": "Animal Care Experts",
+      "payment_date": "06/30/2026",
+      "amount": 595.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "fbefe72642d16f3d2e72aa6e8c58e9b1a6596dccab5461b6c177117cbe0caa6e",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Berkeley Veterinary Clinic",
+      "qb_customer": "Berkeley Veterinary Clinic",
+      "payment_date": "06/30/2026",
+      "amount": 1603.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "ea25e166dab011e9c1d75fd015da7c1ba40d1fb16152eba6c94abd2d167beec4",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Cedar Veterinary Clinic",
+      "qb_customer": "Cedar Veterinary Clinic",
+      "payment_date": "06/30/2026",
+      "amount": 5027.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "080ed24fadb61c65cb5880477ee134408035267cb3d484aa947e35d2c6c7c2d2",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "CityVet Whiterock",
+      "qb_customer": "CityVet Whiterock",
+      "payment_date": "06/30/2026",
+      "amount": 1400.2,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "a93a3352b9e9f77ec261b24f43eb2cd9c4bba0537a48ffc27f394a62fb43dfa0",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Lake Road Animal Hospital",
+      "qb_customer": "Lake Road Animal Hospital",
+      "payment_date": "06/30/2026",
+      "amount": 1833.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "94187b62a995251602cd64121e7f48be05fd30d9a6f236394a116d17faeac174",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Liberty Veterinary Hospital",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "06/30/2026",
+      "amount": 2625.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "f598d79c1b72f53fa1be919bbd7667066d6f2ced948749902265dce0c4be3e48",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Logan County Animal Clinic",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "06/30/2026",
+      "amount": 5700.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "8d8e135ea6be9f160a55d1a4f09443b90ea3660aa5ff8d0a4b755373df2975f7",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Marin City Animal Hospital",
+      "qb_customer": "Marin City Animal Hospital",
+      "payment_date": "06/30/2026",
+      "amount": 23.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "3e3c6bc5b215d9932faa101b44f0c0e742369c8df45afbeb58f766a5bbf0135c",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Northwest Pet Hospital",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "06/30/2026",
+      "amount": 4303.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "3531559ffd784faa635eeee066f87a2129744d36d79b59f02003a8bbccf5d5cc",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "payment_date": "06/30/2026",
+      "amount": 5700.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "dfe6f24e53a5b22c83266ac3663c96d4f8b1ed89482a7e6deaa5230a6de37cbb",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Silicon Valley Pet Clinic",
+      "qb_customer": "Silicon Valley Pet Clinic",
+      "payment_date": "06/30/2026",
+      "amount": 3903.0,
+      "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "06eb8cedc66a54614cbcd461cc6df8cfb68f4f4ec2dfefaa700612d25bd430e5",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "TVC - Foster Veterinary Clinic",
+      "qb_customer": "TVC - Foster Veterinary Clinic",
+      "payment_date": "06/30/2026",
+      "amount": 98.0,
+      "recorded_at": "2026-07-01T14:40:45"
     }
   ]
 }
