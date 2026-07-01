@@ -6603,6 +6603,56 @@
       "payment_date": "06/30/2026",
       "amount": 98.0,
       "recorded_at": "2026-07-01T14:40:45"
+    },
+    {
+      "fingerprint": "0ef9e0fe97fc54e60f500af7d93c0ad47ea5a389e27c56cec6971ec365391e44",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Allen Veterinary Hospital",
+      "qb_customer": "Allen Veterinary Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 1477.0,
+      "recorded_at": "2026-07-01T14:46:21"
+    },
+    {
+      "fingerprint": "6273781bf218a8581a538a4a53e9e2e95a886c0871a0f770bf518c7056c3c5db",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "CityVet Preston Forest",
+      "qb_customer": "CityVet Preston Forest",
+      "payment_date": "2026-06-01",
+      "amount": 4098.7,
+      "recorded_at": "2026-07-01T14:46:21"
+    },
+    {
+      "fingerprint": "d87dc688060e7c4df7c872f26e864148e3564595ecfe4bd8f1a62f28927f5303",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "Northwest Animal Hospital - Grapevine",
+      "qb_customer": "Northwest Animal Hospital - Grapevine",
+      "payment_date": "2026-06-01",
+      "amount": 1068.0,
+      "recorded_at": "2026-07-01T14:46:21"
+    },
+    {
+      "fingerprint": "2a692246a672afc30d80617642ffad89315b8db60e6be7afc802c24818a8188f",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "River Trail Animal Hospital - Tulsa",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-06-01",
+      "amount": 12277.0,
+      "recorded_at": "2026-07-01T14:46:21"
+    },
+    {
+      "fingerprint": "45c653ce5dc0892ee2f7cdc5bba062cbe8d5ec5d786f79e4678b1575b25a4340",
+      "company": "INTERNAL",
+      "kind": "direct_overage",
+      "contract": "TLC Animal Hospital",
+      "qb_customer": "TLC Animal Hospital",
+      "payment_date": "2026-06-01",
+      "amount": 5022.0,
+      "recorded_at": "2026-07-01T14:46:21"
     }
   ]
 }
