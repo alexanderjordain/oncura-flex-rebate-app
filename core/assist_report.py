@@ -56,10 +56,9 @@ CC_RECIPIENTS = [
 SUBJECT = "Re: Weekly Assistance Update"
 WEEKLY_GOAL = 50   # per week
 DAILY_GOAL = 10    # per day
-# Window starts (adjust to shift the report range). Weekly runs Mon-Sun labeled
-# by the Monday; daily runs day-by-day. Both end at the last COMPLETE period.
-WEEKLY_START = dt.date(2025, 12, 29)
-DAILY_START = dt.date(2026, 5, 17)
+# Trailing windows shown in the email (both end at the last COMPLETE period).
+WEEKLY_WEEKS = 15  # last N complete Mon-Sun weeks
+DAILY_DAYS = 15    # last N complete days
 
 
 def recipients(kind: str = "to") -> list[str]:
@@ -130,39 +129,58 @@ def build_counts(pull_start_iso: str, pull_end_iso: str) -> dict:
 
 
 def _rows(counts: dict, today: dt.date):
-    """Build (weekly_rows, daily_rows) as [(label, {son: n}), ...] through the
-    last complete week / day."""
+    """(weekly_rows, daily_rows) as [(label, {son: n}), ...] — the trailing
+    WEEKLY_WEEKS complete weeks and DAILY_DAYS complete days ending `today`."""
     weekly, daily = counts["weekly"], counts["daily"]
     this_monday = today - dt.timedelta(days=today.weekday())
-    last_week_monday = this_monday - dt.timedelta(days=7)   # last fully-complete week
-    wk, m = [], WEEKLY_START
-    while m <= last_week_monday:
+    last_week_monday = this_monday - dt.timedelta(days=7)   # last complete week
+    wk = []
+    for i in range(WEEKLY_WEEKS - 1, -1, -1):
+        m = last_week_monday - dt.timedelta(days=7 * i)
         wk.append((f"WO: {_mdY(m)}", weekly.get(m.isoformat(), {})))
-        m += dt.timedelta(days=7)
     last_day = today - dt.timedelta(days=1)                 # last complete day
-    dy, d = [], DAILY_START
-    while d <= last_day:
+    dy = []
+    for i in range(DAILY_DAYS - 1, -1, -1):
+        d = last_day - dt.timedelta(days=i)
         dy.append((_mdY(d), daily.get(d.isoformat(), {})))
-        d += dt.timedelta(days=1)
     return wk, dy
 
 
-_TH = "border:1px solid #b0b0b0;padding:3px 7px;text-align:center;background:#f3f3f3;font-weight:bold"
-_TD = "border:1px solid #cfcfcf;padding:3px 7px;text-align:center"
-_TDL = "border:1px solid #cfcfcf;padding:3px 7px;text-align:left;white-space:nowrap;font-weight:bold"
+# Palette (inline + bgcolor attrs for Outlook's Word rendering engine).
+_HDR_BG, _GOAL_BG, _LBL_BG, _ZEBRA_BG = "#33415c", "#dff3e0", "#eef1f6", "#f7f9fc"
 
 
-def _table_html(subtitle: str, rows) -> str:
-    head = "".join(f"<th style='{_TH}'>{_html.escape(s)}</th>" for s in SONOGRAPHERS)
+def _th(text: str, align: str = "center") -> str:
+    return (f'<th bgcolor="{_HDR_BG}" style="background:{_HDR_BG};color:#ffffff;font-weight:600;'
+            f'padding:7px 10px;text-align:{align};border:1px solid {_HDR_BG};'
+            f'font-family:Calibri,Arial,sans-serif;font-size:11px">{text}</th>')
+
+
+def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
+    head = "".join(_th(_html.escape(s)) for s in SONOGRAPHERS)
     body = ""
-    for label, counts in rows:
-        cells = "".join(f"<td style='{_TD}'>{(counts.get(s) or '')}</td>" for s in SONOGRAPHERS)
-        body += f"<tr><td style='{_TDL}'>{_html.escape(label)}</td>{cells}</tr>"
+    for idx, (label, counts) in enumerate(rows):
+        zebra = _ZEBRA_BG if idx % 2 else "#ffffff"
+        cells = ""
+        for s in SONOGRAPHERS:
+            v = counts.get(s)
+            if goal is not None and isinstance(v, int) and v >= goal:
+                cells += (f'<td bgcolor="{_GOAL_BG}" style="background:{_GOAL_BG};color:#1e6b2b;'
+                          f'font-weight:700;padding:6px 10px;text-align:center;border:1px solid #cfe8d0">{v}</td>')
+            else:
+                cells += (f'<td bgcolor="{zebra}" style="background:{zebra};color:#333333;'
+                          f'padding:6px 10px;text-align:center;border:1px solid #e6e8eb">{v or ""}</td>')
+        body += (f'<tr><td bgcolor="{_LBL_BG}" style="background:{_LBL_BG};color:#1f2733;font-weight:600;'
+                 f'padding:6px 10px;text-align:left;white-space:nowrap;border:1px solid #e6e8eb">'
+                 f'{_html.escape(label)}</td>{cells}</tr>')
     return (
-        "<div style='font-size:14px;font-weight:bold;margin:14px 0 0'>Finalized Assistance</div>"
-        f"<div style='font-size:12px;margin:0 0 4px'>{_html.escape(subtitle)}</div>"
-        "<table style='border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px'>"
-        f"<tr><th style='{_TH};text-align:left'>Assist Count</th>{head}</tr>{body}</table>"
+        '<div style="font-family:Calibri,Arial,sans-serif;font-size:15px;font-weight:700;'
+        'color:#1f2733;margin:18px 0 1px">Finalized Assistance</div>'
+        f'<div style="font-family:Calibri,Arial,sans-serif;font-size:12px;color:#5b6472;'
+        f'margin:0 0 6px">{_html.escape(subtitle)}</div>'
+        '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
+        'font-family:Calibri,Arial,sans-serif;font-size:11px">'
+        f'<tr>{_th("Assist Count", "left")}{head}</tr>{body}</table>'
     )
 
 
@@ -170,21 +188,24 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     """Pull the data and render the email. Returns (subject, plain_body, html_body)."""
     if today is None:
         today = eastern_today()
-    pull_start = min(WEEKLY_START, DAILY_START)
+    this_monday = today - dt.timedelta(days=today.weekday())
+    last_week_monday = this_monday - dt.timedelta(days=7)
+    weekly_start = last_week_monday - dt.timedelta(days=7 * (WEEKLY_WEEKS - 1))
+    daily_start = (today - dt.timedelta(days=1)) - dt.timedelta(days=DAILY_DAYS - 1)
+    pull_start = min(weekly_start, daily_start)
     counts = build_counts(pull_start.isoformat(), (today + dt.timedelta(days=1)).isoformat())
     wk_rows, dy_rows = _rows(counts, today)
     html = (
-        "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px'>"
+        "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
-        f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week)', wk_rows)}<br>"
-        f"{_table_html(f'Daily (Goal: {DAILY_GOAL}/day)', dy_rows)}"
-        "<p style='margin-top:16px'>Best,<br>Alexander Jordain</p></div>"
+        f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week)', wk_rows, goal=WEEKLY_GOAL)}<br>"
+        f"{_table_html(f'Daily (Goal: {DAILY_GOAL}/day)', dy_rows, goal=DAILY_GOAL)}"
+        "</div>"
     )
     plain = (
         "Hello all,\n\n"
         "Please see the following assisting sonographer activity reports "
-        "(formatted tables in the HTML version of this email).\n\n"
-        "Best,\nAlexander Jordain"
+        "(formatted tables in the HTML version of this email)."
     )
     return SUBJECT, plain, html

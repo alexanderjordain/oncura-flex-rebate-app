@@ -33,28 +33,35 @@ def test_month_chunks_contiguous_and_bounded():
         assert b == c            # non-overlapping + no gaps
 
 
-def test_rows_week_bucketing_and_last_complete_week():
+def test_rows_trailing_windows():
     counts = {
         "weekly": {"2026-06-22": {"Becky Tiner": 30, "Katie Heuer": 16}},
         "daily": {"2026-06-23": {"Becky Tiner": 6}},
     }
     # Tue 2026-07-07 -> last complete week Monday is 2026-06-29 (this week excluded)
     wk, dy = ar._rows(counts, dt.date(2026, 7, 7))
+    assert len(wk) == ar.WEEKLY_WEEKS == 15
+    assert len(dy) == ar.DAILY_DAYS == 15
     labels = [lbl for lbl, _ in wk]
+    assert labels[-1] == "WO: 6/29/2026"     # last complete week present
     assert "WO: 6/22/2026" in labels
-    assert "WO: 6/29/2026" in labels        # last complete week present
-    assert "WO: 7/6/2026" not in labels      # current (incomplete) week excluded
+    assert "WO: 7/6/2026" not in labels       # current (incomplete) week excluded
     assert dict(wk)["WO: 6/22/2026"]["Becky Tiner"] == 30
+    assert dy[-1][0] == "7/6/2026"            # daily ends yesterday
+    assert dy[0][0] == "6/22/2026"            # 15 days back
 
 
-def test_table_html_renders_names_goal_and_blank_zero():
-    html = ar._table_html("Weekly (Goal: 50/week)",
-                          [("WO: 6/22/2026", {"Becky Tiner": 30, "Katie Heuer": 0})])
-    assert "Becky Tiner" in html and "WO: 6/22/2026" in html
-    assert "Goal: 50/week" in html
-    assert ">30<" in html
-    # zero renders as an empty cell, not "0"
-    assert ">0<" not in html
+def test_table_html_highlights_goal_and_blanks_zero():
+    html = ar._table_html(
+        "Weekly (Goal: 50/week)",
+        [("WO: 6/22/2026", {"Becky Tiner": 30, "Denice Rodriguez": 60, "Katie Heuer": 0})],
+        goal=50,
+    )
+    assert "Becky Tiner" in html and "WO: 6/22/2026" in html and "Goal: 50/week" in html
+    assert ">30<" in html          # below goal, plain
+    assert ">60<" in html          # at/above goal, present
+    assert ">0<" not in html       # zero renders as an empty cell
+    assert ar._GOAL_BG in html     # goal-met highlight fill present
 
 
 def test_eml_supports_cc_and_html_body():
