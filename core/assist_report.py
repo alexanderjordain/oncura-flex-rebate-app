@@ -146,41 +146,51 @@ def _rows(counts: dict, today: dt.date):
     return wk, dy
 
 
-# Palette (inline + bgcolor attrs for Outlook's Word rendering engine).
-_HDR_BG, _GOAL_BG, _LBL_BG, _ZEBRA_BG = "#33415c", "#dff3e0", "#eef1f6", "#f7f9fc"
+# Dark-theme palette (inline styles + bgcolor attrs for Outlook's Word engine):
+# charcoal body + light text, teal header, olive goal-met highlight.
+_DARK_BG = "#1f1f1f"
+_LIGHT_TX = "#f0f0f0"
+_TEAL_BG = "#5f93a3"
+_TEAL_TX = "#0e2a33"
+_OLIVE_BG = "#74771e"
+_OLIVE_TX = "#141400"
+_BORDER = "#333333"
+_FONT = "font-family:Calibri,Arial,sans-serif"
 
 
-def _th(text: str, align: str = "center") -> str:
-    return (f'<th bgcolor="{_HDR_BG}" style="background:{_HDR_BG};color:#ffffff;font-weight:600;'
-            f'padding:7px 10px;text-align:{align};border:1px solid {_HDR_BG};'
-            f'font-family:Calibri,Arial,sans-serif;font-size:11px">{text}</th>')
+def _cell(content, bg: str, tx: str, align: str = "center", bold: bool = False) -> str:
+    return (f'<td bgcolor="{bg}" style="background:{bg};color:{tx};'
+            f'font-weight:{"700" if bold else "400"};padding:6px 11px;text-align:{align};'
+            f'white-space:nowrap;border:1px solid {_BORDER};{_FONT};font-size:11px">{content}</td>')
+
+
+def _bar(text: str, size: int, ncol: int) -> str:
+    return (f'<tr><td colspan="{ncol}" bgcolor="{_DARK_BG}" style="background:{_DARK_BG};'
+            f'color:#ffffff;font-weight:700;text-align:center;padding:7px 11px;'
+            f'border:1px solid {_BORDER};{_FONT};font-size:{size}px">{text}</td></tr>')
 
 
 def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
-    head = "".join(_th(_html.escape(s)) for s in SONOGRAPHERS)
+    ncol = len(SONOGRAPHERS) + 1
+    header = ("<tr>" + _cell("Assist Count", _TEAL_BG, _TEAL_TX, "left", True)
+              + "".join(_cell(_html.escape(s), _TEAL_BG, _TEAL_TX, "center", True) for s in SONOGRAPHERS)
+              + "</tr>")
     body = ""
-    for idx, (label, counts) in enumerate(rows):
-        zebra = _ZEBRA_BG if idx % 2 else "#ffffff"
+    for label, counts in rows:
         cells = ""
         for s in SONOGRAPHERS:
             v = counts.get(s)
             if goal is not None and isinstance(v, int) and v >= goal:
-                cells += (f'<td bgcolor="{_GOAL_BG}" style="background:{_GOAL_BG};color:#1e6b2b;'
-                          f'font-weight:700;padding:6px 10px;text-align:center;border:1px solid #cfe8d0">{v}</td>')
+                cells += _cell(v, _OLIVE_BG, _OLIVE_TX, "center", True)
             else:
-                cells += (f'<td bgcolor="{zebra}" style="background:{zebra};color:#333333;'
-                          f'padding:6px 10px;text-align:center;border:1px solid #e6e8eb">{v or ""}</td>')
-        body += (f'<tr><td bgcolor="{_LBL_BG}" style="background:{_LBL_BG};color:#1f2733;font-weight:600;'
-                 f'padding:6px 10px;text-align:left;white-space:nowrap;border:1px solid #e6e8eb">'
-                 f'{_html.escape(label)}</td>{cells}</tr>')
+                cells += _cell(v or "", _DARK_BG, _LIGHT_TX)
+        body += "<tr>" + _cell(_html.escape(label), _DARK_BG, _LIGHT_TX, "left", True) + cells + "</tr>"
     return (
-        '<div style="font-family:Calibri,Arial,sans-serif;font-size:15px;font-weight:700;'
-        'color:#1f2733;margin:18px 0 1px">Finalized Assistance</div>'
-        f'<div style="font-family:Calibri,Arial,sans-serif;font-size:12px;color:#5b6472;'
-        f'margin:0 0 6px">{_html.escape(subtitle)}</div>'
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
-        'font-family:Calibri,Arial,sans-serif;font-size:11px">'
-        f'<tr>{_th("Assist Count", "left")}{head}</tr>{body}</table>'
+        f'{_FONT};font-size:11px;margin:16px 0 0">'
+        f'{_bar("Finalized Assistance", 15, ncol)}'
+        f'{_bar(_html.escape(subtitle), 12, ncol)}'
+        f'{header}{body}</table>'
     )
 
 

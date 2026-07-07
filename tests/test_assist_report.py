@@ -61,7 +61,8 @@ def test_table_html_highlights_goal_and_blanks_zero():
     assert ">30<" in html          # below goal, plain
     assert ">60<" in html          # at/above goal, present
     assert ">0<" not in html       # zero renders as an empty cell
-    assert ar._GOAL_BG in html     # goal-met highlight fill present
+    assert ar._OLIVE_BG in html    # goal-met highlight fill present
+    assert ar._TEAL_BG in html     # teal header present
 
 
 def test_eml_supports_cc_and_html_body():
