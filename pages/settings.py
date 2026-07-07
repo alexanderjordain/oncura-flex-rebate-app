@@ -16,7 +16,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from core import audit, auth, ledger, loaders, store, ui
+from core import accounting_handoff, assist_report, audit, auth, ledger, loaders, store, ui
 
 ui.header(
     "Settings",
@@ -345,6 +345,34 @@ st.info(
     "summary, or the Clear-Ledger action? They've moved to the **Admin → Audit & Tracking** "
     "page — visit there to view records or perform a ledger reset.",
 )
+
+st.divider()
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Sonographer assistance email (utility — opens a ready-to-send draft)
+# ═════════════════════════════════════════════════════════════════════════════
+with st.expander(":material/outgoing_mail: Open assistance email", expanded=False):
+    st.caption(
+        "Pulls finalized-assist counts from OPD (weekly + daily, by sonographer) and "
+        "opens a ready-to-send draft to the assisting sonographers — the same email "
+        "hand-off card the FLEX cycle uses. Leadership is cc'd. Nothing sends automatically."
+    )
+    if st.button("Build assistance email", key="assist_email_build"):
+        try:
+            st.session_state["assist_email_payload"] = assist_report.build_email()
+        except Exception as e:
+            st.error(f"Could not build the assistance report: {e}")
+            st.session_state.pop("assist_email_payload", None)
+    _payload = st.session_state.get("assist_email_payload")
+    if _payload:
+        _subject, _plain, _html = _payload
+        accounting_handoff.render_handoff(
+            _subject, _plain, key_prefix="assist_email",
+            to=assist_report.recipients("to"),
+            cc=assist_report.recipients("cc"),
+            html_body=_html,
+            heading="Weekly Assistance Update",
+        )
 
 st.divider()
 

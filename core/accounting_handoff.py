@@ -52,12 +52,17 @@ def _smtp_config():
 
 
 def _build_message(subject: str, body: str, to: str, sender: str,
-                   attachments: list[tuple[str, bytes]] | None = None) -> EmailMessage:
+                   attachments: list[tuple[str, bytes]] | None = None,
+                   *, cc: str | None = None, html_body: str | None = None) -> EmailMessage:
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"]    = sender
     msg["To"]      = to
+    if cc:
+        msg["Cc"] = cc
     msg.set_content(body)
+    if html_body:
+        msg.add_alternative(html_body, subtype="html")
     for filename, blob in attachments or []:
         ctype, _ = mimetypes.guess_type(filename)
         maintype, subtype = (ctype.split("/", 1) if ctype else ("application", "octet-stream"))
@@ -67,9 +72,10 @@ def _build_message(subject: str, body: str, to: str, sender: str,
 
 def _send_smtp(subject: str, body: str, to: str,
                attachments: list[tuple[str, bytes]] | None,
-               cfg: dict) -> tuple[bool, str]:
+               cfg: dict, *, cc: str | None = None,
+               html_body: str | None = None) -> tuple[bool, str]:
     """Send via SMTP. Returns (ok, info)."""
-    msg = _build_message(subject, body, to, cfg["from"], attachments)
+    msg = _build_message(subject, body, to, cfg["from"], attachments, cc=cc, html_body=html_body)
     try:
         if cfg["port"] == 465:
             ctx = ssl.create_default_context()
@@ -129,7 +135,8 @@ def _body_to_html(body: str) -> str:
 
 
 def _build_eml_bytes(subject: str, body: str, to: str,
-                     attachments: list[tuple[str, bytes]] | None) -> bytes:
+                     attachments: list[tuple[str, bytes]] | None,
+                     *, cc: str | None = None, html_body: str | None = None) -> bytes:
     """Build an .eml file. Omits From/Date/Message-ID so the user's mail client
     fills From from their own account on open. Adds X-Unsent:1 — classic Outlook
     recognizes this and opens the file in compose mode rather than read mode.
@@ -143,9 +150,11 @@ def _build_eml_bytes(subject: str, body: str, to: str,
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["To"]      = to
+    if cc:
+        msg["Cc"] = cc
     msg["X-Unsent"] = "1"
     msg.set_content(body)                                   # text/plain part
-    msg.add_alternative(_body_to_html(body), subtype="html")  # text/html part
+    msg.add_alternative(html_body or _body_to_html(body), subtype="html")  # text/html part
     for filename, blob in attachments or []:
         ctype, _ = mimetypes.guess_type(filename)
         maintype, subtype = (ctype.split("/", 1) if ctype else ("application", "octet-stream"))
@@ -153,8 +162,11 @@ def _build_eml_bytes(subject: str, body: str, to: str,
     return msg.as_bytes()
 
 
-def mailto_link(subject: str, body: str, to: str = TO) -> str:
-    return f"mailto:{to}?subject={quote(subject)}&body={quote(body)}"
+def mailto_link(subject: str, body: str, to: str = TO, cc: str | None = None) -> str:
+    link = f"mailto:{to}?subject={quote(subject)}&body={quote(body)}"
+    if cc:
+        link += f"&cc={quote(cc)}"
+    return link
 
 
 # ── UI: handoff card ──────────────────────────────────────────────────────────
@@ -165,40 +177,62 @@ def render_handoff(
     body: str,
     key_prefix: str = "handoff",
     attachments: list[tuple[str, bytes]] | None = None,
+    *,
+    to=None,
+    cc=None,
+    html_body: str | None = None,
+    heading: str = "Hand off to accounting",
 ):
     """Render the email-draft card. Priority order:
         1. Microsoft Graph (draft in user's own Outlook — user clicks Send there)
         2. SMTP send (auto-send from configured account, with confirm step)
         3. .eml download (universal fallback)
         4. mailto: link (last resort, no attachment)
+
+    `to` / `cc` default to the accounting mailbox; pass a str or list of
+    'Name <email>' to override. `html_body`, when given, is the rich body used
+    for the Graph draft / .eml (the plain `body` stays as the text fallback).
     """
     from core import graph_email  # local import keeps module load-time small
+
+    to = to if to is not None else TO
+    _disp = lambda x: ", ".join(x) if isinstance(x, (list, tuple)) else str(x)
+    to_disp = _disp(to)
+    cc_disp = _disp(cc) if cc else None
+
     with st.container(border=True):
-        st.markdown("### Hand off to accounting")
-        st.caption(f"Sends to **{TO}** with this cycle's numbers + action items pre-filled.")
+        st.markdown(f"### {heading}")
+        _cap = f"Sends to **{to_disp}**"
+        if cc_disp:
+            _cap += f"  ·  cc **{cc_disp}**"
+        st.caption(_cap)
 
         used_path = False
         if graph_email.is_configured():
-            _render_graph_path(subject, body, attachments, key_prefix, graph_email)
+            _render_graph_path(subject, body, attachments, key_prefix, graph_email,
+                               to=to, cc=cc, html_body=html_body)
             used_path = True
 
         cfg = _smtp_config()
         if cfg and not used_path:
-            _render_smtp_path(subject, body, attachments, key_prefix, cfg)
+            _render_smtp_path(subject, body, attachments, key_prefix, cfg,
+                              to_disp=to_disp, cc_disp=cc_disp, html_body=html_body)
             used_path = True
 
         if not used_path:
-            _render_eml_path(subject, body, attachments, key_prefix)
+            _render_eml_path(subject, body, attachments, key_prefix,
+                             to_disp=to_disp, cc_disp=cc_disp, html_body=html_body)
 
         # Preview is always available
         with st.expander(":gray[Preview / copy the full email body]"):
-            st.caption(f"To: {TO}  ·  Subject: {subject}")
+            st.caption(f"To: {to_disp}" + (f"  ·  Cc: {cc_disp}" if cc_disp else "") + f"  ·  Subject: {subject}")
             if attachments:
                 st.caption("Attached: " + ", ".join(f"**{n}** ({len(b):,} bytes)" for n, b in attachments))
             st.code(body, language="text")
 
 
-def _render_graph_path(subject, body, attachments, key_prefix, graph_email):
+def _render_graph_path(subject, body, attachments, key_prefix, graph_email,
+                       *, to=TO, cc=None, html_body=None):
     """Create a draft in the user's own Outlook. User clicks Send in Outlook."""
     if not graph_email.is_connected():
         with st.expander("**First time? Read this before clicking the button below.**", expanded=False):
@@ -266,7 +300,7 @@ def _render_graph_path(subject, body, attachments, key_prefix, graph_email):
     )
     if st.button("Create draft in my Outlook", key=f"{key_prefix}_graph_create"):
         with st.spinner("Creating draft via Microsoft Graph…"):
-            ok, info = graph_email.create_draft(subject, body, TO, attachments)
+            ok, info = graph_email.create_draft(subject, body, to, attachments, cc=cc, html=html_body)
         if ok:
             st.session_state[created_key] = info
             st.rerun()
@@ -274,7 +308,8 @@ def _render_graph_path(subject, body, attachments, key_prefix, graph_email):
             st.error(info)
 
 
-def _render_smtp_path(subject, body, attachments, key_prefix, cfg):
+def _render_smtp_path(subject, body, attachments, key_prefix, cfg,
+                      *, to_disp=TO, cc_disp=None, html_body=None):
     """Two-click send: 'Prepare to send' → 'Confirm send'."""
     confirm_key = f"{key_prefix}_confirm"
     sent_key    = f"{key_prefix}_sent"
@@ -297,7 +332,7 @@ def _render_smtp_path(subject, body, attachments, key_prefix, cfg):
         )
     else:
         st.warning(
-            f"**Ready to send** to {TO}"
+            f"**Ready to send** to {to_disp}"
             + (f" with {len(attachments)} attachment(s)" if attachments else " (no attachments)")
             + ". This will leave your outbox. Confirm below."
         )
@@ -309,7 +344,7 @@ def _render_smtp_path(subject, body, attachments, key_prefix, cfg):
         with col_send:
             if st.button("Confirm — Send now", key=f"{key_prefix}_send",
                          type="primary", use_container_width=True):
-                ok, info = _send_smtp(subject, body, TO, attachments, cfg)
+                ok, info = _send_smtp(subject, body, to_disp, attachments, cfg, cc=cc_disp, html_body=html_body)
                 if ok:
                     st.session_state[sent_key] = info
                     st.session_state.pop(confirm_key, None)
@@ -318,12 +353,13 @@ def _render_smtp_path(subject, body, attachments, key_prefix, cfg):
                     st.error(info)
 
 
-def _render_eml_path(subject, body, attachments, key_prefix):
+def _render_eml_path(subject, body, attachments, key_prefix,
+                     *, to_disp=TO, cc_disp=None, html_body=None):
     """Universal fallback: download a .eml file that opens in any mail client.
     Note: in new Outlook / OWA, .eml typically opens in read-only viewer (Microsoft
     limitation). Set up Microsoft Graph (see docs/AZURE_AD_SETUP.md) for a real
     editable draft in the user's Drafts folder."""
-    eml_bytes = _build_eml_bytes(subject, body, TO, attachments)
+    eml_bytes = _build_eml_bytes(subject, body, to_disp, attachments, cc=cc_disp, html_body=html_body)
     safe_subj = "".join(c if c.isalnum() or c in "-_" else "_" for c in subject)[:60]
     # Reuse the light-green commit-button styling from ui.record_button — the
     # .eml download is the *primary action* in the no-Graph path (it's the
@@ -373,7 +409,7 @@ def _render_eml_path(subject, body, attachments, key_prefix):
             "straight to the editable compose window."
         )
     with st.expander(":gray[Last-resort: mailto link (no attachment)]"):
-        st.link_button("Open mailto link", mailto_link(subject, body))
+        st.link_button("Open mailto link", mailto_link(subject, body, to_disp, cc_disp))
         st.caption(
             "Opens a fresh email in your default mail client with To/Subject/Body filled in. "
             "**Does not carry attachments** — you'd have to attach the file yourself. "

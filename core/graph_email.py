@@ -174,10 +174,17 @@ def get_user_info() -> dict | None:
 def create_draft(
     subject: str,
     body: str,
-    to: str,
+    to,
     attachments: list[tuple[str, bytes]] | None = None,
+    *,
+    cc=None,
+    html: str | None = None,
 ) -> tuple[bool, str]:
     """Create a draft email in the signed-in user's Outlook with attachments.
+
+    `to` / `cc` accept a single 'Name <email>' (or bare email) string, or a list
+    of them. When `html` is provided it becomes the message body (contentType
+    HTML); otherwise `body` is sent as plain text.
 
     Returns (ok, info). On success info is the Outlook webLink to the draft.
     """
@@ -185,13 +192,30 @@ def create_draft(
     if not tok:
         return False, "Not connected to Outlook. Click 'Connect Outlook' first."
     import requests
+    from email.utils import parseaddr
     headers = {"Authorization": f"Bearer {tok}", "Content-Type": "application/json"}
+
+    def _recips(x):
+        items = x if isinstance(x, (list, tuple)) else ([x] if x else [])
+        out = []
+        for a in items:
+            name, addr = parseaddr(str(a))
+            if not addr:
+                continue
+            ea = {"address": addr}
+            if name:
+                ea["name"] = name
+            out.append({"emailAddress": ea})
+        return out
 
     payload = {
         "subject": subject,
-        "body": {"contentType": "Text", "content": body},
-        "toRecipients": [{"emailAddress": {"address": to}}],
+        "body": {"contentType": "HTML" if html else "Text", "content": html or body},
+        "toRecipients": _recips(to),
     }
+    _cc = _recips(cc)
+    if _cc:
+        payload["ccRecipients"] = _cc
 
     # Step 1: create the draft message
     try:
