@@ -61,8 +61,17 @@ def test_table_html_highlights_goal_and_blanks_zero():
     assert ">30<" in html          # below goal, plain
     assert ">60<" in html          # at/above goal, present
     assert ">0<" not in html       # zero renders as an empty cell
-    assert ar._OLIVE_BG in html    # goal-met highlight fill present
-    assert ar._TEAL_BG in html     # teal header present
+    assert ar._GOAL_BG in html     # goal-met highlight fill present
+    assert ar._HEAD_BG in html     # teal header present
+
+
+def test_regular_cells_transparent_only_goal_and_header_filled():
+    # A plain (below-goal) cell carries no background fill at all.
+    plain = ar._cell("30")
+    assert "bgcolor" not in plain and "background:" not in plain
+    # Goal + header cells DO carry a fill.
+    assert f'bgcolor="{ar._GOAL_BG}"' in ar._cell(60, ar._GOAL_BG, ar._GOAL_TX, bold=True)
+    assert f'bgcolor="{ar._HEAD_BG}"' in ar._cell("Becky Tiner", ar._HEAD_BG, ar._HEAD_TX, bold=True)
 
 
 def test_eml_supports_cc_and_html_body():

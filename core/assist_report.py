@@ -146,34 +146,36 @@ def _rows(counts: dict, today: dt.date):
     return wk, dy
 
 
-# Dark-theme palette (inline styles + bgcolor attrs for Outlook's Word engine):
-# charcoal body + light text, teal header, olive goal-met highlight.
-_DARK_BG = "#1f1f1f"
-_LIGHT_TX = "#f0f0f0"
-_TEAL_BG = "#5f93a3"
-_TEAL_TX = "#0e2a33"
-_OLIVE_BG = "#74771e"
-_OLIVE_TX = "#141400"
-_BORDER = "#333333"
+# Transparent cells with dark text (renders on any email background); only the
+# header names and goal-met (>= goal) cells carry a fill.
+_HEAD_BG = "#5f93a3"   # teal header band (the names)
+_HEAD_TX = "#0e2a33"
+_GOAL_BG = "#f5e04d"   # yellow highlight for >= goal
+_GOAL_TX = "#3a3300"
+_TX = "#333333"        # regular numbers
+_LBL_TX = "#1f2733"    # row labels (dates)
+_BORDER = "#d9dde3"
 _FONT = "font-family:Calibri,Arial,sans-serif"
 
 
-def _cell(content, bg: str, tx: str, align: str = "center", bold: bool = False) -> str:
-    return (f'<td bgcolor="{bg}" style="background:{bg};color:{tx};'
-            f'font-weight:{"700" if bold else "400"};padding:6px 11px;text-align:{align};'
-            f'white-space:nowrap;border:1px solid {_BORDER};{_FONT};font-size:11px">{content}</td>')
+def _cell(content, bg: str | None = None, tx: str = _TX, align: str = "center", bold: bool = False) -> str:
+    fill = f'bgcolor="{bg}" ' if bg else ""
+    bgs = f"background:{bg};" if bg else ""            # omit entirely -> transparent
+    return (f'<td {fill}style="{bgs}color:{tx};font-weight:{"700" if bold else "400"};'
+            f'padding:6px 11px;text-align:{align};white-space:nowrap;border:1px solid {_BORDER};'
+            f'{_FONT};font-size:11px">{content}</td>')
 
 
 def _bar(text: str, size: int, ncol: int) -> str:
-    return (f'<tr><td colspan="{ncol}" bgcolor="{_DARK_BG}" style="background:{_DARK_BG};'
-            f'color:#ffffff;font-weight:700;text-align:center;padding:7px 11px;'
-            f'border:1px solid {_BORDER};{_FONT};font-size:{size}px">{text}</td></tr>')
+    # Transparent title/subtitle band — centered dark text, no fill or border.
+    return (f'<tr><td colspan="{ncol}" style="color:{_LBL_TX};font-weight:700;text-align:center;'
+            f'padding:7px 11px;{_FONT};font-size:{size}px">{text}</td></tr>')
 
 
 def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
     ncol = len(SONOGRAPHERS) + 1
-    header = ("<tr>" + _cell("Assist Count", _TEAL_BG, _TEAL_TX, "left", True)
-              + "".join(_cell(_html.escape(s), _TEAL_BG, _TEAL_TX, "center", True) for s in SONOGRAPHERS)
+    header = ("<tr>" + _cell("Assist Count", _HEAD_BG, _HEAD_TX, "left", True)
+              + "".join(_cell(_html.escape(s), _HEAD_BG, _HEAD_TX, "center", True) for s in SONOGRAPHERS)
               + "</tr>")
     body = ""
     for label, counts in rows:
@@ -181,10 +183,10 @@ def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
         for s in SONOGRAPHERS:
             v = counts.get(s)
             if goal is not None and isinstance(v, int) and v >= goal:
-                cells += _cell(v, _OLIVE_BG, _OLIVE_TX, "center", True)
+                cells += _cell(v, _GOAL_BG, _GOAL_TX, "center", True)   # highlighted
             else:
-                cells += _cell(v or "", _DARK_BG, _LIGHT_TX)
-        body += "<tr>" + _cell(_html.escape(label), _DARK_BG, _LIGHT_TX, "left", True) + cells + "</tr>"
+                cells += _cell(v or "")                                # transparent
+        body += "<tr>" + _cell(_html.escape(label), None, _LBL_TX, "left", True) + cells + "</tr>"
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
