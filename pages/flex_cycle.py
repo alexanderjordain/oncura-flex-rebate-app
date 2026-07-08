@@ -14,9 +14,9 @@ import pandas as pd
 import streamlit as st
 
 from core import (
-    accounting_handoff, audit, auth, errors, flex_credits, flex_finance,
-    flex_overage, flex_unused, ledger, loaders, opd_adapter, opd_api, saasant,
-    store, ui,
+    accounting_handoff, audit, auth, errors, flex_closeout, flex_credits,
+    flex_finance, flex_overage, flex_unused, ledger, loaders, opd_adapter,
+    opd_api, saasant, store, ui,
 )
 
 
@@ -42,11 +42,12 @@ ui.header("Payment Cycle",
 flex = loaders.flex_master()
 flex_clinics = flex.get("clinics", [])
 
-tab_overview, tab_remit, tab_credits, tab_recap = st.tabs([
+tab_overview, tab_remit, tab_credits, tab_recap, tab_closeout = st.tabs([
     "Overview",
     "1. Finance Payment Imports",
     "2. Monthly Credit Memos",
     "3. Unused / Overage",
+    "4. Closeout",
 ])
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -571,6 +572,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 contract_id_col=ga_contract_col,
                 payment_date=pay_date, invoice_date=inv_date, start_invoice_no=start_inv,
                 name_map=nm, contract_qb_map=contract_qb_map, split=split,
+                payment_splits=(loaders.config().get("flex", {}) or {}).get("payment_splits", {}),
             )
 
             # ── Row-level dedup against the processed-payments ledger ──────────────
@@ -1589,6 +1591,17 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     if pipe:
         recap_included = [r for r in pipe["recap"] if not r.get("excluded_no_payments")]
         recap_excluded = [r for r in pipe["recap"] if r.get("excluded_no_payments")]
+        # Feed Stage 4 (Closeout): the clinics with an overage this quarter (whose OPD
+        # invoice must be flipped to PAST DUE), plus the group credit-spread moves.
+        SS["closeout_overage_clinics"] = sorted(
+            (r.get("qb_name") or r.get("clinic_name"))
+            for r in recap_included if (r.get("overage") or 0) > 0
+        )
+        SS["closeout_group_spread"] = [
+            {"amount": m["amount"], "from": m["from_clinic"], "to": m["to_clinic"]}
+            for m in flex_overage.group_overage_spread(recap_included)
+            if m.get("from_clinic")
+        ]
     else:
         recap_included, recap_excluded = [], []
     udf = pd.DataFrame()
@@ -2595,3 +2608,17 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
             st.rerun()
     else:
         nav_n.markdown("**Done ✓**")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 4 — CLOSEOUT: the manual QBO/OPD steps to finish the quarter (a guide).
+# Stage 3 produces the unused/overage numbers; Stage 4 tells the operator exactly
+# what to do with them (tie-up, past-due overages, group credit-spread, exceptions).
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_closeout, safe_stage("Stage 4 — Closeout"):
+    flex_closeout.render_closeout(
+        flex_clinics,
+        loaders.config(),
+        overage_clinics=SS.get("closeout_overage_clinics"),
+        group_spread=SS.get("closeout_group_spread"),
+    )

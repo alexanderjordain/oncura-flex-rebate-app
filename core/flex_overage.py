@@ -220,3 +220,105 @@ def build_partner_submission(annotated_rows: list[dict], recap_year: int, recap_
             "Net Overage to Submit": round(float(r["net_overage"]), 2),
         })
     return pd.DataFrame(out)
+
+
+def group_overage_spread(recap_rows: list[dict]) -> list[dict]:
+    """Propose how to SPREAD (smooth) a multi-clinic FLEX group's overages
+    across its own members using each member's unused credit (SOP-13/14).
+
+    Contractual rule (Tanya meetings, esp. the PR-vets group): an overage is a
+    GROUP obligation, not the bill of the single clinic that happened to exceed
+    its own threshold. Within a `group_id`, an over-utilizing member (overage>0)
+    is covered first by the unused credit sitting on its under-utilizing siblings
+    (unused>0) before anything is billed. Only clinics that share a `group_id`
+    pool together; independent clinics (no `group_id`) are never touched.
+
+    Algorithm (per group):
+      1. donors    = members with unused>0, sorted by qb_name (deterministic).
+      2. recipients = members with overage>0, sorted by qb_name.
+      3. Greedily walk recipients; for each, pull credit from donors in order,
+         moving min(remaining_donor_unused, remaining_recipient_overage) at each
+         step until the recipient is covered or donors are exhausted.
+      4. Any recipient overage still uncovered after donors run dry is GROUP-level
+         real overage that must still be billed — surfaced as a residual row.
+
+    Returns an audit-friendly, deterministic list of move dicts. Two shapes,
+    both sharing the same keys:
+
+      inter-member credit move
+        {"group": group_id, "from_clinic": donor_qb_name,
+         "to_clinic": recipient_qb_name, "amount": round(x, 2),
+         "reason": "spread group overage per contract"}
+
+      residual (group's total overage exceeded its total unused)
+        {"group": group_id, "from_clinic": None,
+         "to_clinic": recipient_qb_name, "amount": round(residual, 2),
+         "reason": "residual group overage to bill"}
+        One residual row per still-uncovered recipient (in qb_name order), so
+        the unmet need is attributed to the specific clinics that generated it
+        and the residual amounts sum to (total overage - total unused) for the
+        group. Groups whose unused fully covers overage produce no residual row.
+
+    This is a PROPOSED spread for operator review — an audit trail of who would
+    fund whom — NOT an automatic QBO write. Rows with no `group_id` are ignored.
+    Amounts are rounded to cents and the output order is deterministic (groups
+    by group_id, then recipients/donors by qb_name).
+    """
+    # Bucket rows by group_id, ignoring independents (no group_id).
+    groups: dict = {}
+    for r in recap_rows or []:
+        gid = r.get("group_id")
+        if not gid:
+            continue
+        groups.setdefault(gid, []).append(r)
+
+    def _qb(row) -> str:
+        return (row.get("qb_name") or row.get("clinic_name") or "")
+
+    moves: list[dict] = []
+    for gid in sorted(groups.keys(), key=lambda g: str(g)):
+        members = groups[gid]
+        donors = sorted(
+            (m for m in members if float(m.get("unused") or 0.0) > 0),
+            key=lambda m: _qb(m).lower(),
+        )
+        recipients = sorted(
+            (m for m in members if float(m.get("overage") or 0.0) > 0),
+            key=lambda m: _qb(m).lower(),
+        )
+        # Mutable remaining balances keyed by identity (allows dup qb_names safely).
+        donor_left = {id(d): round(float(d.get("unused") or 0.0), 2) for d in donors}
+        di = 0
+        for rec in recipients:
+            need = round(float(rec.get("overage") or 0.0), 2)
+            rec_qb = _qb(rec)
+            # Pull from donors in deterministic order until covered or dry.
+            while need > 0 and di < len(donors):
+                donor = donors[di]
+                avail = donor_left[id(donor)]
+                if avail <= 0:
+                    di += 1
+                    continue
+                amt = round(min(avail, need), 2)
+                if amt > 0:
+                    moves.append({
+                        "group": gid,
+                        "from_clinic": _qb(donor),
+                        "to_clinic": rec_qb,
+                        "amount": amt,
+                        "reason": "spread group overage per contract",
+                    })
+                donor_left[id(donor)] = round(avail - amt, 2)
+                need = round(need - amt, 2)
+                if donor_left[id(donor)] <= 0:
+                    di += 1
+            # Whatever this recipient still needs is real group overage to bill.
+            if need > 0:
+                moves.append({
+                    "group": gid,
+                    "from_clinic": None,
+                    "to_clinic": rec_qb,
+                    "amount": round(need, 2),
+                    "reason": "residual group overage to bill",
+                })
+    return moves

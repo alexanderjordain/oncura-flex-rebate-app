@@ -307,6 +307,7 @@ def process_remittance(
     name_map: dict,
     contract_qb_map: dict | None = None,
     split: str = "by_cents",
+    payment_splits: dict | None = None,
 ):
     """Turn a remittance into SaasAnt imports.
 
@@ -316,6 +317,15 @@ def process_remittance(
       so when this map is provided and the row's contract matches, we use the
       mapped QB name directly. Falls through to name-based ``translate_name``
       when no contract match is found.
+    payment_splits: optional ``{incoming_qb_customer: [{"qb_customer": str,
+      "amount": float}, ...]}``. Some finance companies wire ONE combined payment
+      that actually covers two clinics on a shared contract (e.g. River Trail:
+      GreatAmerica pays both Tulsa + Memorial under one ContractID, resolving to a
+      single QB customer). When a resolved row's ``_qb_customer`` matches a key
+      here AND its amount equals the sum of the part amounts (within 1 cent), the
+      row is fanned out into one row per part so each clinic gets its own payment
+      and credit memo. Rows that don't match — or whose amount doesn't equal the
+      split total — pass through unchanged.
     Returns dict: flex_payments, scan_invoices, scan_payments (DataFrames), plus summary + unmapped.
     Original columns are preserved; SaasAnt columns are appended.
     """
@@ -396,6 +406,32 @@ def process_remittance(
         kinds = ["scan" if is_whole_dollar(a) else "flex" for a in amounts]
     work["_kind"] = kinds
     work["_amount"] = amounts.round(2)
+
+    # Payment split: fan a single combined payment out into one row per clinic
+    # when the resolved QB customer is a split key AND the row amount equals the
+    # sum of that key's part amounts (within 1 cent). River Trail is the live
+    # case: GreatAmerica wires ONE payment under a shared ContractID that resolves
+    # to a single QB customer but actually covers two clinics. We copy the source
+    # row per part (preserving contract/id columns so Ref No generation still
+    # produces unique refs via the -2 dedup suffix), overriding only _qb_customer
+    # and _amount. Non-matching rows pass through untouched.
+    if payment_splits:
+        pieces = []
+        for i in range(len(work)):
+            row = work.iloc[[i]]
+            key = row["_qb_customer"].iloc[0]
+            parts = payment_splits.get(key)
+            if parts and abs(float(row["_amount"].iloc[0])
+                             - sum(float(p["amount"]) for p in parts)) <= 0.01:
+                for p in parts:
+                    part_row = row.copy()
+                    part_row["_qb_customer"] = p["qb_customer"]
+                    part_row["_amount"] = round(float(p["amount"]), 2)
+                    pieces.append(part_row)
+            else:
+                pieces.append(row)
+        if pieces:
+            work = pd.concat(pieces, ignore_index=True)
 
     meta = COMPANY_META.get(company, {"flex_label": f"Flex{company}", "scan_label": f"{company}Scan"})
     flex = work[work["_kind"] == "flex"].reset_index(drop=True)
