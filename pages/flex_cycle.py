@@ -1591,12 +1591,9 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     if pipe:
         recap_included = [r for r in pipe["recap"] if not r.get("excluded_no_payments")]
         recap_excluded = [r for r in pipe["recap"] if r.get("excluded_no_payments")]
-        # Feed Stage 4 (Closeout): the clinics with an overage this quarter (whose OPD
-        # invoice must be flipped to PAST DUE), plus the group credit-spread moves.
-        SS["closeout_overage_clinics"] = sorted(
-            (r.get("qb_name") or r.get("clinic_name"))
-            for r in recap_included if (r.get("overage") or 0) > 0
-        )
+        # Feed Stage 4 (Closeout): the full per-clinic recap rows (the wizard builds
+        # its worklist from these) + the group credit-spread moves.
+        SS["closeout_recap"] = recap_included
         SS["closeout_group_spread"] = [
             {"amount": m["amount"], "from": m["from_clinic"], "to": m["to_clinic"]}
             for m in flex_overage.group_overage_spread(recap_included)
@@ -2305,22 +2302,23 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 xlsx_bytes = saasant.to_xlsx_bytes(didf, "OverageBilling")
                 fname = f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
 
-                # Email handoff to Tanya — worksheet attached, SOP-6 instructions
-                # AND per-clinic detail (threshold/activity/credit/net) in body so
-                # she can scan totals without opening the attachment.
+                # No email hand-off — download the worksheet; the billing steps
+                # (authorize.net / corporate statement + OPD Past Due) are walked
+                # through in Stage 4 -> Overages.
                 if not didf.empty:
-                    _subj, _body = accounting_handoff.direct_bill_overage_email(
-                        year=rec_year, month=rec_month,
-                        invoice_count=len(didf),
-                        invoice_total=float(direct_total),
-                        clinic_details=didf.to_dict("records"),
+                    st.download_button(
+                        f"Download direct-bill worksheet ({len(didf)} clinic(s))",
+                        data=xlsx_bytes, file_name=fname,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="recap_direct_dl",
                     )
-                    accounting_handoff.render_handoff(
-                        _subj, _body, key_prefix="recap_direct_email",
-                        attachments=[(fname, xlsx_bytes)],
+                    st.caption(
+                        ":gray[Bill these per **Stage 4 -> Overages** — authorize.net for "
+                        "non-corporates, statement/wire for corporates — and flip each "
+                        "clinic's OPD invoice to Past Due.]"
                     )
                 else:
-                    st.info("No direct-bill rows to send.")
+                    st.info("No direct-bill overages this cycle.")
 
                 # Dedup against ledger — flag rows already emitted in prior runs.
                 direct_payments_for_ledger = []
@@ -2344,23 +2342,23 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     already_direct = ledger.check_payments_seen(direct_fps)
                     if already_direct:
                         st.warning(
-                            f"**{len(already_direct)} direct-bill invoice(s) already sent for "
-                            f"this period.** Re-sending tells Tanya to bill these twice — "
-                            f"review the file before sending the email."
+                            f"**{len(already_direct)} direct-bill invoice(s) already billed for "
+                            f"this period.** Re-billing double-charges these clinics — "
+                            f"review the file before you bill again."
                         )
 
                 if not didf.empty:
                     st.divider()
                     st.caption(
-                        ":gray[Initial below **after** you've sent the email above. This logs "
-                        "the send to the audit manifest + dedup ledger.]"
+                        ":gray[Initial below **after** you've billed these (per Stage 4). This "
+                        "logs it to the audit manifest + dedup ledger.]"
                     )
                     ui.persistence_warning()
                     direct_initials = ui.initials_input("stage3_direct_audit_initials")
                 else:
                     direct_initials = ""
                 if not didf.empty and ui.record_button(
-                    f"Record {len(didf)} direct-bill invoice(s) as sent to accounting",
+                    f"Record {len(didf)} direct-bill invoice(s) as billed",
                     key="w_recap_mark_direct",
                     disabled=not direct_initials,
                 ):
@@ -2378,7 +2376,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         params={
                             "route": "direct_bill",
                             "clinic_count": direct_count,
-                            "sent_to": "accounting@oncurapartners.com",
                         },
                         outputs=[{
                             "name": "overage_direct_invoices",
@@ -2386,7 +2383,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "row_count": len(didf),
                             "total": round(float(direct_total), 2),
                         }],
-                        note=f"Direct-bill overages emailed to accounting for {dt.date(2000, rec_month, 1):%B %Y}",
+                        note=f"Direct-bill overages billed for {dt.date(2000, rec_month, 1):%B %Y}",
                     )
                     st.success(
                         f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest "
@@ -2406,22 +2403,21 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                 xlsx_bytes_partner = saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission")
                 fname_partner = f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
 
-                # Email handoff — accounting@oncurapartners.com (Tanya) is the
-                # recipient. Tanya forwards / sends to OnePlace before cutoff.
+                # No email hand-off — download the submission file and send it to
+                # OnePlace before the cutoff (walked through in Stage 4 -> Overages).
                 if not pdf.empty:
-                    _subj, _body = accounting_handoff.partner_submission_email(
-                        year=rec_year, month=rec_month,
-                        clinic_count=partner_count,
-                        total=float(partner_total),
-                        cutoff_date=cutoff,
-                        clinic_details=pdf.to_dict("records"),
+                    st.download_button(
+                        f"Download OnePlace submission ({partner_count} clinic(s))",
+                        data=xlsx_bytes_partner, file_name=fname_partner,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="recap_partner_dl",
                     )
-                    accounting_handoff.render_handoff(
-                        _subj, _body, key_prefix="recap_partner_email",
-                        attachments=[(fname_partner, xlsx_bytes_partner)],
+                    st.caption(
+                        f":gray[Send this to OnePlace before **{cutoff:%b %d, %Y}** "
+                        "(see Stage 4 -> Overages).]"
                     )
                 else:
-                    st.info("No partner-submission rows to send.")
+                    st.info("No partner-submission overages this cycle.")
 
                 # Dedup against ledger. build_partner_submission() owns the
                 # column schema — hardcode the column names instead of probing.
@@ -2452,22 +2448,22 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     if already_partner:
                         st.warning(
                             f"**{len(already_partner)} partner submission(s) already sent for "
-                            f"this period.** Re-sending tells Tanya to forward these to OnePlace "
-                            f"twice — review before sending the email."
+                            f"this period.** Re-sending forwards these to OnePlace twice — "
+                            f"review before you send again."
                         )
 
                 if not pdf.empty:
                     st.divider()
                     st.caption(
-                        ":gray[Initial below **after** you've sent the email above. This logs "
-                        "the send to the audit manifest + dedup ledger.]"
+                        ":gray[Initial below **after** you've sent this to OnePlace (per Stage 4). "
+                        "This logs it to the audit manifest + dedup ledger.]"
                     )
                     ui.persistence_warning()
                     partner_initials = ui.initials_input("stage3_partner_audit_initials")
                 else:
                     partner_initials = ""
                 if not pdf.empty and ui.record_button(
-                    f"Record {len(pdf)} partner-submission row(s) as sent to accounting",
+                    f"Record {len(pdf)} partner-submission row(s) as sent to OnePlace",
                     key="w_recap_mark_partner",
                     disabled=not partner_initials,
                 ):
@@ -2487,7 +2483,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "partner": "OnePlace",
                             "cutoff": cutoff.isoformat(),
                             "clinic_count": partner_count,
-                            "sent_to": "accounting@oncurapartners.com",
                         },
                         outputs=[{
                             "name": "oneplace_overage_submission",
@@ -2495,7 +2490,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                             "row_count": len(pdf),
                             "total": round(float(partner_total), 2),
                         }],
-                        note=f"OnePlace partner submission emailed to accounting for {dt.date(2000, rec_month, 1):%B %Y}",
+                        note=f"OnePlace partner submission sent for {dt.date(2000, rec_month, 1):%B %Y}",
                     )
                     st.success(
                         f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest "
@@ -2616,9 +2611,42 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 # what to do with them (tie-up, past-due overages, group credit-spread, exceptions).
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_closeout, safe_stage("Stage 4 — Closeout"):
-    flex_closeout.render_closeout(
-        flex_clinics,
-        loaders.config(),
-        overage_clinics=SS.get("closeout_overage_clinics"),
-        group_spread=SS.get("closeout_group_spread"),
+    st.subheader("Stage 4 — Closeout")
+    st.caption(
+        "Walks you through the manual QBO closeout for the clinics Stage 3 just closed. "
+        "OPD marks FLEX invoices paid automatically — you only tie up QBO, flip the overage "
+        "clinics to Past Due, and settle the group / corporate billing."
     )
+    _recap = SS.get("closeout_recap")
+    if not _recap:
+        st.info(
+            "Run **Stage 3 (Unused / Overage)** first — Stage 4 walks you through closing "
+            "out the clinics it flags.",
+            icon=":material/info:",
+        )
+    else:
+        _worklist = flex_closeout.build_worklist(
+            flex_clinics, _recap, SS.get("closeout_group_spread"))
+        SS.setdefault("closeout_step", 0)
+        SS["closeout_step"] = max(0, min(SS["closeout_step"], len(flex_closeout.STEPS) - 1))
+        _skey, _slabel = flex_closeout.STEPS[SS["closeout_step"]]
+        st.markdown(f"**Step {SS['closeout_step'] + 1} of {len(flex_closeout.STEPS)} — {_slabel}**")
+        st.progress((SS["closeout_step"] + 1) / len(flex_closeout.STEPS))
+        st.caption(" · ".join(
+            (f"**{lbl}**" if i == SS["closeout_step"] else lbl)
+            for i, (_, lbl) in enumerate(flex_closeout.STEPS)
+        ))
+        st.divider()
+        flex_closeout.render_step(_skey, _worklist)
+        st.divider()
+        _cb, _csp, _cn = st.columns([1, 4, 1])
+        if SS["closeout_step"] > 0:
+            if _cb.button("← Back", key="closeout_back", use_container_width=True):
+                SS["closeout_step"] -= 1
+                st.rerun()
+        if SS["closeout_step"] < len(flex_closeout.STEPS) - 1:
+            if _cn.button("Next →", key="closeout_next", type="primary", use_container_width=True):
+                SS["closeout_step"] += 1
+                st.rerun()
+        else:
+            _cn.markdown("**Done ✓**")

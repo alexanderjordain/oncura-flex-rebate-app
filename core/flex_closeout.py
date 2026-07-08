@@ -1,23 +1,42 @@
-"""FLEX Stage 4 — Closeout operator guide.
+"""FLEX Stage 4 — Closeout WIZARD content module.
 
 Stages 1-3 of the Payment Cycle produce SaasAnt files and numbers; they do NOT
-touch QuickBooks Online (QBO) or OPD directly. Stage 4 is the *guide* that tells
-the operator the manual QBO + OPD steps that finish a quarter after Stages 1-3.
-Going forward we no longer hand these steps off by email — this page replaces
-those instructions (source: the Tanya closeout meetings).
+touch QuickBooks Online (QBO) or OPD directly. Stage 4 is the *wizard* that
+walks the operator through the manual closeout one step at a time, telling them
+exactly WHICH clinics need each action. It replaces the side spreadsheet Tanya
+used to keep.
+
+Scope note (important): OPD now auto-defaults FLEX clinic invoices to PAID
+(built by Lawrence). So the wizard NEVER tells the operator to mark invoices
+paid, lock clinics out, or disable OPD payment. The only OPD action left is
+flipping the OVERAGE clinics' invoices to PAST DUE — because those clinics still
+owe the overage. Everything else is QBO + billing.
 
 Design:
-  - The long prose lives in module-level string builders (functions that return
-    markdown) so they're testable without a Streamlit runtime.
-  - `render_closeout(...)` draws the whole Stage 4 UI with streamlit.
+  - `build_worklist(...)` assembles a per-clinic worklist dict from the Stage-3
+    recap rows. Pure — testable without a Streamlit runtime.
+  - `render_step(step_key, worklist)` draws one wizard step with streamlit.
+  - `STEPS` names the four steps, in order.
   - Two small pure helpers (`group_members`, `corporate_clinics`) slice the
-    flex_master clinic list for the group-specific and corporate sections.
+    flex_master clinic list.
 
 No emojis anywhere — Material Symbols only, written as ":material/<name>:".
 """
 from __future__ import annotations
 
 import streamlit as st
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STEPS — the wizard's ordered steps. (key, label). Consumed by the caller.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+STEPS = [
+    ("clinics",  "Closing clinics"),
+    ("tieup",    "QBO tie-up"),
+    ("overages", "Overages: Past Due + bill"),
+    ("groups",   "Group credit-spread"),
+]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -53,275 +72,307 @@ def corporate_clinics(flex_clinics) -> list[str]:
     return out
 
 
-def _members_for(flex_clinics, group_id: str) -> list[str]:
-    """Convenience: members of one group, empty list if the group is absent."""
-    return group_members(flex_clinics).get(group_id, [])
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
-# CONTENT BUILDERS — return markdown strings (testable without streamlit)
+# WORKLIST — assemble the per-clinic picture from the Stage-3 recap rows.
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def intro_md() -> str:
-    """Stage 4 framing: what it is, scope, and the ~2-day expectation."""
-    return (
-        "**Stage 4 is the manual QBO + OPD work that finishes a quarter** after "
-        "Stages 1-3 have generated their files and numbers. Stages 1-3 do not "
-        "perform any QBO or OPD action for you — this page is the checklist and "
-        "reference for the hands-on tie-up.\n\n"
-        "Work **only the clinics whose quarter closed this month** — take that "
-        "list from the Stage 3 (Unused / Overage) report. Every account differs, "
-        "and a full tie-up can take roughly **two days**. Nothing below is "
-        "automated; the app does not touch QBO or OPD on your behalf."
-    )
+def build_worklist(flex_clinics, recap_rows, group_spread=None) -> dict:
+    """Turn Stage-3 recap rows into a per-clinic closeout worklist.
 
+    `recap_rows` are the rows returned by `core.flex_unused.compute_recapture`
+    for the clinics whose quarter closed this run. `group_spread` is a list of
+    credit-move dicts, e.g. {"amount": 123.45, "from": "Clinic A", "to": "Clinic B"}.
 
-def qbo_tieup_md() -> str:
-    """The core per-clinic QBO Receive-Payment tie-up, done at quarter-end."""
-    return (
-        "The core step, run **per clinic, only at the quarter-end tie-up**:\n\n"
-        "1. **Roll the tracker to the new quarter.** Color the closing quarter — "
-        "**blue = unused**, **green = overage** — so the state is visible at a glance.\n"
-        "2. **Confirm the expected item exists in QBO** for this clinic: either the "
-        "`Unused-Flex-Credits` invoice (unused quarter) or the overage.\n"
-        "3. **Receive Payment** with the **date = the last day of the quarter month**.\n"
-        "4. **Apply this quarter's lines:** the finance-company payment(s) + the credit "
-        "memo(s) + the unused invoice. **Every applied line must have \"FLEX\" in the "
-        "name** — never \"merchant services\", never blank. A blank or mis-labeled line "
-        "is the usual cause of a non-zero balance; relabel it or investigate before moving on.\n"
-        "5. **Verify the balance nets to $0.** QBO will pull in stray old credits and "
-        "payments — prior quarters, December entries, stray journal entries. **Un-apply "
-        "anything that isn't this quarter's FLEX.** If a journal entry (from Mike or "
-        "Jennifer) blocks the zero, **leave it off and flag Jennifer** — do not force it.\n"
-        "6. **In OPD, mark this quarter's FLEX invoices PAID** and add your initials in "
-        "the memo. The initials signal \"Accounting processed this through the program; "
-        "the clinic did not pay it.\""
-    )
+    Each clinic entry is:
+        {qb_name, group, finance_company, threshold, activity, payments,
+         unused, overage, outcome, past_due, is_corporate}
+    where
+        outcome     = "overage" if overage>0 else "unused" if unused>0 else "zero"
+        past_due    = overage > 0   (this clinic's OPD invoice must go Past Due)
+        is_corporate= qb_name is a corporate / direct-pay (CityVet) clinic
 
-
-def overage_md(overage_clinics=None) -> str:
-    """Overage handling: mark Past Due in OPD, bill outside OPD.
-
-    When `overage_clinics` is provided, the returned markdown names them
-    explicitly as the clinics to flip to Past Due; otherwise it points the
-    operator at the Stage 3 overage list.
+    Returns:
+        {
+          "clinics":        [clinic dict, ...]        # every closing clinic
+          "overage_clinics":[clinic dict, ...]        # rows where overage > 0
+          "group_moves":    group_spread or []
+          "corporate":      [clinic dict, ...]        # rows where is_corporate
+          "counts":         {"total","unused","overage","zero"}
+        }
     """
-    if overage_clinics:
-        listed = "\n".join(f"- {c}" for c in overage_clinics)
-        which = (
-            "**Mark these clinics' OPD invoices Past Due** (this quarter's overages, "
-            "from Stage 3):\n\n" + listed + "\n\n"
-        )
-    else:
-        which = (
-            "Run Stage 3 to populate the specific list — then flip **each overage "
-            "clinic's** OPD invoice to Past Due. (No overage list was passed in, so use "
-            "the Stage 3 overage report as the source of which clinics to mark.)\n\n"
-        )
-    return (
-        "All FLEX OPD invoices now **default to Paid**. Your job is to flip the "
-        "**overage clinics'** invoices to **Past Due** in OPD.\n\n"
-        + which +
-        "**Overages are NOT billed through OPD.** How to bill them:\n\n"
-        "- **Non-corporate overages → authorize.net** (cleanest path).\n"
-        "- **If QBO must be used**, make a dummy invoice labeled **\"Telemedicine "
-        "Overage\"** and **VOID it after payment** — QBO's QR code otherwise "
-        "double-counts the payment.\n"
-        "- **OnePlace overages** are submitted to the partner **by the cutoff (the 5th)**. "
-        "OnePlace charges no fees, which is why we still route through them.\n\n"
-        "**Keep the overage invoice OPEN / Past Due in OPD until the clinic pays.** The "
-        "clinic verifies its OPD balance against the invoice to the penny before paying, "
-        "so change nothing on it until it's paid — then mark it paid.\n\n"
-        "**Avoid double-payment:** keep **only** the overage invoice open and mark every "
-        "OTHER OPD invoice paid so nothing else can be paid. If a clinic pays via OPD "
-        "\"merchant services\", apply it to the **oldest open overage invoice**. For "
-        "auto-pay clinics, **preemptively close the non-overage OPD invoices**.\n\n"
-        "_Note: authorize.net access is currently Tanya-only._"
-    )
+    corp_names = {n.lower() for n in corporate_clinics(flex_clinics)}
 
+    clinics: list[dict] = []
+    for r in recap_rows or []:
+        qb_name = r.get("qb_name") or r.get("clinic_name") or ""
+        unused = round(float(r.get("unused") or 0.0), 2)
+        overage = round(float(r.get("overage") or 0.0), 2)
+        if overage > 0:
+            outcome = "overage"
+        elif unused > 0:
+            outcome = "unused"
+        else:
+            outcome = "zero"
+        clinics.append({
+            "qb_name": qb_name,
+            "group": r.get("group_id"),
+            "finance_company": r.get("finance_company"),
+            "threshold": round(float(r.get("quarterly_threshold") or 0.0), 2),
+            "activity": round(float(r.get("quarter_activity") or 0.0), 2),
+            "payments": r.get("payments_in_quarter"),
+            "unused": unused,
+            "overage": overage,
+            "outcome": outcome,
+            "past_due": overage > 0,
+            "is_corporate": qb_name.lower() in corp_names,
+        })
 
-def groups_md(flex_clinics, group_spread=None) -> str:
-    """Multi-clinic group spread rule + the three known groups.
-
-    When `group_spread` (a list of credit-move dicts) is provided, the moves are
-    rendered as an explicit "move $X credit from A to B" list; otherwise the
-    manual method is described.
-    """
-    mohnacky = _members_for(flex_clinics, "mohnacky")
-    pr_vets = _members_for(flex_clinics, "pr-vets")
-    river_trail = _members_for(flex_clinics, "river-trail")
-
-    def _fmt(members: list[str]) -> str:
-        return ", ".join(members) if members else "(no members found in the FLEX master)"
-
-    if group_spread:
-        rows = []
-        for m in group_spread:
-            amt = m.get("amount")
-            frm = m.get("from") or m.get("from_clinic") or "?"
-            to = m.get("to") or m.get("to_clinic") or "?"
-            try:
-                amt_str = f"${float(amt):,.2f}"
-            except (TypeError, ValueError):
-                amt_str = f"${amt}"
-            rows.append(f"- Move **{amt_str}** credit from **{frm}** → **{to}**")
-        spread_block = (
-            "**This quarter's documented credit moves** (audit-friendly — spread via "
-            "CREDITS ONLY, not payments):\n\n" + "\n".join(rows) + "\n\n"
-        )
-    else:
-        spread_block = (
-            "No spread moves were passed in — do it manually: within each group, move "
-            "overage from the **over-utilizing** clinics to the **under-utilizing** ones "
-            "using **credits only** (never payments), and clear the group's OPD invoices "
-            "monthly so they never pay. Document each move for the audit trail.\n\n"
-        )
-
-    return (
-        "**Rule:** overages must be spread **ACROSS a group's clinics using CREDITS "
-        "ONLY** (not payments) — move overage from over-utilizing clinics to "
-        "under-utilizing ones, and clear the group's OPD invoices monthly so they never "
-        "pay.\n\n"
-        + spread_block +
-        "**Mohnacky group** — members: " + _fmt(mohnacky) + ".\n"
-        "  Total group hurdle is **$6,000**; the contract is on **Carlsbad only** (FLEX "
-        "is collected only on Carlsbad). Vista and Escondido scan packages have expired. "
-        "This is the **most complicated account** — walk the contact invoice-by-invoice, "
-        "**ACH only** (no checks), and **never auto-pull** from their account.\n\n"
-        "**PR-vets group** — members: " + _fmt(pr_vets) + ".\n"
-        "  Each clinic pays its own FLEX, but overages **MUST be spread across the group** "
-        "(contractual). They are **Spanish-speaking** — send invoices to **billing**, not "
-        "the admin email. **NEVER let them pay on OPD** (they are notorious for paying).\n\n"
-        "**River Trail group** — members: " + _fmt(river_trail) + ".\n"
-        "  Tulsa + Memorial arrive as **one GA payment**; split it **Tulsa 921.84 / "
-        "Memorial 921.83**, with credit memos **978.16 / 978.17**. A **penny-exact OPD "
-        "match** is demanded."
-    )
-
-
-def corporate_md(flex_clinics) -> str:
-    """Corporate / direct-pay clinics (CityVet + Preston Forest)."""
-    corp = corporate_clinics(flex_clinics)
-    corp_list = ", ".join(corp) if corp else "(no CityVet clinics found in the FLEX master)"
-    return (
-        "**Corporate / direct-pay clinics do NOT pay through OPD.** These are the "
-        "**CityVet** clinics (" + corp_list + ") and **Preston Forest**.\n\n"
-        "Their billing manager emails at the **start of the month** requesting the last "
-        "**~3 months of OPD statements** for all their clinics. You pull each account's "
-        "**Statements**, send them, and they **wire the payments together**.\n\n"
-        "_Mark: confirm CityVet's exact process with Tanya._"
-    )
-
-
-def get_off_opd_md() -> str:
-    """The plan to make FLEX clinics view-only in OPD (Lawrence to build)."""
-    return (
-        "**Plan (Lawrence to build):** disable FLEX clinics' ability to pay in OPD "
-        "(make them **view-only**), which also stops autopay. **Re-enable** a clinic "
-        "when it leaves FLEX, and **record that as a note in the QBO customer's Notes.**\n\n"
-        "An account with **3 open invoices (even $0) auto-locks** — clean up phantom $0 "
-        "invoices so a clinic doesn't lock unexpectedly.\n\n"
-        "If a clinic **won't pay its overage, lock it.**"
-    )
-
-
-def policies_md() -> str:
-    """Standing policies + the recurring per-clinic exceptions."""
-    return (
-        "**Standing policies**\n\n"
-        "- **No refunds on FLEX overpayments** — reallocate the money as a **credit**. "
-        "Marty approval required for any exception.\n"
-        "- **Don't issue credit memos to a clinic that dropped off** (Stage 2 already "
-        "skips no-payment clinics).\n"
-        "- **Late finance-partner payments** post to the **month received**.\n"
-        "- **Credits must be added to the OPD account-credit field (top)**, NOT onto an "
-        "existing invoice, so OPD and QBO match. Escalate any clinic that refuses to pay "
-        "until the credit shows on a past invoice.\n\n"
-        "**Recurring per-clinic exceptions**\n\n"
-        "- **Luv-N-Care** runs a one-off OPD-managed program that Tanya continues to manage.\n"
-        "- **South Central** converts to a normal non-FLEX account once its Q10 is installed.\n"
-        "- **Silicon Valley** is upgrading — keep it on FLEX until installed, then remove "
-        "and true up after the finance payoff.\n"
-        "- **Veterinary Cancer Care** — do nothing.\n"
-        "- **Animal Care Experts** — a credit was put on the OPD invoice, not the "
-        "account-credit field; label it **\"OPD credit\"** and email Michelle."
-    )
+    overage_clinics = [c for c in clinics if c["overage"] > 0]
+    corporate = [c for c in clinics if c["is_corporate"]]
+    counts = {
+        "total": len(clinics),
+        "unused": sum(1 for c in clinics if c["outcome"] == "unused"),
+        "overage": sum(1 for c in clinics if c["outcome"] == "overage"),
+        "zero": sum(1 for c in clinics if c["outcome"] == "zero"),
+    }
+    return {
+        "clinics": clinics,
+        "overage_clinics": overage_clinics,
+        "group_moves": group_spread or [],
+        "corporate": corporate,
+        "counts": counts,
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# RENDER
+# RENDER — one wizard step at a time (streamlit).
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def render_closeout(flex_clinics, config, *, overage_clinics=None, group_spread=None):
-    """Draw the Stage 4 — Closeout operator guide.
+def _money(value) -> str:
+    try:
+        return f"${float(value):,.2f}"
+    except (TypeError, ValueError):
+        return f"${value}"
+
+
+def _payments_str(value) -> str:
+    """Human payment count — "-" when the ledger wasn't supplied (None)."""
+    return "-" if value is None else str(value)
+
+
+def _outcome_amount(clinic: dict):
+    """The single dollar figure that matters for a clinic: overage or unused."""
+    if clinic["outcome"] == "overage":
+        return clinic["overage"]
+    if clinic["outcome"] == "unused":
+        return clinic["unused"]
+    return 0.0
+
+
+# outcome -> (label, hex color) matching Tanya's tracker: unused=blue, overage=green.
+_OUTCOME_STYLE = {
+    "unused": ("UNUSED", "#2563eb"),   # blue
+    "overage": ("OVERAGE", "#16a34a"),  # green
+    "zero": ("zero", None),             # plain
+}
+
+
+def _outcome_badge(outcome: str) -> str:
+    """A small colored markdown badge for the outcome (no emoji)."""
+    label, color = _OUTCOME_STYLE.get(outcome, (outcome, None))
+    if color:
+        return f"<span style='color:{color};font-weight:600'>{label}</span>"
+    return f"<span style='color:#6b7280'>{label}</span>"
+
+
+def render_step(step_key: str, worklist: dict) -> None:
+    """Render one Stage-4 wizard step with streamlit.
 
     Args:
-        flex_clinics: list of clinic dicts (from data/flex_master.json "clinics").
-        config: the loaded config.json dict (reserved for future use; the guide
-            reads its content from the module builders, not config).
-        overage_clinics: optional list of qb_names with an overage this quarter —
-            the clinics whose OPD invoice must be marked PAST DUE. Comes from
-            Stage 3. When None, the guide gives generic guidance and points at the
-            Stage 3 report.
-        group_spread: optional list of credit-move dicts, e.g.
-            {"amount": 123.45, "from": "Clinic A", "to": "Clinic B"}. Comes from
-            Stage 3. When None, the guide describes the manual spread method.
+        step_key: one of the keys in STEPS ("clinics", "tieup", "overages",
+            "groups").
+        worklist: the dict returned by build_worklist(...).
     """
-    st.subheader("Stage 4 — Closeout")
+    if step_key == "clinics":
+        _render_clinics(worklist)
+    elif step_key == "tieup":
+        _render_tieup(worklist)
+    elif step_key == "overages":
+        _render_overages(worklist)
+    elif step_key == "groups":
+        _render_groups(worklist)
+    else:
+        st.warning(f"Unknown closeout step: {step_key}")
+
+
+def _render_clinics(worklist: dict) -> None:
+    """The workbook replacement: a scannable picture of every closing clinic."""
+    clinics = worklist.get("clinics", [])
+    counts = worklist.get("counts", {})
+
+    st.subheader("Closing clinics")
+    if not clinics:
+        st.info(
+            ":material/inbox: No clinics closed their quarter this run. "
+            "Nothing to work in Stage 4."
+        )
+        return
+
+    st.markdown(
+        f"**{counts.get('total', 0)} closing** — "
+        f"{counts.get('unused', 0)} unused, "
+        f"{counts.get('overage', 0)} overage, "
+        f"{counts.get('zero', 0)} zero."
+    )
     st.caption(
-        "The manual QBO + OPD steps that finish a quarter after Stages 1-3. "
-        "Replaces the old email hand-off."
+        "The picture that replaces the side tracker. Blue = unused, "
+        "green = overage. No action here — just confirm the list."
     )
-    st.markdown(intro_md())
 
-    # ── Closeout checklist ───────────────────────────────────────────────────
-    st.subheader("Closeout checklist")
+    rows = []
+    for c in clinics:
+        label, _ = _OUTCOME_STYLE.get(c["outcome"], (c["outcome"], None))
+        rows.append({
+            "Clinic": c["qb_name"],
+            "Outcome": label,
+            "Group": c["group"] or "",
+            "Finance co": c["finance_company"] or "",
+            "Threshold": c["threshold"],
+            "Activity": c["activity"],
+            "Payments": _payments_str(c["payments"]),
+            "Unused / Overage": _outcome_amount(c),
+        })
+
+    try:
+        import pandas as pd
+
+        df = pd.DataFrame(rows)
+
+        def _style_outcome(val):
+            style = _OUTCOME_STYLE.get(
+                "unused" if val == "UNUSED"
+                else "overage" if val == "OVERAGE"
+                else "zero"
+            )
+            color = style[1] if style else None
+            return f"color: {color}; font-weight: 600" if color else "color: #6b7280"
+
+        styled = df.style.applymap(_style_outcome, subset=["Outcome"]).format(
+            {"Threshold": "${:,.2f}", "Activity": "${:,.2f}",
+             "Unused / Overage": "${:,.2f}"}
+        )
+        st.dataframe(styled, use_container_width=True, hide_index=True)
+    except Exception:
+        # No pandas / styler — fall back to a clean colored list.
+        for c in clinics:
+            st.markdown(
+                f"- {_outcome_badge(c['outcome'])} &nbsp; **{c['qb_name']}** "
+                f"&nbsp;·&nbsp; threshold {_money(c['threshold'])} "
+                f"&nbsp;·&nbsp; activity {_money(c['activity'])} "
+                f"&nbsp;·&nbsp; {_payments_str(c['payments'])} pmts "
+                f"&nbsp;·&nbsp; {_money(_outcome_amount(c))}",
+                unsafe_allow_html=True,
+            )
+
+
+def _render_tieup(worklist: dict) -> None:
+    """QBO Receive-Payment tie-up, with a per-clinic checkbox tracker."""
+    clinics = worklist.get("clinics", [])
+
+    st.subheader("QBO tie-up")
+    st.markdown(
+        "In QBO, run a **Receive Payment** dated the **last day of the quarter "
+        "month** for each closing clinic. Apply this quarter's lines so the "
+        "account nets to **$0**:\n\n"
+        "- the finance-company payment(s)\n"
+        "- the credit memo(s)\n"
+        "- the `Unused-Flex-Credits` invoice (unused clinics)\n\n"
+        "**Every applied line must say \"FLEX\"** — never \"merchant services\", "
+        "never blank. Overage clinics intentionally leave the overage overdue "
+        "(you bill it in the next step), so they will not net to $0 — that is "
+        "expected."
+    )
+
+    if not clinics:
+        st.info(":material/inbox: No closing clinics to tie up this run.")
+        return
+
+    st.caption("Check each clinic off as you tie it up. Counts shown so you don't need a spreadsheet.")
+    for c in clinics:
+        label, _ = _OUTCOME_STYLE.get(c["outcome"], (c["outcome"], None))
+        target = _money(_outcome_amount(c))
+        kind = "overage (leave overdue)" if c["outcome"] == "overage" else \
+               "unused invoice" if c["outcome"] == "unused" else "nets to $0"
+        st.checkbox(
+            f"{c['qb_name']} — {_payments_str(c['payments'])} pmts · "
+            f"credit-memo/{label.lower()} target {target} · {kind}",
+            key=f"closeout_tieup_{c['qb_name']}",
+        )
+
+
+def _render_overages(worklist: dict) -> None:
+    """Only the overage clinics: flip OPD Past Due + bill outside OPD."""
+    overage_clinics = worklist.get("overage_clinics", [])
+
+    st.subheader("Overages: Past Due + bill")
+    if not overage_clinics:
+        st.success(
+            ":material/check_circle: No overages this quarter — "
+            "nothing to mark Past Due."
+        )
+        return
+
+    st.markdown(
+        "These clinics used **more** than their entitlement, so they still owe "
+        "the overage. For each one: flip its **OPD invoice to PAST DUE** (OPD "
+        "otherwise defaults FLEX invoices to Paid), then **bill the overage "
+        "outside OPD**:\n\n"
+        "- **Non-corporate** → charge via **authorize.net**.\n"
+        "- **Corporate (CityVet)** → **send a statement; the clinic wires** the payment.\n"
+        "- **OnePlace-financed overages** → submit to the partner **by the 5th**."
+    )
+
+    for c in overage_clinics:
+        bill = ("send statement, clinic wires" if c["is_corporate"]
+                else "authorize.net")
+        note = " · OnePlace: submit to partner by the 5th" \
+            if (c.get("finance_company") == "OnePlace") else ""
+        corp = " · CORPORATE" if c["is_corporate"] else ""
+        st.checkbox(
+            f"{c['qb_name']} — overage {_money(c['overage'])} · "
+            f"flip OPD invoice to PAST DUE · bill: {bill}{corp}{note}",
+            key=f"closeout_overage_{c['qb_name']}",
+        )
+
+
+def _render_groups(worklist: dict) -> None:
+    """The audit-friendly group credit-spread table, with per-move checkboxes."""
+    moves = worklist.get("group_moves", [])
+
+    st.subheader("Group credit-spread")
     st.caption(
-        "Work only the clinics whose quarter closed this month (from the Stage 3 report)."
-    )
-    st.checkbox(
-        "Rolled the tracker to the new quarter and colored the closing quarter "
-        "(blue = unused, green = overage)",
-        key="closeout_chk_tracker",
-    )
-    st.checkbox(
-        "QBO tie-up done per clinic — Receive Payment dated the last day of the "
-        "quarter month, every applied line has \"FLEX\" in the name, balance nets to $0",
-        key="closeout_chk_qbo",
-    )
-    st.checkbox(
-        "OPD FLEX invoices for the quarter marked PAID, with operator initials in the memo",
-        key="closeout_chk_opd_paid",
-    )
-    st.checkbox(
-        "Overage clinics' OPD invoices flipped to PAST DUE and billed outside OPD "
-        "(authorize.net / OnePlace by the 5th)",
-        key="closeout_chk_overage",
-    )
-    st.checkbox(
-        "Multi-clinic group overages spread via CREDITS ONLY; group OPD invoices cleared",
-        key="closeout_chk_groups",
-    )
-    st.checkbox(
-        "Corporate / direct-pay statements pulled and sent (CityVet, Preston Forest)",
-        key="closeout_chk_corporate",
+        "Spread group overages across the group's members via CREDITS ONLY "
+        "(never payments), per contract."
     )
 
-    # ── Detail sections ──────────────────────────────────────────────────────
-    with st.expander(":material/account_balance: QBO tie-up — receive payment", expanded=True):
-        st.markdown(qbo_tieup_md())
+    if not moves:
+        st.success(
+            ":material/check_circle: No group credit-spread needed this quarter."
+        )
+        return
 
-    with st.expander(":material/schedule: Overages — mark Past Due, bill outside OPD", expanded=True):
-        st.markdown(overage_md(overage_clinics))
+    # Group the moves by destination clinic for an audit-friendly layout.
+    by_to: dict[str, list[dict]] = {}
+    for m in moves:
+        to = m.get("to") or m.get("to_clinic") or "?"
+        by_to.setdefault(to, []).append(m)
 
-    with st.expander(":material/groups: Multi-clinic groups — spread overages via credits (audit-friendly)"):
-        st.markdown(groups_md(flex_clinics, group_spread))
-
-    with st.expander(":material/corporate_fare: Corporate / direct-pay clinics"):
-        st.markdown(corporate_md(flex_clinics))
-
-    with st.expander(":material/lock: Get clinics off OPD payment"):
-        st.markdown(get_off_opd_md())
-
-    with st.expander(":material/policy: Policies & recurring exceptions"):
-        st.markdown(policies_md())
+    for i, (to, group_moves) in enumerate(by_to.items()):
+        st.markdown(f"**Into {to}**")
+        for j, m in enumerate(group_moves):
+            amt = _money(m.get("amount"))
+            frm = m.get("from") or m.get("from_clinic") or "?"
+            st.checkbox(
+                f"Move {amt} credit from {frm} → {to}",
+                key=f"closeout_group_{i}_{j}_{frm}_{to}",
+            )
