@@ -121,10 +121,32 @@ Can't log in to the live app.
 
 ---
 
+## 8. "Oh no. Error running app." after a reboot — Cloud Python version drifted
+
+**Symptom**
+The whole app shows Streamlit's generic **"Oh no. Error running app."** screen (no sidebar, no login form). Rebooting does not fix it — it comes back up broken every time. Started with no code change on our side.
+
+**Cause**
+Streamlit Community Cloud picks a **default Python version** when one isn't explicitly pinned for the deployment, and that default drifts upward over time (we were silently moved to **Python 3.14** in July 2026). `requirements.txt` pins exact versions for audit reproducibility (`pandas==3.0.1`, `lxml==6.0.2`, …), and those pins have **no pre-built wheels for the newer Python**, so the dependency install fails on every rebuild and the app never starts. Because it's an *environment* problem, not a code problem, a reboot just re-runs the same failing install — hence "keeps going down after reboot," while everything passes locally.
+
+**How to confirm**
+Manage app → open the log panel → the **build/install** log shows something like `ERROR: Could not build wheels for pandas` or `No matching distribution found` — *not* a Python traceback in our own code. (If it's a traceback in `app.py`/`core/*` instead, this isn't your problem — see mode 1.)
+
+**Fix**
+1. Manage app → **Settings** → set **Python version** explicitly to **3.13** (the version `requirements.txt` is validated against — verified locally with `streamlit.testing` AppTest across `app.py` + all pages).
+2. Reboot. The rebuild installs cleanly on 3.13 and the app returns in ~1–2 min. Hard-refresh (Ctrl+Shift+R).
+
+**Prevention**
+- Keep the Python version **pinned in the deployment settings** — never leave it on "Cloud default," or it will drift again on the next platform bump.
+- When you deliberately bump Python (or a pinned dependency), first re-run `python scripts/smoke_test.py` + `python -m pytest tests/` **on that Python version** locally.
+
+---
+
 ## Quick reference — Streamlit Cloud paths
 
 - **Manage app**: lower-right corner of the live URL
 - **Reboot**: Manage app → click reboot button (forces clean rebuild without code change)
 - **Settings → Main file path**: must be `app.py`
+- **Settings → Python version**: pin to **3.13** — do NOT leave on Cloud default (it drifts and breaks the pinned deps; see mode 8)
 - **Settings → Secrets**: `APP_PASSWORD`, `GITHUB_TOKEN`
 - **Auto-redeploy**: triggered automatically on every push to `main`, ~1 minute lag
