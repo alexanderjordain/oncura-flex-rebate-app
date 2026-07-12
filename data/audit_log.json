@@ -1575,6 +1575,49 @@
       ],
       "note": "26 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "b4eb5757ac711aae4c7db9c3769ebd5706eb43fec49b2403722362b79dcc336d"
+    },
+    {
+      "id": "c372a709-f263-46bf-9e5b-03e74f63e424",
+      "timestamp": "2026-07-12T21:15:15",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 7,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-07-01",
+        "applies_to": "",
+        "invoice_date": "2026-07-01",
+        "start_invoice_no": 50048,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "June 2026 Oncura Pass Thru Billing (2).xlsx",
+        "sha256": "8118d0e8518a77677c18b99866df1bc42293a568974549553bd2e179a6ac9e22",
+        "size_bytes": 32849
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "fb6f77590416226503e49c077be83bd2a18f56ce152ba089eaf48cc5be185af7",
+          "row_count": 30,
+          "total": 27379.99
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "f8e9fa068dc099795fc9fda56a3e1c478522146c9093423a6492396e9c237297",
+          "row_count": 27,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "6e3665dcff5ffa5470f44ed91237e08666458cbb12c9305b47768552e6569724",
+          "row_count": 27,
+          "total": 9390.0
+        }
+      ],
+      "note": "57 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "f6e6436aaa358b3c6eca55bfdaaba845a414ec37db6ae7972ab148e76be29db7"
     }
   ]
 }
