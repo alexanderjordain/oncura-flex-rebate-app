@@ -1532,6 +1532,49 @@
       ],
       "note": "Direct-bill overages emailed to accounting for June 2000",
       "entry_hash": "fe18f29f17bac0f56b9a865ec39cb3183155429a36491dd2c947b359e3277925"
+    },
+    {
+      "id": "6bfd874c-939a-4f83-ada7-b7a4009734a7",
+      "timestamp": "2026-07-12T21:04:01",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 7,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-07-07",
+        "applies_to": "2026-06",
+        "invoice_date": "2026-07-07",
+        "start_invoice_no": 50024,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Copy of Consumable_2026-07-03_080000.xlsx",
+        "sha256": "b55530d00105a59759251cc07fd049ceea40e327dc47aaeeca7c36ed2d68ed37",
+        "size_bytes": 11522
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "36abccc6eac69698ecf7b68aa87cffaded61489d27efa457e4b1acf2eed72e8f",
+          "row_count": 2,
+          "total": 1705.86
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "5fe9bed0e2eedda2b1232621db029d29256ba6a13c08044d2c7831551ff38dd9",
+          "row_count": 24,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "d4c042a3ad89df874b802b5bb551777b58538efbcdc993b22cdfa2bb97fe3a49",
+          "row_count": 24,
+          "total": 16145.0
+        }
+      ],
+      "note": "26 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "b4eb5757ac711aae4c7db9c3769ebd5706eb43fec49b2403722362b79dcc336d"
     }
   ]
 }
