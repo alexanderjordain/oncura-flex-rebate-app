@@ -15,8 +15,8 @@ import streamlit as st
 
 from core import (
     accounting_handoff, audit, auth, errors, flex_closeout, flex_credits,
-    flex_finance, flex_overage, flex_unused, ledger, loaders, opd_adapter,
-    opd_api, saasant, store, ui,
+    flex_finance, flex_overage, flex_unused, ledger, loaders, monthly_audit,
+    opd_adapter, opd_api, saasant, store, ui,
 )
 
 
@@ -183,6 +183,50 @@ with tab_overview, safe_stage("Overview"):
             icon=":material/calendar_month:",
         )
 
+    st.divider()
+    st.subheader("Monthly audit export")
+    st.caption(
+        "Download an accountant-ready workbook of a month's FLEX activity and the "
+        "QuickBooks entries it maps to, one row per clinic. Read-only — nothing posts."
+    )
+    _prev = dt.date.today().replace(day=1) - dt.timedelta(days=1)
+    _ac_y, _ac_m, _ac_b = st.columns([1, 1, 2])
+    _audit_year = _ac_y.number_input(
+        "Year", min_value=2024, max_value=dt.date.today().year,
+        value=_prev.year, step=1, key="audit_year", format="%d",
+    )
+    _audit_month = _ac_m.selectbox(
+        "Month", list(range(1, 13)), index=_prev.month - 1,
+        format_func=lambda m: dt.date(2000, m, 1).strftime("%B"), key="audit_month",
+    )
+    _ac_b.markdown('<div style="height: 1.85rem"></div>', unsafe_allow_html=True)
+    if _ac_b.button("Build audit workbook", key="audit_build", type="primary"):
+        _xbytes, _tot = monthly_audit.build_workbook(
+            int(_audit_year), int(_audit_month), flex_clinics)
+        st.session_state["audit_xlsx"] = _xbytes
+        st.session_state["audit_name"] = (
+            f"FLEX_Audit_{dt.date(int(_audit_year), int(_audit_month), 1):%b_%Y}.xlsx")
+        st.session_state["audit_totals"] = _tot
+    if st.session_state.get("audit_xlsx"):
+        _t = st.session_state.get("audit_totals", {})
+        if _t.get("clinics"):
+            st.success(
+                f"{_t.get('clinics', 0)} clinics · finance payments "
+                f"${_t.get('finance_total', 0):,.2f} · credit memos "
+                f"${_t.get('credit_total', 0):,.2f}"
+                + (f" · overage ${_t['overage_total']:,.2f}" if _t.get("overage_total") else "")
+            )
+        else:
+            st.warning("No FLEX activity recorded for that month.")
+        st.download_button(
+            "Download audit workbook",
+            data=st.session_state["audit_xlsx"],
+            file_name=st.session_state["audit_name"],
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="audit_dl",
+        )
+
+    st.divider()
     st.caption(
         "Click a tab above to start. Deeper docs: `docs/FLEX_PROGRAM_EXPLAINED.md`, "
         "`docs/ACCOUNTING_HANDOFF.md`, `docs/RECOVERY.md`."
