@@ -16,7 +16,7 @@ import streamlit as st
 from core import (
     accounting_handoff, audit, auth, errors, flex_closeout, flex_credits,
     flex_finance, flex_overage, flex_unused, ledger, loaders, monthly_audit,
-    opd_adapter, opd_api, saasant, store, ui,
+    opd_adapter, opd_api, overage_ledger, saasant, store, ui,
 )
 
 
@@ -2429,9 +2429,24 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         }],
                         note=f"Direct-bill overages billed for {dt.date(2000, rec_month, 1):%B %Y}",
                     )
+                    # Record into the overage ledger so the Overage Tracker page
+                    # can watch these bills for payment / lockout aging.
+                    direct_annotated = [r for r in annotated
+                                        if r["route"] in ("direct", "missed_cutoff")
+                                        and float(r.get("net_overage", 0)) > 0]
+                    quarter_start_month = ((rec_month - 1) // 3) * 3 + 1
+                    quarter_label = f"Q{(quarter_start_month - 1) // 3 + 1} {rec_year}"
+                    overage_ledger.record_batch(
+                        direct_annotated,
+                        billing_month=f"{rec_year:04d}-{rec_month:02d}",
+                        quarter_covered=quarter_label,
+                        date_billed=dt.date.today().isoformat(),
+                        actor=direct_initials or auth.current_role(),
+                    )
                     st.success(
                         f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest "
-                        f"and {added_l} fingerprint(s) in the dedup ledger."
+                        f"and {added_l} fingerprint(s) in the dedup ledger. "
+                        f"Overage Tracker will now watch these for payment."
                     )
 
             def _partner_block():
