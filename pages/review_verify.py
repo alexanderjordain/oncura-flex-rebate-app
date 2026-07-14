@@ -202,20 +202,16 @@ with tab_month:
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_recap:
     st.markdown(
-        "Recompute the quarter-end unused and overage from a live OPD pull, using the "
-        "same logic Stage 3 uses, and compare it to what was posted. Pick the month the "
-        "quarter ENDS in (for the June cycle that closed the calendar-quarter clinics, "
-        "use June)."
+        "Recompute the quarter-end unused and overage from a live OPD pull, using the same "
+        "logic Stage 3 uses, and compare it to what was posted. Uses the month selected above "
+        "as the quarter-end (for the June cycle that closed the calendar-quarter clinics, "
+        "select June)."
     )
-    qc1, qc2, _qc3 = st.columns([1, 1, 3])
-    q_year = int(qc1.number_input("Quarter-end year", min_value=2024, max_value=dt.date.today().year,
-                                  value=year, step=1, format="%d", key="rv_q_year"))
-    q_month = int(qc2.selectbox("Quarter-end month", list(range(1, 13)), index=month - 1,
-                                format_func=lambda m: dt.date(2000, m, 1).strftime("%B"),
-                                key="rv_q_month"))
+    q_year, q_month = year, month
     win_start, win_end = flex_unused.quarter_window(q_year, q_month)
-    st.caption(f"Quarter window: {win_start:%b %d, %Y} to {win_end:%b %d, %Y}. "
-               "The live pull hits OPD, so it takes a few seconds.")
+    st.caption(f"Quarter ending {dt.date(q_year, q_month, 1):%B %Y}  ·  window "
+               f"{win_start:%b %d, %Y} to {win_end:%b %d, %Y}. The live pull hits OPD, so it "
+               "takes a few seconds.")
 
     if st.button("Run live OPD reconcile", type="primary", key="rv_run_recap"):
         try:
@@ -236,7 +232,7 @@ with tab_recap:
 
     cached = SS.get("rv_recap")
     if not cached or cached.get("key") != (q_year, q_month):
-        st.info("Pick the quarter-end month and click Run live OPD reconcile.")
+        st.info("Click Run live OPD reconcile to recompute and compare against what was posted.")
     else:
         recap = cached["recap"]
         included = [r for r in recap if not r.get("excluded_no_payments")]
