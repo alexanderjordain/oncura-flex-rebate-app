@@ -66,6 +66,41 @@ else:
 st.divider()
 
 # ---------------------------------------------------------------------------
+# Authorize.net collection worklist — open overages, most urgent first
+# ---------------------------------------------------------------------------
+
+worklist = ol.open_worklist(today)
+if worklist:
+    st.subheader("Collection worklist — authorize.net")
+    st.caption(
+        f"{len(worklist)} open overage(s) to collect. Charge each in authorize.net, then mark "
+        "it collected below with the transaction reference. Ordered by soonest to lock out "
+        "(3 months unpaid = service lockout)."
+    )
+
+    def _wl_row(it):
+        d = it["days_until_lockout"]
+        return {
+            "Clinic": it.get("clinic", ""),
+            "Open $": float(it.get("net_amount") or 0),
+            "Date Billed": it.get("date_billed", ""),
+            "Lockout": ("locked out" if (d is not None and d < 0)
+                        else f"in {d} days" if d is not None else ""),
+            "Status": {ol.STATUS_LOCKED_OUT: "Locked out", ol.STATUS_WARNING: "Warning",
+                       ol.STATUS_OPEN: "Open"}.get(it["status"], it["status"]),
+            "Route": it.get("route", ""),
+        }
+
+    st.dataframe(
+        pd.DataFrame([_wl_row(it) for it in worklist]),
+        hide_index=True, use_container_width=True,
+        column_config={"Open $": st.column_config.NumberColumn(format="$%.2f")},
+    )
+    st.caption(f"Total open to collect: "
+               f"${sum(float(it.get('net_amount') or 0) for it in worklist):,.2f}")
+    st.divider()
+
+# ---------------------------------------------------------------------------
 # Filters
 # ---------------------------------------------------------------------------
 
@@ -178,29 +213,43 @@ else:
                 col_a, col_b = st.columns([2, 1])
                 with col_a:
                     if entry.get("paid_at"):
+                        _m = entry.get("paid_method") or ""
+                        _r = entry.get("paid_ref") or ""
                         st.info(
-                            f"Already marked paid: ${entry['paid_amount']:,.2f} on {entry['paid_at']}"
+                            f"Already collected: ${entry['paid_amount']:,.2f} on {entry['paid_at']}"
+                            + (f" via {_m}" if _m else "")
+                            + (f" (ref {_r})" if _r else "")
                             + (f" · {entry.get('paid_note')}" if entry.get("paid_note") else "")
                         )
-                        if is_admin and st.button("Unmark paid", key=f"unmark_{selected_id}"):
+                        if is_admin and st.button("Unmark collected", key=f"unmark_{selected_id}"):
                             ol.unmark_paid(selected_id, actor=actor)
                             st.success("Unmarked. Refresh to reflect.")
                             st.rerun()
                     else:
                         with st.form(f"mark_paid_{selected_id}"):
-                            st.markdown("**Mark this overage paid**")
+                            st.markdown("**Mark this overage collected**")
                             paid_amount = st.number_input(
-                                "Amount received ($)",
+                                "Amount collected ($)",
                                 min_value=0.0,
                                 value=float(entry.get("net_amount") or 0),
                                 step=0.01, format="%.2f",
                             )
-                            paid_date = st.date_input("Date received", value=today, max_value=today)
+                            mc1, mc2 = st.columns(2)
+                            paid_date = mc1.date_input("Date collected", value=today, max_value=today)
+                            method = mc2.selectbox(
+                                "Collected via",
+                                options=["authorize.net", "check", "wire", "QBO credit", "other"],
+                                index=0,
+                            )
+                            txn_ref = st.text_input(
+                                "Authorize.net transaction ID / reference",
+                                placeholder="e.g. 60123456789 (or a check / wire reference)",
+                            )
                             paid_note = st.text_input(
                                 "Note (optional)",
-                                placeholder="e.g. QBO invoice #12345 paid via check 06/21",
+                                placeholder="anything else worth recording",
                             )
-                            submitted = st.form_submit_button("Mark paid", type="primary")
+                            submitted = st.form_submit_button("Mark collected", type="primary")
                             if submitted:
                                 ol.mark_paid(
                                     selected_id,
@@ -208,8 +257,10 @@ else:
                                     paid_date=paid_date.isoformat(),
                                     note=paid_note,
                                     actor=actor,
+                                    method=method,
+                                    txn_ref=txn_ref,
                                 )
-                                st.success("Marked paid.")
+                                st.success("Marked collected.")
                                 st.rerun()
                 with col_b:
                     if is_admin:

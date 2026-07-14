@@ -62,6 +62,40 @@ def test_upsert_creates_new_entry(mem):
     assert entries[0]["paid_at"] is None
 
 
+def test_mark_paid_records_method_and_ref(mem):
+    eid = ol.upsert(_base_record())
+    ol.mark_paid(eid, paid_amount=1250.0, paid_date="2026-06-01",
+                 method="authorize.net", txn_ref="60123456789")
+    e = ol.get(eid)
+    assert e["paid_method"] == "authorize.net"
+    assert e["paid_ref"] == "60123456789"
+    assert ol.status(e, dt.date(2026, 12, 1)) == ol.STATUS_PAID  # paid never locks out
+
+
+def test_unmark_paid_clears_method_and_ref(mem):
+    eid = ol.upsert(_base_record())
+    ol.mark_paid(eid, 1250.0, "2026-06-01", method="authorize.net", txn_ref="X1")
+    ol.unmark_paid(eid)
+    e = ol.get(eid)
+    assert not e["paid_method"] and not e["paid_ref"] and e["paid_at"] is None
+
+
+def test_open_worklist_excludes_paid_and_sorts_by_urgency(mem):
+    # Billed 2026-05-15 (older, more urgent) vs 2026-06-20 (newer)
+    older = ol.upsert(_base_record(qb_customer="Older Clinic", billing_month="2026-05",
+                                   date_billed="2026-05-15"))
+    ol.upsert(_base_record(qb_customer="Newer Clinic", billing_month="2026-06",
+                           date_billed="2026-06-20"))
+    paid = ol.upsert(_base_record(qb_customer="Paid Clinic", billing_month="2026-04",
+                                  date_billed="2026-04-10"))
+    ol.mark_paid(paid, 1250.0, "2026-05-01", txn_ref="P1")
+    wl = ol.open_worklist(dt.date(2026, 7, 1))
+    names = [it["qb_customer"] for it in wl]
+    assert "Paid Clinic" not in names          # paid excluded
+    assert names == ["Older Clinic", "Newer Clinic"]  # soonest-to-lockout first
+    assert all("days_until_lockout" in it and "status" in it for it in wl)
+
+
 def test_upsert_updates_existing_by_natural_key(mem):
     eid1 = ol.upsert(_base_record(net_amount=1250.00))
     eid2 = ol.upsert(_base_record(net_amount=1500.00, notes="corrected"))

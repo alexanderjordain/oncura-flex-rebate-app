@@ -170,8 +170,15 @@ def upsert(record: dict, actor: str = "") -> str:
 
 
 def mark_paid(entry_id: str, paid_amount: float, paid_date: str,
-              note: str = "", actor: str = "") -> None:
-    """Mark an entry paid. paid_date is 'YYYY-MM-DD'."""
+              note: str = "", actor: str = "",
+              method: str = "authorize.net", txn_ref: str = "") -> None:
+    """Mark an entry collected. paid_date is 'YYYY-MM-DD'.
+
+    method: how it was collected (default 'authorize.net'); txn_ref: the
+    authorize.net transaction id (or check/wire reference). Both are recorded so
+    a collection can be traced back to its charge. Marking collected stops the
+    lockout clock.
+    """
     data, sha = _load()
     entry = data["entries"].get(entry_id)
     if not entry:
@@ -181,6 +188,8 @@ def mark_paid(entry_id: str, paid_amount: float, paid_date: str,
     entry["paid_at"] = paid_date
     entry["paid_amount"] = float(paid_amount)
     entry["paid_note"] = note
+    entry["paid_method"] = method
+    entry["paid_ref"] = txn_ref
     entry["updated_at"] = _now_iso()
     entry["updated_by"] = actor
     _save(data, sha, f"overage_ledger: mark paid {entry['clinic']} {entry['billing_month']}")
@@ -195,6 +204,8 @@ def unmark_paid(entry_id: str, actor: str = "") -> None:
     entry["paid_at"] = None
     entry["paid_amount"] = None
     entry["paid_note"] = ""
+    entry["paid_method"] = ""
+    entry["paid_ref"] = ""
     entry["updated_at"] = _now_iso()
     entry["updated_by"] = actor
     _save(data, sha, f"overage_ledger: unmark paid {entry['clinic']} {entry['billing_month']}")
@@ -256,6 +267,29 @@ def locked_out_clinics(today: dt.date | None = None) -> set[str]:
             out.add(e.get("qb_customer", "").strip())
     out.discard("")
     return out
+
+
+def open_worklist(today: dt.date | None = None) -> list[dict]:
+    """Unpaid overages, most urgent first, for the authorize.net collection queue.
+
+    Returns each unpaid entry (open / warning / locked_out) with two computed
+    fields added: `status` and `days_until_lockout` (negative = already past).
+    Sorted soonest-to-lock-out first (already-locked-out at the top), so the
+    operator works the queue top-down. Paid entries are excluded.
+    """
+    today = today or dt.date.today()
+    items = []
+    for e in all_entries():
+        st_ = status(e, today)
+        if st_ == STATUS_PAID:
+            continue
+        items.append({**e, "status": st_, "days_until_lockout": days_until_lockout(e, today)})
+
+    def _key(it):
+        d = it["days_until_lockout"]
+        return (d is None, d if d is not None else 0)
+
+    return sorted(items, key=_key)
 
 
 def summarize(today: dt.date | None = None) -> dict:
