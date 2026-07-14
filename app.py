@@ -39,10 +39,12 @@ pages = {
     ],
     "Pass-Through Payments": [
         st.Page("pages/flex_cycle.py", title="Payment Cycle"),
+        st.Page("pages/overage_tracker.py", title="Overage Tracker"),
         st.Page("pages/flex_master.py", title="Clinic Roster"),
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
+        st.Page("pages/review_verify.py", title="Review & Verify"),
         st.Page("pages/settings.py", title="Settings"),
         st.Page("pages/audit_log.py", title="Audit & Tracking"),
     ],
@@ -60,9 +62,11 @@ with st.sidebar:
         st.page_link("pages/rebate_master.py", label="Rebate Program Controls")
     with st.expander("Pass-Through Payments", expanded=False):
         st.page_link("pages/flex_cycle.py", label="Payment Cycle")
+        st.page_link("pages/overage_tracker.py", label="Overage Tracker")
         st.page_link("pages/flex_master.py", label="Clinic Roster")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
+        st.page_link("pages/review_verify.py", label="Review & Verify")
         st.page_link("pages/settings.py", label="Settings")
         st.page_link("pages/audit_log.py", label="Audit & Tracking")
     st.markdown('</div>', unsafe_allow_html=True)
