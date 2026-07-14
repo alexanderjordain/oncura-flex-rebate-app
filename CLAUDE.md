@@ -26,6 +26,8 @@ core/
   flex_unused.py              # quarter-end recapture (SOP-5) + overage detection
   flex_overage.py             # overage routing + direct-bill worksheet + partner submission (SOP-6, SOP-12)
   flex_finance.py             # finance-co remittance -> SaasAnt imports (SOP-9, SOP-10)
+  overage_ledger.py           # overage billed/paid tracking + 3-month lockout aging (SOP-15)
+  monthly_audit.py            # month-end per-clinic audit workbook (activity vs QBO entries)
   saasant.py                  # shared SaasAnt helpers (unique refs, last-day, xlsx bytes)
   accounting_handoff.py       # per-workflow email-draft builders + render helpers
   graph_email.py              # Microsoft Graph draft-creation (preferred over .eml when configured)
@@ -42,7 +44,9 @@ pages/
   rebate_master.py            # edit clinics + rates
   rebate_cycle.py             # multi-month cycle -> multi-tab xlsx report
   flex_cycle.py               # 3-tab wizard wrapped in safe_stage() guards; live-OPD Stage 3
+  overage_tracker.py          # overage billed/paid + 3-month lockout watch (Pass-Through nav)
   flex_tutorial.py            # operator-facing walkthrough of the FLEX program model
+  review_verify.py            # Admin: read-only month/quarter verification (recorded vs recompute)
   audit_log.py                # browse + verify the audit manifest (password-gated admin view)
   settings.py                 # config.json editor + backup/restore + ledger summary (admin-only)
 tests/                        # pytest suite — `python -m pytest tests/` (165 tests, ~1s)
@@ -87,7 +91,7 @@ Source: `OneDrive\...\Oncura_Accounting_Master_Reference-5-28-26.docx` (CFO Mart
 | Accounting SOP-10 | Catch-up Credit Memo Application | ✓ via FLEX Cycle stage 2 picking past months |
 | Accounting SOP-11 | Reconciliation | output computed (recapture). QBO un-apply/re-apply is manual. |
 | Accounting SOP-13/14 | Multi-clinic contracts | **GAP** — flex_master doesn't model parent contracts. See "Known gaps" below. |
-| Accounting SOP-15 | Account Locking | OPD/QBO side, out of app scope. |
+| Accounting SOP-15 | Account Locking | In-app tracking via `core/overage_ledger.py` + the Overage Tracker page (billed/paid/lockout aging; 3-months-unpaid = lockout). OPD/QBO enforcement of the lock is still manual. |
 
 ## Key decisions (don't re-litigate without reading the rationale)
 

@@ -9,6 +9,10 @@ What it checks (fast, no streamlit runtime needed):
   4. Every `module.attr` reference in pages/*.py resolves against the imported module.
      This is the static check that would have caught the build_import_from_payments
      AttributeError before it hit production.
+  5. Every `st.Page("pages/X.py")` target in app.py is git-tracked. A nav entry
+     pointing at an uncommitted file crashes the whole app on Streamlit Cloud
+     (st.Page validates eagerly there; local Streamlit is lazy and hides it).
+     See docs/RECOVERY.md mode 9.
 
 Exit code:
   0 = clean. Cloud deploy is safe.
@@ -21,6 +25,8 @@ from __future__ import annotations
 import ast
 import importlib
 import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -129,6 +135,44 @@ def check_page_references(page: Path, core_modules: dict) -> list[str]:
     return errors
 
 
+def check_nav_pages_committed(app_file: Path) -> list[str]:
+    """Every st.Page("pages/X.py") target in app.py must be a git-tracked file.
+
+    A page referenced in the nav but not committed passes locally (the file is
+    on disk) yet crashes the WHOLE app on Streamlit Cloud: Cloud only has
+    committed files and st.Page validates its target eagerly
+    (StreamlitAPIException, "file could not be found"). Local Streamlit is lazy,
+    so it hides the bug. This is the check that would have caught the outage.
+    See docs/RECOVERY.md mode 9.
+    """
+    if not app_file.exists():
+        return []
+    src = app_file.read_text(encoding="utf-8")
+    targets = sorted(set(re.findall(r'st\.Page\(\s*["\'](pages/[^"\']+\.py)["\']', src)))
+    if not targets:
+        return []
+    tracked, have_git = set(), False
+    try:
+        res = subprocess.run(["git", "ls-files", "pages/"], cwd=ROOT,
+                             capture_output=True, text=True, timeout=15)
+        if res.returncode == 0:
+            tracked = set(res.stdout.split())
+            have_git = True
+    except Exception:
+        have_git = False
+    errors = []
+    for t in targets:
+        if have_git:
+            if t not in tracked:
+                errors.append(
+                    f"UNCOMMITTED: app.py references st.Page(\"{t}\") but it is not git-tracked. "
+                    "It will crash the whole app on Streamlit Cloud (st.Page validates eagerly). "
+                    "Commit the file or remove the reference.")
+        elif not (ROOT / t).exists():
+            errors.append(f"MISSING: app.py references st.Page(\"{t}\") but the file does not exist.")
+    return errors
+
+
 def main() -> int:
     print(f"Smoke test :: root={ROOT}")
     py_files = (
@@ -169,6 +213,13 @@ def main() -> int:
         print("\n".join(ref_errors))
         return 1
     print(f"  OK references ({len(pages)} pages)")
+
+    # Stage 4: every nav page target in app.py is committed (else Cloud crashes at startup)
+    nav_errors = check_nav_pages_committed(ROOT / "app.py")
+    if nav_errors:
+        print("\n".join(nav_errors))
+        return 1
+    print("  OK nav page files committed")
 
     print("All checks passed — Cloud deploy is safe to push.")
     return 0

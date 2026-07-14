@@ -142,6 +142,36 @@ Manage app → open the log panel → the **build/install** log shows something 
 
 ---
 
+## 9. "Error running app" from st.Page — a nav page file was not committed
+
+**Symptom**
+The whole app shows an error at startup with a traceback ending in
+`StreamlitAPIException: Unable to create Page. The file \`pages/<name>.py\` could not be
+found.` at the `st.Page("pages/<name>.py", ...)` line in `app.py`. It works fine when you
+run locally.
+
+**Cause**
+`app.py` registers a page in the nav (`st.Page("pages/<name>.py")`) whose file was never
+committed and pushed. Streamlit Cloud only has the committed files, and its `st.Page`
+validates the target file EAGERLY, so a missing target raises at startup and takes the
+entire app down (not just that one page). The version of Streamlit installed locally is
+lazy about this, so the app runs fine on your machine and the gap is invisible until Cloud
+rebuilds. This is how the Overage Tracker outage happened (2026-07-14): the page file and
+its module existed on disk but were never pushed, while the `app.py` nav entry was.
+
+**Fix**
+1. Either commit and push the referenced page file (and any module it imports), or remove
+   the `st.Page(...)` and `st.page_link(...)` lines for it from `app.py`.
+2. Confirm every nav target is committed: `git ls-files pages/` should list every
+   `pages/*.py` that `app.py` references.
+
+**Prevention (in place)**
+`scripts/smoke_test.py` now checks that every `st.Page("pages/X.py")` target in `app.py`
+is git-tracked, and fails the pre-push / CI smoke run if one is not. Run
+`python scripts/smoke_test.py` before pushing.
+
+---
+
 ## Quick reference — Streamlit Cloud paths
 
 - **Manage app**: lower-right corner of the live URL
