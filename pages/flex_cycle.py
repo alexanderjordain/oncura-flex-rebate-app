@@ -2677,35 +2677,40 @@ with tab_closeout, safe_stage("Stage 4 — Closeout"):
         "clinics to Past Due, and settle the group / corporate billing."
     )
     _recap = SS.get("closeout_recap")
-    if not _recap:
+    _preview = not _recap
+    if _preview:
         st.info(
-            "Run **Stage 3 (Unused / Overage)** first — Stage 4 walks you through closing "
-            "out the clinics it flags.",
-            icon=":material/info:",
+            "**Preview.** Stage 3 has not produced a closeout set in this session yet, so no "
+            "clinics are filled in. You can still walk the steps to see exactly what the "
+            "closeout will ask you to do. Run **Stage 3 (Unused / Overage)** to populate the "
+            "specific clinics for each step.",
+            icon=":material/visibility:",
         )
+    # Always render the wizard. With no recap the worklist is empty, so each step
+    # shows its instructions and an empty-state message rather than clinic rows.
+    _worklist = flex_closeout.build_worklist(
+        flex_clinics, _recap or [], SS.get("closeout_group_spread"))
+    SS.setdefault("closeout_step", 0)
+    SS["closeout_step"] = max(0, min(SS["closeout_step"], len(flex_closeout.STEPS) - 1))
+    _skey, _slabel = flex_closeout.STEPS[SS["closeout_step"]]
+    st.markdown(f"**Step {SS['closeout_step'] + 1} of {len(flex_closeout.STEPS)} — {_slabel}**"
+                + ("  ·  _preview_" if _preview else ""))
+    st.progress((SS["closeout_step"] + 1) / len(flex_closeout.STEPS))
+    st.caption(" · ".join(
+        (f"**{lbl}**" if i == SS["closeout_step"] else lbl)
+        for i, (_, lbl) in enumerate(flex_closeout.STEPS)
+    ))
+    st.divider()
+    flex_closeout.render_step(_skey, _worklist)
+    st.divider()
+    _cb, _csp, _cn = st.columns([1, 4, 1])
+    if SS["closeout_step"] > 0:
+        if _cb.button("← Back", key="closeout_back", use_container_width=True):
+            SS["closeout_step"] -= 1
+            st.rerun()
+    if SS["closeout_step"] < len(flex_closeout.STEPS) - 1:
+        if _cn.button("Next →", key="closeout_next", type="primary", use_container_width=True):
+            SS["closeout_step"] += 1
+            st.rerun()
     else:
-        _worklist = flex_closeout.build_worklist(
-            flex_clinics, _recap, SS.get("closeout_group_spread"))
-        SS.setdefault("closeout_step", 0)
-        SS["closeout_step"] = max(0, min(SS["closeout_step"], len(flex_closeout.STEPS) - 1))
-        _skey, _slabel = flex_closeout.STEPS[SS["closeout_step"]]
-        st.markdown(f"**Step {SS['closeout_step'] + 1} of {len(flex_closeout.STEPS)} — {_slabel}**")
-        st.progress((SS["closeout_step"] + 1) / len(flex_closeout.STEPS))
-        st.caption(" · ".join(
-            (f"**{lbl}**" if i == SS["closeout_step"] else lbl)
-            for i, (_, lbl) in enumerate(flex_closeout.STEPS)
-        ))
-        st.divider()
-        flex_closeout.render_step(_skey, _worklist)
-        st.divider()
-        _cb, _csp, _cn = st.columns([1, 4, 1])
-        if SS["closeout_step"] > 0:
-            if _cb.button("← Back", key="closeout_back", use_container_width=True):
-                SS["closeout_step"] -= 1
-                st.rerun()
-        if SS["closeout_step"] < len(flex_closeout.STEPS) - 1:
-            if _cn.button("Next →", key="closeout_next", type="primary", use_container_width=True):
-                SS["closeout_step"] += 1
-                st.rerun()
-        else:
-            _cn.markdown("**Done ✓**")
+        _cn.markdown("**Done ✓**")
