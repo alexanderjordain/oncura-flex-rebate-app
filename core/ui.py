@@ -9,6 +9,7 @@ Call inject() once per page (after auth), then header(...) instead of st.title/s
 """
 from __future__ import annotations
 
+import html
 import os
 
 import streamlit as st
@@ -280,6 +281,19 @@ footer { visibility:hidden; }
   opacity: 0.7;
 }
 .oncura-record-btn-anchor { display: none; }
+
+/* Thin status banner — a slim full-width strip (not a chunky st.info). Used to
+ * flag a stage, e.g. one to be completed as part of the month-close process. */
+.oncura-banner {
+  display:flex; align-items:center;
+  background: rgba(227,160,51,.12);
+  border-left: 3px solid var(--amber);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: .8rem; font-weight: 600; letter-spacing: .03em;
+  padding: .35rem .8rem; border-radius: 4px;
+  margin: 0 0 1rem 0;
+}
 </style>
 """
 
@@ -295,6 +309,16 @@ def header(title: str, subtitle: str = "", kicker: str = "FLEX · REBATE LEDGER"
         f"<h1>{title}</h1>{sub}</div>",
         unsafe_allow_html=True,
     )
+
+
+def banner(text: str) -> None:
+    """Render a thin full-width status strip — slimmer and quieter than st.info.
+
+    Used to flag a stage or section (e.g. one to be completed during the
+    month-close process) without the visual weight of a full callout box.
+    """
+    st.markdown(f'<div class="oncura-banner">{html.escape(text)}</div>',
+                unsafe_allow_html=True)
 
 
 def set_logo():

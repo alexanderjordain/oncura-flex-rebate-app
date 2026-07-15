@@ -1188,6 +1188,7 @@ the next. After all uploads, the combined total should match the bank-feed depos
 # STAGE 2 — Monthly Credit Memos
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
+    ui.banner("To be completed during month close process")
     SS = st.session_state
 
     # Two-step wizard: setup (year/month/start ref) first so the operator can't
@@ -1561,6 +1562,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
+    ui.banner("To be completed during month close process")
     import pandas as pd
 
     SS = st.session_state
@@ -2689,6 +2691,7 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 # what to do with them (tie-up, past-due overages, group credit-spread, exceptions).
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_closeout, safe_stage("Stage 4 — Closeout"):
+    ui.banner("To be completed during month close process")
     st.subheader("Stage 4 — Closeout")
     st.caption(
         "Walks you through the manual QBO closeout for the clinics Stage 3 just closed. "
