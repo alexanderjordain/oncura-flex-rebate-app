@@ -1,19 +1,15 @@
 """Admin > Review & Verify — manual verification surface for a FLEX cycle.
 
-Read-only. Nothing here writes to QBO, OPD, or the ledger. Two tabs:
+Read-only. Nothing here writes to QBO, OPD, or the ledger. Pick a month, then:
 
-  Monthly entries: every finance payment and credit memo the app recorded for
-    the chosen month, per clinic, checked against the flex_master expectation
-    (each credit memo should equal the clinic's monthly_credit, one per finance
-    payment; each finance payment should equal monthly_finance_payment).
+  Clinic walkthrough: step through every clinic that closed that month, one at a
+    time — the quarter's finance payments and credit memos (dates + amounts), the
+    recorded unused/overage, the hurdle, what QBO should show after tie-up, and
+    any exceptions to check. All from the ledger; no OPD pull.
 
-  Quarter recapture: for a chosen quarter-end month, re-pull OPD live and
-    recompute unused/overage with the SAME compute_recapture Stage 3 uses, then
-    reconcile against what was actually posted in the ledger and flag any
-    disagreement (drift, reversals since posting, roster changes).
-
-A scannable table plus a per-clinic drill-down, with a "flagged only" filter so
-you can go clinic by clinic or jump straight to what needs a look.
+  Recorded totals: the quarter-end unused/overage Stage 3 recorded for the month,
+    from the ledger, with reversal / calendar-mismatch notes and an optional live
+    OPD recompute to confirm the posted figures against a fresh pull.
 """
 from __future__ import annotations
 
@@ -74,128 +70,102 @@ period = dt.date(year, month, 1).strftime("%B %Y")
 _all_payments, _ = ledger.load()
 _all_payments = _all_payments.get("payments", [])
 
-tab_month, tab_recap = st.tabs(["Monthly entries", "Quarter recapture"])
+tab_walk, tab_recap = st.tabs(["Clinic walkthrough", "Recorded totals"])
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# MONTHLY ENTRIES
+# CLINIC WALKTHROUGH — one closing clinic at a time (tie-up verification)
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab_month:
-    rows = monthly_audit.categorize(_all_payments, year, month)
-    summary, _review, totals = monthly_audit.summarize(rows, flex_clinics)
-
-    st.markdown(
-        f"**{period}** recorded entries, from the processed-payments ledger. "
-        f"Finance payments {_money(totals['finance_total'])} across {totals['finance_count']}, "
-        f"credit memos {_money(totals['credit_total'])} across {totals['credit_count']}."
-    )
-
-    # Per-clinic checks against flex_master expectations.
-    def _month_checks(rec):
-        c = CLINIC_IDX.get(_norm(rec["clinic"]))
-        exp_cm = float(c.get("monthly_credit") or 0.0) if c else None
-        exp_fin = float(c.get("monthly_finance_payment") or 0.0) if c else None
-        flags = []
-        if rec["flex"] and not rec["credit_memo"]:
-            flags.append("finance payment but no credit memo")
-        if rec["credit_memo"] and not rec["flex"]:
-            flags.append("credit memo but no finance payment")
-        if rec["flex_n"] and rec["credit_memo_n"] and rec["flex_n"] != rec["credit_memo_n"]:
-            flags.append(f"{rec['credit_memo_n']} credit memos vs {rec['flex_n']} payments")
-        if exp_cm and rec["credit_memo_n"]:
-            if abs(rec["credit_memo"] - rec["credit_memo_n"] * exp_cm) > _CENT:
-                flags.append(
-                    f"credit memo {_money(rec['credit_memo'])} vs expected "
-                    f"{_money(rec['credit_memo_n'] * exp_cm)} "
-                    f"({rec['credit_memo_n']} x {_money(exp_cm)})")
-        if exp_fin and rec["flex_n"]:
-            if abs(rec["flex"] - rec["flex_n"] * exp_fin) > _CENT:
-                flags.append(
-                    f"finance {_money(rec['flex'])} vs expected "
-                    f"{_money(rec['flex_n'] * exp_fin)} "
-                    f"({rec['flex_n']} x {_money(exp_fin)})")
-        if rec.get("min_amount", 0) < 0:
-            flags.append("negative amount (reversal)")
-        if c is None:
-            flags.append("not on the FLEX roster")
-        return exp_cm, exp_fin, flags
-
-    table, detail = [], {}
-    for rec in summary:
-        exp_cm, exp_fin, flags = _month_checks(rec)
-        status = "OK" if not flags else "CHECK"
-        table.append({
-            "Clinic": rec["clinic"],
-            "Finance co": rec["company"],
-            "Finance $": rec["flex"],
-            "# pmts": rec["flex_n"],
-            "Credit memo $": rec["credit_memo"],
-            "# CMs": rec["credit_memo_n"],
-            "Expected CM/ea": exp_cm if exp_cm else None,
-            "Status": status,
-        })
-        detail[rec["clinic"]] = {"rec": rec, "exp_cm": exp_cm, "exp_fin": exp_fin, "flags": flags}
-
-    if not table:
-        st.info("No FLEX entries recorded for this month.")
+with tab_walk:
+    _slides = flex_closeout.closeout_walkthrough(flex_clinics, _all_payments, year, month)
+    if not _slides:
+        st.info(f"No clinics closed for {dt.date(year, month, 1):%B %Y}. Pick the month a "
+                "quarter closed (for example, June closed the calendar-quarter clinics).")
     else:
-        only_flagged = st.checkbox("Show only clinics that need a look", key="rv_month_flagged")
-        view = [r for r in table if (not only_flagged or r["Status"] == "CHECK")]
-        n_flag = sum(1 for r in table if r["Status"] == "CHECK")
-        st.caption(f"{len(table)} clinics, {n_flag} flagged.")
-        st.dataframe(
-            pd.DataFrame(view), hide_index=True, use_container_width=True,
-            column_config={
-                "Finance $": st.column_config.NumberColumn(format="$%.2f"),
-                "Credit memo $": st.column_config.NumberColumn(format="$%.2f"),
-                "Expected CM/ea": st.column_config.NumberColumn(format="$%.2f"),
-            },
-        )
+        SS.setdefault("rv_wt_step", 0)
+        SS["rv_wt_step"] = max(0, min(SS["rv_wt_step"], len(_slides) - 1))
+        i = SS["rv_wt_step"]
+        s = _slides[i]
+
+        st.markdown(f"**Clinic {i + 1} of {len(_slides)}**  ·  {dt.date(year, month, 1):%B %Y} closeout")
+        st.progress((i + 1) / len(_slides))
+        _pick = st.selectbox("Jump to clinic", range(len(_slides)), index=i,
+                             format_func=lambda j: _slides[j]["qb_name"], key="rv_wt_jump")
+        if _pick != i:
+            SS["rv_wt_step"] = _pick
+            st.rerun()
 
         st.divider()
-        pick = st.selectbox("Inspect a clinic", [r["Clinic"] for r in table], key="rv_month_pick")
-        d = detail.get(pick)
-        if d:
-            rec, exp_cm, exp_fin, flags = d["rec"], d["exp_cm"], d["exp_fin"], d["flags"]
-            st.markdown(f"### {pick}")
-            st.caption(f"Finance company: {rec['company'] or 'unknown'}")
-            # Individual ledger entries for this clinic this month.
-            mine = [p for p in rows if _norm(p.get("qb_customer")) == _norm(pick)]
-            lines = []
-            for p in sorted(mine, key=lambda x: (x.get("kind", ""), str(x.get("payment_date", "")))):
-                entry, _qbo = monthly_audit.ENTRY_META.get(p.get("kind"), (p.get("kind"), ""))
-                lines.append({
-                    "Entry": entry,
-                    "Date": str(p.get("payment_date", ""))[:10],
-                    "Amount": round(float(p.get("amount") or 0), 2),
-                    "Company": p.get("company", ""),
-                    "Contract": str(p.get("contract", "")),
-                })
-            st.dataframe(pd.DataFrame(lines), hide_index=True, use_container_width=True,
-                         column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")})
-            # The arithmetic, written out.
-            st.markdown("**Checks**")
-            checks = []
-            if exp_fin is not None:
-                checks.append(
-                    f"Finance payments: {rec['flex_n']} totaling {_money(rec['flex'])}; "
-                    f"expected {_money(exp_fin)} each ({_money(rec['flex_n'] * exp_fin)} total).")
-            if exp_cm is not None:
-                checks.append(
-                    f"Credit memos: {rec['credit_memo_n']} totaling {_money(rec['credit_memo'])}; "
-                    f"expected {_money(exp_cm)} each ({_money(rec['credit_memo_n'] * exp_cm)} total).")
-            c = CLINIC_IDX.get(_norm(pick))
-            if c and (c.get("monthly_threshold") is not None):
-                per_mo = round(rec['flex'] + rec['credit_memo'], 2)
-                checks.append(
-                    f"Payment + credit this month = {_money(per_mo)} "
-                    f"vs monthly threshold {_money(c.get('monthly_threshold'))}.")
-            for line in checks:
-                st.write("- " + line)
-            if flags:
-                for f in flags:
-                    st.warning(f, icon=":material/flag:")
+        _grp = f"  ·  group of {s['group_member_count']}" if s.get("group_member_count") else ""
+        st.subheader(s["qb_name"])
+        st.caption(f"{s['finance_company'] or 'unknown'}{_grp}  ·  hurdle {_money(s['hurdle'])}"
+                   f"  ·  activity ~{_money(s['activity'])}")
+
+        st.markdown("**What went in**")
+        _cp, _cc = st.columns(2)
+        with _cp:
+            st.markdown(f"Finance payments — **{len(s['payments'])}** (expect "
+                        f"{s['expected_payments']}), total {_money(s['payment_total'])}")
+            if s["payments"]:
+                st.dataframe(pd.DataFrame([
+                    {"Date": p["date"], "Amount": p["amount"], "Company": p["company"]}
+                    for p in s["payments"]]), hide_index=True, use_container_width=True,
+                    column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")})
             else:
-                st.success("No issues flagged for this clinic.", icon=":material/check_circle:")
+                st.caption("none recorded")
+        with _cc:
+            st.markdown(f"Credit memos — **{len(s['credit_memos'])}**, total "
+                        f"{_money(s['credit_memo_total'])}")
+            if s["credit_memos"]:
+                st.dataframe(pd.DataFrame([
+                    {"Date": x["date"], "Amount": x["amount"]} for x in s["credit_memos"]]),
+                    hide_index=True, use_container_width=True,
+                    column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")})
+            else:
+                st.caption("none recorded")
+
+        if s["overage"] > 0:
+            st.markdown(f"Quarter-end: **overage {_money(s['overage'])}** — activity was above "
+                        f"the {_money(s['hurdle'])} hurdle.")
+        elif s["unused"] > 0:
+            st.markdown(f"Quarter-end: **unused {_money(s['unused'])}** — activity was below the "
+                        f"{_money(s['hurdle'])} hurdle; an Unused-Flex-Credits invoice was raised.")
+        else:
+            st.markdown("Quarter-end: **no unused or overage** — activity met the hurdle.")
+
+        st.markdown("**What QBO should show (barring exceptions)**")
+        _np, _nc = len(s["payments"]), len(s["credit_memos"])
+        if s["overage"] > 0:
+            st.info(f"Apply the {_np} payment(s) and {_nc} credit memo(s). The account nets down "
+                    f"and the clinic is left owing the {_money(s['overage'])} overage (bill via "
+                    "authorize.net). The FLEX portion nets to $0.",
+                    icon=":material/account_balance:")
+        elif s["unused"] > 0:
+            st.info(f"Apply the {_np} payment(s), {_nc} credit memo(s), and the "
+                    f"{_money(s['unused'])} Unused-Flex-Credits invoice. The account nets to $0.00.",
+                    icon=":material/account_balance:")
+        else:
+            st.info(f"Apply the {_np} payment(s) and {_nc} credit memo(s). The account nets to $0.00.",
+                    icon=":material/account_balance:")
+
+        if s["exceptions"]:
+            st.markdown("**Exceptions to check**")
+            for _e in s["exceptions"]:
+                st.warning(_e, icon=":material/flag:")
+        else:
+            st.success("No exceptions flagged.", icon=":material/check_circle:")
+
+        st.divider()
+        _b, _spacer, _n = st.columns([1, 4, 1])
+        if i > 0 and _b.button("← Previous", key="rv_wt_prev", use_container_width=True):
+            SS["rv_wt_step"] -= 1
+            st.rerun()
+        if i < len(_slides) - 1:
+            if _n.button("Next →", key="rv_wt_next", type="primary", use_container_width=True):
+                SS["rv_wt_step"] += 1
+                st.rerun()
+        else:
+            _n.markdown("**Done ✓**")
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # QUARTER RECAPTURE — recorded figures from the ledger (+ optional OPD recompute)

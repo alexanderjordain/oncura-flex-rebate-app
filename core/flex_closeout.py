@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from . import flex_unused, ledger
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STEPS — the wizard's ordered steps. (key, label). Consumed by the caller.
@@ -227,6 +229,106 @@ def recap_from_ledger(flex_clinics, ledger_payments, year, end_month):
             "payments_in_quarter": None,
         })
     return rows
+
+
+def _quarter_months(year, end_month):
+    """The three (year, month) tuples of the quarter ending in end_month."""
+    win_start, _ = flex_unused.quarter_window(year, end_month)
+    out, y, m = [], win_start.year, win_start.month
+    for _ in range(3):
+        out.append((y, m))
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    return out
+
+
+def closeout_walkthrough(flex_clinics, ledger_payments, year, end_month):
+    """Per-clinic tie-up verification for the clinics whose quarter ends in
+    (year, end_month) — the data behind the clinic-by-clinic Review walkthrough.
+
+    One entry per closing anchor / independent clinic (group members pooled into
+    their anchor), each carrying, for the quarter:
+      - payments: the finance payments (date, amount, company) + how many to expect
+      - credit_memos: (date, amount)
+      - unused / overage: the recorded quarter-end recapture
+      - hurdle: the pooled quarterly threshold; activity: reconstructed for context
+      - exceptions: payment/credit-memo count off, or a reversal
+    All from the ledger + roster; no OPD pull. Empty list if nothing closes.
+    """
+    qmonths = set(_quarter_months(year, end_month))
+    members_by_anchor: dict = {}
+    for c in flex_clinics or []:
+        parent = (c.get("parent_clinic_id") or "").strip().lower()
+        if parent:
+            members_by_anchor.setdefault(parent, []).append(c)
+    recap = {_norm(r["qb_name"]): r
+             for r in recap_from_ledger(flex_clinics, ledger_payments, year, end_month)}
+
+    def _in_quarter(p):
+        if p.get("kind") == "flex":
+            return ledger._attribution_ym(p) in qmonths
+        return _ym(p.get("payment_date")) in qmonths
+
+    slides = []
+    for c in flex_clinics or []:
+        if not c.get("active") or c.get("parent_clinic_id"):
+            continue
+        if not flex_unused.is_quarter_end(c.get("calendar_spread"), end_month):
+            continue
+        members = members_by_anchor.get((c.get("clinic_name") or "").strip().lower(), [])
+        group = [c] + members
+        group_qbs = {_norm(g.get("qb_name") or g.get("clinic_name")) for g in group}
+        threshold = round(sum(float(g.get("quarterly_threshold") or 0.0) for g in group), 2)
+
+        pmts, cms = [], []
+        for p in ledger_payments or []:
+            if _norm(p.get("qb_customer")) not in group_qbs or not _in_quarter(p):
+                continue
+            if p.get("kind") == "flex":
+                pmts.append({"date": str(p.get("payment_date"))[:10],
+                             "amount": round(float(p.get("amount") or 0.0), 2),
+                             "company": p.get("company", "")})
+            elif p.get("kind") == "credit_memo":
+                cms.append({"date": str(p.get("payment_date"))[:10],
+                            "amount": round(float(p.get("amount") or 0.0), 2)})
+        pmts.sort(key=lambda x: x["date"])
+        cms.sort(key=lambda x: x["date"])
+
+        rr = recap.get(_norm(c.get("qb_name") or c.get("clinic_name")))
+        unused = round(float(rr["unused"]), 2) if rr else 0.0
+        overage = round(float(rr["overage"]), 2) if rr else 0.0
+        clinic_count = len(group)
+        expected_payments = 3 * clinic_count
+
+        exceptions = []
+        if len(pmts) != expected_payments:
+            exceptions.append(
+                f"{len(pmts)} finance payment(s) on the books, expected {expected_payments} "
+                f"({clinic_count} clinic(s) x 3 months).")
+        if len(cms) != len(pmts):
+            exceptions.append(
+                f"{len(cms)} credit memo(s) vs {len(pmts)} payment(s) — should be one-for-one.")
+        if any(p["amount"] < 0 for p in pmts):
+            exceptions.append("A finance payment is negative (reversal) — check for a manual adjustment.")
+
+        slides.append({
+            "qb_name": c.get("qb_name") or c.get("clinic_name"),
+            "finance_company": c.get("finance_company"),
+            "group_member_count": clinic_count if members else None,
+            "hurdle": threshold,
+            "activity": round(threshold - unused + overage, 2),
+            "payments": pmts,
+            "payment_total": round(sum(p["amount"] for p in pmts), 2),
+            "expected_payments": expected_payments,
+            "credit_memos": cms,
+            "credit_memo_total": round(sum(x["amount"] for x in cms), 2),
+            "unused": unused,
+            "overage": overage,
+            "exceptions": exceptions,
+        })
+    slides.sort(key=lambda s: (s["qb_name"] or "").lower())
+    return slides
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
