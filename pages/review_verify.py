@@ -107,18 +107,19 @@ with tab_walk:
         st.info(f"No clinics closed for {dt.date(year, month, 1):%B %Y}. Pick the month a "
                 "quarter closed (for example, June closed the calendar-quarter clinics).")
     else:
-        SS.setdefault("rv_wt_step", 0)
-        SS["rv_wt_step"] = max(0, min(SS["rv_wt_step"], len(_slides) - 1))
-        i = SS["rv_wt_step"]
+        # One piece of state drives the slideshow: rv_wt_jump (the dropdown's
+        # key). Prev/Next nudge it via on_click callbacks, which run before the
+        # widgets rebuild — so the buttons and the dropdown never fight. (The
+        # earlier two-variable version let a stale dropdown value undo Next.)
+        SS.setdefault("rv_wt_jump", 0)
+        SS["rv_wt_jump"] = max(0, min(int(SS["rv_wt_jump"]), len(_slides) - 1))
+        i = SS["rv_wt_jump"]
         s = _slides[i]
 
         st.markdown(f"**Clinic {i + 1} of {len(_slides)}**  ·  {dt.date(year, month, 1):%B %Y} closeout")
         st.progress((i + 1) / len(_slides))
-        _pick = st.selectbox("Jump to clinic", range(len(_slides)), index=i,
-                             format_func=lambda j: _slides[j]["qb_name"], key="rv_wt_jump")
-        if _pick != i:
-            SS["rv_wt_step"] = _pick
-            st.rerun()
+        st.selectbox("Jump to clinic", range(len(_slides)),
+                     format_func=lambda j: _slides[j]["qb_name"], key="rv_wt_jump")
 
         st.divider()
         _grp = f"  ·  group of {s['group_member_count']}" if s.get("group_member_count") else ""
@@ -235,14 +236,16 @@ with tab_walk:
                                    "is the closeout being verified.")
 
         st.divider()
+
+        def _wt_go(delta):
+            SS["rv_wt_jump"] = max(0, min(SS["rv_wt_jump"] + delta, len(_slides) - 1))
+
         _b, _spacer, _n = st.columns([1, 4, 1])
-        if i > 0 and _b.button("← Previous", key="rv_wt_prev", use_container_width=True):
-            SS["rv_wt_step"] -= 1
-            st.rerun()
+        _b.button("← Previous", key="rv_wt_prev", use_container_width=True,
+                  disabled=(i == 0), on_click=_wt_go, args=(-1,))
         if i < len(_slides) - 1:
-            if _n.button("Next →", key="rv_wt_next", type="primary", use_container_width=True):
-                SS["rv_wt_step"] += 1
-                st.rerun()
+            _n.button("Next →", key="rv_wt_next", type="primary",
+                      use_container_width=True, on_click=_wt_go, args=(1,))
         else:
             _n.markdown("**Done ✓**")
 
