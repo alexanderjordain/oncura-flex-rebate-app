@@ -22,7 +22,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
-from core import flex_unused, ledger, loaders, monthly_audit, opd_api, ui
+from core import flex_closeout, flex_unused, ledger, loaders, monthly_audit, opd_api, ui
 
 ui.header(
     "Review & Verify",
@@ -198,42 +198,79 @@ with tab_month:
                 st.success("No issues flagged for this clinic.", icon=":material/check_circle:")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# QUARTER RECAPTURE RECONCILE (live OPD)
+# QUARTER RECAPTURE — recorded figures from the ledger (+ optional OPD recompute)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_recap:
     st.markdown(
-        "Recompute the quarter-end unused and overage from a live OPD pull, using the same "
-        "logic Stage 3 uses, and compare it to what was posted. Uses the month selected above "
-        "as the quarter-end (for the June cycle that closed the calendar-quarter clinics, "
-        "select June)."
+        "The quarter-end unused and overage Stage 3 recorded for the selected month, straight "
+        "from the ledger. Uses the month selected above as the quarter-end (for the June cycle "
+        "that closed the calendar-quarter clinics, select June)."
     )
     q_year, q_month = year, month
     win_start, win_end = flex_unused.quarter_window(q_year, q_month)
     st.caption(f"Quarter ending {dt.date(q_year, q_month, 1):%B %Y}  ·  window "
-               f"{win_start:%b %d, %Y} to {win_end:%b %d, %Y}. The live pull hits OPD, so it "
-               "takes a few seconds.")
+               f"{win_start:%b %d, %Y} to {win_end:%b %d, %Y}. Read from the ledger, no OPD pull.")
 
-    if st.button("Run live OPD reconcile", type="primary", key="rv_run_recap"):
+    _rec_rows = flex_closeout.recap_from_ledger(flex_clinics, _all_payments, q_year, q_month)
+    if not _rec_rows:
+        st.info(f"No recorded Stage 3 output (unused / overage) for "
+                f"{dt.date(q_year, q_month, 1):%B %Y}. Run Stage 3 for that month first.")
+    else:
+        _un = round(sum(r["unused"] for r in _rec_rows), 2)
+        _ov = round(sum(r["overage"] for r in _rec_rows), 2)
+        _nu = sum(1 for r in _rec_rows if r["unused"] > 0)
+        _no = sum(1 for r in _rec_rows if r["overage"] > 0)
+        st.markdown(f"**{len(_rec_rows)} clinics** — unused {_money(_un)} ({_nu}), "
+                    f"overage {_money(_ov)} ({_no}).")
+        st.dataframe(
+            pd.DataFrame([{
+                "Clinic": r["qb_name"],
+                "Finance co": r.get("finance_company") or "",
+                "Threshold": r["quarterly_threshold"],
+                "Activity": r["quarter_activity"],
+                "Unused": r["unused"],
+                "Overage": r["overage"],
+            } for r in sorted(_rec_rows, key=lambda x: (x["qb_name"] or "").lower())]),
+            hide_index=True, use_container_width=True,
+            column_config={c: st.column_config.NumberColumn(format="$%.2f")
+                           for c in ("Threshold", "Activity", "Unused", "Overage")},
+        )
+        st.caption("Activity is reconstructed from threshold, unused, and overage for context.")
+
+    # Review notes that need no OPD pull: reversal payments (ledger) + roster calendar mismatches.
+    _neg = flex_unused.clinics_with_negative_payments(
+        flex_clinics, ledger.flex_payments_in_window(win_start, win_end))
+    if _neg:
+        with st.expander(f"Clinics with reversal (negative) payments this quarter ({len(_neg)})"):
+            st.dataframe(pd.DataFrame([
+                {"Clinic": n["clinic"], "Reversal total": n["reversal_total"],
+                 "Rows": n["reversal_count"]} for n in _neg]),
+                hide_index=True, use_container_width=True,
+                column_config={"Reversal total": st.column_config.NumberColumn(format="$%.2f")})
+    _cal = flex_unused.group_calendar_mismatches(flex_clinics)
+    if _cal:
+        with st.expander(f"Group calendar mismatches ({len(_cal)})"):
+            for g in _cal:
+                st.write(f"- **{g['anchor']}** (spread {g['anchor_spread']}) has members on a "
+                         f"different calendar: " + ", ".join(
+                             f"{m['clinic_name']} ({m['calendar_spread']})" for m in g["members"]))
+
+    st.divider()
+    st.caption("Optional: independently recompute from a live OPD pull and compare to what was "
+               "posted. Slower; use it to confirm the recorded figures against OPD.")
+    if st.button("Run live OPD reconcile", key="rv_run_recap"):
         try:
             activity, raw_df, orphans = opd_api.flex_activity_for_quarter(q_year, q_month)
             pays = ledger.flex_payments_in_window(win_start, win_end)
             recap = flex_unused.compute_recapture(
                 flex_clinics, activity, q_year, q_month, ledger_payments_for_quarter=pays)
-            SS["rv_recap"] = {
-                "key": (q_year, q_month),
-                "recap": recap,
-                "orphans": orphans,
-                "negatives": flex_unused.clinics_with_negative_payments(flex_clinics, pays),
-                "cal_mismatch": flex_unused.group_calendar_mismatches(flex_clinics),
-            }
+            SS["rv_recap"] = {"key": (q_year, q_month), "recap": recap, "orphans": orphans}
         except Exception as e:  # noqa: BLE001 - surface any OPD/auth error plainly
             SS.pop("rv_recap", None)
             st.error(f"Could not run the OPD reconcile: {type(e).__name__}: {e}")
 
     cached = SS.get("rv_recap")
-    if not cached or cached.get("key") != (q_year, q_month):
-        st.info("Click Run live OPD reconcile to recompute and compare against what was posted.")
-    else:
+    if cached and cached.get("key") == (q_year, q_month):
         recap = cached["recap"]
         included = [r for r in recap if not r.get("excluded_no_payments")]
         excluded = [r for r in recap if r.get("excluded_no_payments")]
