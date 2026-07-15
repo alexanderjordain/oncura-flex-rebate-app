@@ -144,6 +144,91 @@ def build_worklist(flex_clinics, recap_rows, group_spread=None) -> dict:
     }
 
 
+def _norm(name) -> str:
+    return " ".join(str(name or "").casefold().split())
+
+
+def _ym(date_str):
+    """Parse a ledger payment_date to (year, month). Tolerates ISO 'YYYY-MM-DD'
+    (direct_overage rows) and US 'MM/DD/YYYY' (unused_invoice rows). None on junk."""
+    s = str(date_str or "").strip()
+    if not s:
+        return None
+    if "-" in s[:10]:
+        parts = s[:10].split("-")
+        try:
+            if len(parts[0]) == 4:
+                return int(parts[0]), int(parts[1])
+        except (ValueError, IndexError):
+            return None
+    if "/" in s:
+        parts = s.split("/")
+        try:
+            if len(parts) == 3:
+                return int(parts[2]), int(parts[0])
+        except (ValueError, IndexError):
+            return None
+    return None
+
+
+def recap_from_ledger(flex_clinics, ledger_payments, year, end_month):
+    """Rebuild a closeout recap for (year, end_month) from what Stage 3 already
+    posted to the ledger, so Stage 4 can load a month with NO live OPD pull.
+
+    Reads the recorded Stage 3 output for that month: unused_invoice rows (the
+    Unused-Flex-Credits invoices) and direct_overage rows. One row per clinic
+    (already at anchor level, since Stage 3 emits pooled to the anchor), enriched
+    with group_id / finance_company / quarterly_threshold from flex_master.
+    quarter_activity is reconstructed for display as threshold - unused + overage.
+    Returns [] when the ledger holds no Stage 3 output for that month (the caller
+    should then tell the operator to run Stage 3).
+
+    Note: clinics that closed but netted to exactly zero produced no unused or
+    overage invoice, so they are not in the ledger and do not appear here. The
+    posted unused / overage clinics — the ones needing action — all do.
+    """
+    idx = {}
+    for c in flex_clinics or []:
+        for k in (c.get("qb_name"), c.get("clinic_name")):
+            if k:
+                idx.setdefault(_norm(k), c)
+
+    by_clinic: dict[str, dict] = {}
+    for p in ledger_payments or []:
+        kind = p.get("kind")
+        if kind not in ("unused_invoice", "direct_overage"):
+            continue
+        if _ym(p.get("payment_date")) != (year, end_month):
+            continue
+        name = (p.get("qb_customer") or "").strip()
+        if not name:
+            continue
+        amt = round(float(p.get("amount") or 0.0), 2)
+        rec = by_clinic.setdefault(name, {"unused": 0.0, "overage": 0.0})
+        if kind == "unused_invoice":
+            rec["unused"] = round(rec["unused"] + amt, 2)
+        else:
+            rec["overage"] = round(rec["overage"] + amt, 2)
+
+    rows = []
+    for name, v in sorted(by_clinic.items(), key=lambda kv: kv[0].lower()):
+        c = idx.get(_norm(name))
+        threshold = round(float(c.get("quarterly_threshold") or 0.0), 2) if c else 0.0
+        unused, overage = v["unused"], v["overage"]
+        rows.append({
+            "qb_name": name,
+            "clinic_name": (c.get("clinic_name") if c else name),
+            "group_id": c.get("group_id") if c else None,
+            "finance_company": c.get("finance_company") if c else None,
+            "quarterly_threshold": threshold,
+            "quarter_activity": round(threshold - unused + overage, 2),
+            "unused": unused,
+            "overage": overage,
+            "payments_in_quarter": None,
+        })
+    return rows
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # RENDER — one wizard step at a time (streamlit).
 # ═══════════════════════════════════════════════════════════════════════════════

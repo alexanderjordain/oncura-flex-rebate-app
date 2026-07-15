@@ -205,3 +205,34 @@ def test_build_worklist_empty_recap():
 def test_build_worklist_handles_none_recap():
     wl = flex_closeout.build_worklist(_clinics(), None)
     assert wl["counts"]["total"] == 0
+
+
+# ── recap_from_ledger (Stage 4 loads a recorded month) ────────────────────────
+
+def test_recap_from_ledger_builds_rows_from_recorded_stage3():
+    clinics = [
+        {"qb_name": "Clinic A", "clinic_name": "Clinic A", "finance_company": "GreatAmerica",
+         "quarterly_threshold": 6000, "group_id": None},
+        {"qb_name": "Clinic B", "clinic_name": "Clinic B", "finance_company": "OnePlace",
+         "quarterly_threshold": 5700, "group_id": "G1"},
+    ]
+    pays = [
+        {"kind": "unused_invoice", "qb_customer": "Clinic A", "amount": 1200.0,
+         "payment_date": "06/30/2026"},                       # US date (unused invoices)
+        {"kind": "direct_overage", "qb_customer": "Clinic B", "amount": 800.0,
+         "payment_date": "2026-06-01"},                        # ISO date (overages)
+        {"kind": "direct_overage", "qb_customer": "Clinic C", "amount": 50.0,
+         "payment_date": "2026-05-01"},                        # wrong month -> excluded
+        {"kind": "flex", "qb_customer": "Clinic A", "amount": 900.0,
+         "payment_date": "2026-06-15"},                        # not a Stage 3 kind -> excluded
+    ]
+    rows = flex_closeout.recap_from_ledger(clinics, pays, 2026, 6)
+    by = {r["qb_name"]: r for r in rows}
+    assert set(by) == {"Clinic A", "Clinic B"}
+    assert by["Clinic A"]["unused"] == 1200.0 and by["Clinic A"]["overage"] == 0.0
+    assert by["Clinic A"]["finance_company"] == "GreatAmerica"
+    assert by["Clinic A"]["quarterly_threshold"] == 6000
+    assert by["Clinic A"]["quarter_activity"] == 4800.0        # threshold - unused + overage
+    assert by["Clinic B"]["overage"] == 800.0 and by["Clinic B"]["group_id"] == "G1"
+    # A month with no recorded Stage 3 output returns empty.
+    assert flex_closeout.recap_from_ledger(clinics, pays, 2026, 1) == []
