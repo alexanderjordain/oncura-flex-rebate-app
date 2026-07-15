@@ -378,19 +378,16 @@ def _render_overages(worklist: dict) -> None:
         "otherwise defaults FLEX invoices to Paid), then **bill the overage "
         "outside OPD**:\n\n"
         "- **Non-corporate** → charge via **authorize.net**.\n"
-        "- **Corporate (CityVet)** → **send a statement; the clinic wires** the payment.\n"
-        "- **OnePlace-financed overages** → submit to the partner **by the 5th**."
+        "- **Corporate (CityVet)** → **send a statement; the clinic wires** the payment."
     )
 
     for c in overage_clinics:
         bill = ("send statement, clinic wires" if c["is_corporate"]
                 else "authorize.net")
-        note = " · OnePlace: submit to partner by the 5th" \
-            if (c.get("finance_company") == "OnePlace") else ""
         corp = " · CORPORATE" if c["is_corporate"] else ""
         st.checkbox(
             f"{c['qb_name']} — overage {_money(c['overage'])} · "
-            f"flip OPD invoice to PAST DUE · bill: {bill}{corp}{note}",
+            f"flip OPD invoice to PAST DUE · bill: {bill}{corp}",
             key=f"closeout_overage_{c['qb_name']}",
         )
 

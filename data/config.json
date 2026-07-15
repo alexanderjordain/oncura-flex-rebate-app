@@ -81,7 +81,7 @@
       "finance_partner_handles": {
         "GreatAmerica": false,
         "NewLane": false,
-        "OnePlace": true,
+        "OnePlace": false,
         "SelfFinanced": false
       },
       "direct_invoice_item": "Telemedicine Overage",
