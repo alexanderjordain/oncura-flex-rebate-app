@@ -162,21 +162,6 @@ with tab_walk:
         else:
             st.markdown("Quarter-end: **no unused or overage** — activity met the hurdle.")
 
-        st.markdown("**What QBO should show (barring exceptions)**")
-        _np, _nc = len(s["payments"]), len(s["credit_memos"])
-        if s["overage"] > 0:
-            st.info(f"Apply the {_np} payment(s) and {_nc} credit memo(s). The account nets down "
-                    f"and the clinic is left owing the {_money(s['overage'])} overage (bill via "
-                    "authorize.net). The FLEX portion nets to $0.",
-                    icon=":material/account_balance:")
-        elif s["unused"] > 0:
-            st.info(f"Apply the {_np} payment(s), {_nc} credit memo(s), and the "
-                    f"{_money(s['unused'])} Unused-Flex-Credits invoice. The account nets to $0.00.",
-                    icon=":material/account_balance:")
-        else:
-            st.info(f"Apply the {_np} payment(s) and {_nc} credit memo(s). The account nets to $0.00.",
-                    icon=":material/account_balance:")
-
         if s["exceptions"]:
             st.markdown("**Exceptions to check**")
             for _e in s["exceptions"]:
