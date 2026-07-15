@@ -305,7 +305,7 @@
       "company": "OnePlace",
       "kind": "flex",
       "contract": "040010149791",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "2026-05-03",
       "amount": 917.71,
       "recorded_at": "2026-06-05T17:39:43"
@@ -515,7 +515,7 @@
       "company": "OnePlace",
       "kind": "flex",
       "contract": "040010172988",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "2026-05-03",
       "amount": 910.69,
       "recorded_at": "2026-06-05T17:39:43"
@@ -1698,7 +1698,7 @@
       "company": "INTERNAL",
       "kind": "credit_memo",
       "contract": "7c4157ded9ba697ad1acae3dfc087ad2d666594ae8fa939a4b31a092be8400b0",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "05/31/2026",
       "amount": 982.29,
       "recorded_at": "2026-06-08T18:46:48"
@@ -1898,7 +1898,7 @@
       "company": "INTERNAL",
       "kind": "credit_memo",
       "contract": "fed2052cda6bb32bccaae2e0254d5768132b497b86f2d238c3bb366f84bce808",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "05/31/2026",
       "amount": 989.31,
       "recorded_at": "2026-06-08T18:46:48"
@@ -2358,7 +2358,7 @@
       "company": "OnePlace",
       "kind": "flex",
       "contract": "040010149791",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "2026-06-01",
       "amount": 917.71,
       "recorded_at": "2026-06-09T16:21:04"
@@ -2438,7 +2438,7 @@
       "company": "OnePlace",
       "kind": "flex",
       "contract": "040010172988",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "2026-06-01",
       "amount": 910.69,
       "recorded_at": "2026-06-09T16:21:04"
@@ -3494,7 +3494,7 @@
       "company": "INTERNAL",
       "kind": "unused_invoice",
       "contract": "Desert Ark Vet Care - North",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "05/31/2026",
       "amount": 3758.0,
       "recorded_at": "2026-06-24T21:36:53"
@@ -3854,7 +3854,7 @@
       "company": "OnePlace",
       "kind": "flex",
       "contract": "040010149791",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "2026-04-07",
       "amount": 917.71,
       "recorded_at": "2026-06-29T14:54:43"
@@ -4064,7 +4064,7 @@
       "company": "OnePlace",
       "kind": "flex",
       "contract": "040010172988",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "2026-04-07",
       "amount": 910.69,
       "recorded_at": "2026-06-29T14:54:43"
@@ -5971,7 +5971,7 @@
       "company": "INTERNAL",
       "kind": "credit_memo",
       "contract": "9f27af65371591b4775b9f233ebaa47b4fe6e59be571682ec427c071d5b0a1a7",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "06/30/2026",
       "amount": 982.29,
       "recorded_at": "2026-07-01T14:29:50"
@@ -6211,7 +6211,7 @@
       "company": "INTERNAL",
       "kind": "credit_memo",
       "contract": "1b74e78aa3571524fba4ea69f1642b00e7547a7dc7774bdf545f65fb7198a055",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "06/30/2026",
       "amount": 989.31,
       "recorded_at": "2026-07-01T14:29:50"
@@ -6611,7 +6611,7 @@
       "company": "INTERNAL",
       "kind": "unused_invoice",
       "contract": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "06/30/2026",
       "amount": 5700.0,
       "recorded_at": "2026-07-01T14:40:45"
@@ -7657,7 +7657,7 @@
       "company": "INTERNAL",
       "kind": "credit_memo",
       "contract": "8025aedf48db33ce64c67b7e3538bc52f0f7803a2cba278d18bb717e8ce525cc",
-      "qb_customer": "Desert Ark Vet Care - North",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
       "payment_date": "04/30/2026",
       "amount": 917.71,
       "recorded_at": "2026-07-15T10:55:54"
@@ -7787,7 +7787,7 @@
       "company": "INTERNAL",
       "kind": "credit_memo",
       "contract": "2c99d3829b9cb7e93a266ee95e8aee8ddd29ce2f80ed906dd642ece0c87677e4",
-      "qb_customer": "PetVet Care Centers, LLC DBA Rancho Regional Veterinary Hospital",
+      "qb_customer": "Baseline Animal Hospital",
       "payment_date": "04/30/2026",
       "amount": 910.69,
       "recorded_at": "2026-07-15T10:55:54"
