@@ -236,3 +236,36 @@ def test_recap_from_ledger_builds_rows_from_recorded_stage3():
     assert by["Clinic B"]["overage"] == 800.0 and by["Clinic B"]["group_id"] == "G1"
     # A month with no recorded Stage 3 output returns empty.
     assert flex_closeout.recap_from_ledger(clinics, pays, 2026, 1) == []
+
+
+# ── closeout_walkthrough: credit-memo history gap must not false-flag ──────────
+
+def test_closeout_walkthrough_cm_history_gap():
+    clinics = [{"clinic_name": "Clinic A", "qb_name": "Clinic A", "active": True,
+                "finance_company": "GreatAmerica", "calendar_spread": "Calendar",
+                "quarterly_threshold": 6000, "group_id": None, "parent_clinic_id": None}]
+    pays = [
+        # 3 quarter payments (Apr/May/Jun)
+        {"kind": "flex", "company": "GreatAmerica", "qb_customer": "Clinic A",
+         "payment_date": "2026-04-14", "amount": 912.68},
+        {"kind": "flex", "company": "GreatAmerica", "qb_customer": "Clinic A",
+         "payment_date": "2026-05-14", "amount": 912.68},
+        {"kind": "flex", "company": "GreatAmerica", "qb_customer": "Clinic A",
+         "payment_date": "2026-06-14", "amount": 912.68},
+        # only May + June credit memos (ledger CM history starts May; April is in QBO)
+        {"kind": "credit_memo", "qb_customer": "Clinic A", "amount": 1087.32,
+         "payment_date": "05/31/2026"},
+        {"kind": "credit_memo", "qb_customer": "Clinic A", "amount": 1087.32,
+         "payment_date": "06/30/2026"},
+        {"kind": "unused_invoice", "qb_customer": "Clinic A", "amount": 1200.0,
+         "payment_date": "06/30/2026"},
+    ]
+    slides = flex_closeout.closeout_walkthrough(clinics, pays, 2026, 6)
+    assert len(slides) == 1
+    s = slides[0]
+    assert len(s["payments"]) == 3 and s["expected_payments"] == 3
+    # April credit memo predates the ledger -> expect only 2, no false flag
+    assert len(s["credit_memos"]) == 2 and s["expected_credit_memos"] == 2
+    assert s["pre_ledger_cm_months"] == ["2026-04"]
+    assert s["hurdle"] == 6000 and s["unused"] == 1200.0
+    assert s["exceptions"] == []

@@ -257,6 +257,18 @@ def closeout_walkthrough(flex_clinics, ledger_payments, year, end_month):
     All from the ledger + roster; no OPD pull. Empty list if nothing closes.
     """
     qmonths = set(_quarter_months(year, end_month))
+    _qmonths_sorted = sorted(qmonths)
+    # The ledger's credit-memo history can start mid-quarter (Stage 2 was adopted
+    # after Stage 1). Memos for quarter months before that start live in QBO only,
+    # so expect memos just for the months the ledger actually tracks — otherwise
+    # every clinic false-flags a "missing" memo that is really in QBO.
+    _cm_seen = [_ym(p.get("payment_date")) for p in (ledger_payments or [])
+                if p.get("kind") == "credit_memo"]
+    _cm_seen = [m for m in _cm_seen if m]
+    _cm_start = min(_cm_seen) if _cm_seen else None
+    _cm_covered = [m for m in _qmonths_sorted if _cm_start is None or m >= _cm_start]
+    _pre_ledger = [f"{y}-{mm:02d}" for (y, mm) in _qmonths_sorted
+                   if _cm_start is not None and (y, mm) < _cm_start]
     members_by_anchor: dict = {}
     for c in flex_clinics or []:
         parent = (c.get("parent_clinic_id") or "").strip().lower()
@@ -300,15 +312,17 @@ def closeout_walkthrough(flex_clinics, ledger_payments, year, end_month):
         overage = round(float(rr["overage"]), 2) if rr else 0.0
         clinic_count = len(group)
         expected_payments = 3 * clinic_count
+        expected_cms = len(_cm_covered) * clinic_count
 
         exceptions = []
         if len(pmts) != expected_payments:
             exceptions.append(
                 f"{len(pmts)} finance payment(s) on the books, expected {expected_payments} "
                 f"({clinic_count} clinic(s) x 3 months).")
-        if len(cms) != len(pmts):
+        if len(cms) != expected_cms:
             exceptions.append(
-                f"{len(cms)} credit memo(s) vs {len(pmts)} payment(s) — should be one-for-one.")
+                f"{len(cms)} credit memo(s), expected {expected_cms} (one per payment in the "
+                "months the ledger tracks credit memos).")
         if any(p["amount"] < 0 for p in pmts):
             exceptions.append("A finance payment is negative (reversal) — check for a manual adjustment.")
 
@@ -323,6 +337,8 @@ def closeout_walkthrough(flex_clinics, ledger_payments, year, end_month):
             "expected_payments": expected_payments,
             "credit_memos": cms,
             "credit_memo_total": round(sum(x["amount"] for x in cms), 2),
+            "expected_credit_memos": expected_cms,
+            "pre_ledger_cm_months": _pre_ledger,
             "unused": unused,
             "overage": overage,
             "exceptions": exceptions,

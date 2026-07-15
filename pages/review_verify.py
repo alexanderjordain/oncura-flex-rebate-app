@@ -113,8 +113,8 @@ with tab_walk:
             else:
                 st.caption("none recorded")
         with _cc:
-            st.markdown(f"Credit memos — **{len(s['credit_memos'])}**, total "
-                        f"{_money(s['credit_memo_total'])}")
+            st.markdown(f"Credit memos — **{len(s['credit_memos'])}** (expect "
+                        f"{s['expected_credit_memos']}), total {_money(s['credit_memo_total'])}")
             if s["credit_memos"]:
                 st.dataframe(pd.DataFrame([
                     {"Date": x["date"], "Amount": x["amount"]} for x in s["credit_memos"]]),
@@ -122,6 +122,9 @@ with tab_walk:
                     column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")})
             else:
                 st.caption("none recorded")
+            if s.get("pre_ledger_cm_months"):
+                st.caption(f"Credit memos for {', '.join(s['pre_ledger_cm_months'])} predate the "
+                           "ledger (in QBO, not shown here).")
 
         if s["overage"] > 0:
             st.markdown(f"Quarter-end: **overage {_money(s['overage'])}** — activity was above "
