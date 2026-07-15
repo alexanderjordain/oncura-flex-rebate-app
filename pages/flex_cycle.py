@@ -295,8 +295,12 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         # last calendar month; the operator changes it only for an off-schedule
         # remittance. Every other company is attributed by the received date, so
         # no field appears for them.
+        # Row: "Applies to month" (coverage companies only) beside the starting
+        # scan Invoice No, so the two setup fields sit on one line.
+        _row_l, _row_r = st.columns([1, 1])
         applies_to = ""
-        if ledger.uses_coverage(company):
+        _coverage = ledger.uses_coverage(company)
+        if _coverage:
             _cur = dt.date.today()
             _cur_idx = _cur.year * 12 + (_cur.month - 1)
             _last_month = f"{(_cur_idx-1)//12:04d}-{(_cur_idx-1)%12+1:02d}"  # current month - 1
@@ -306,8 +310,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
                 _opts.add(SS["remit_applies_to_w"])
             _month_opts = sorted(_opts)
             _def_idx = _month_opts.index(_last_month) if _last_month in _month_opts else 0
-            ac, _ = st.columns([1, 1])
-            applies_to = ac.selectbox(
+            applies_to = _row_l.selectbox(
                 "Applies to month",
                 options=_month_opts,
                 index=_def_idx,
@@ -325,10 +328,11 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             st.caption("GreatAmerica is all-flex — no starting scan invoice number needed.")
             start_inv = 50000
         else:
-            # Invoice date for scan packages is always the same as the payment date in
-            # the live workflow, so we mirror payment date into invoice date instead of
-            # asking twice. Only the starting scan invoice number needs its own input.
-            start_inv = int(st.number_input(
+            # Invoice date for scan packages is always the payment date in the live
+            # workflow, so only the starting scan invoice number needs its own input.
+            # Sits beside "Applies to month" for coverage cos, else on the left.
+            _inv_col = _row_r if _coverage else _row_l
+            start_inv = int(_inv_col.number_input(
                 "Starting scan Invoice No (QBO max + 1)",
                 value=int(SS["remit_start_inv"]),
                 step=1,
@@ -2699,22 +2703,54 @@ with tab_closeout, safe_stage("Stage 4 — Closeout"):
         "clinics to Past Due, and settle the group / corporate billing."
     )
 
-    # Load a month's closeout directly, without an in-session Stage 3 run: read the recorded
-    # Stage 3 output (unused / overage) for the chosen quarter-end month straight from the
-    # ledger and populate the wizard. No OPD pull; reflects exactly what was posted. Read-only.
-    _cprev = dt.date.today().replace(day=1) - dt.timedelta(days=1)
-    with st.expander("Load a month's closeout", expanded=not SS.get("closeout_recap")):
-        st.caption("Loads what Stage 3 already recorded for the month, straight from the "
-                   "ledger. No OPD pull.")
-        _lcy, _lcm, _lcb = st.columns([1, 1, 2])
+    # Wizard, mirroring the setup-first pattern of Stages 2 and 3: month selection
+    # is step 1; advancing loads that month's recorded Stage 3 output (unused /
+    # overage) straight from the ledger and fills the closeout. No OPD pull.
+    CLOSEOUT_STEPS = [("setup", "Select month")] + list(flex_closeout.STEPS)
+    SS.setdefault("closeout_step", 0)
+    SS["closeout_step"] = max(0, min(SS["closeout_step"], len(CLOSEOUT_STEPS) - 1))
+    _skey, _slabel = CLOSEOUT_STEPS[SS["closeout_step"]]
+    ui.scroll_top_on_step_change("flex_stage4_closeout", SS["closeout_step"])
+
+    st.markdown(f"**Step {SS['closeout_step'] + 1} of {len(CLOSEOUT_STEPS)} — {_slabel}**")
+    st.progress((SS["closeout_step"] + 1) / len(CLOSEOUT_STEPS))
+    st.caption("  ·  ".join(
+        (f"**{lbl}**" if i == SS["closeout_step"] else f":gray[{lbl}]")
+        for i, (_, lbl) in enumerate(CLOSEOUT_STEPS)
+    ))
+    st.divider()
+
+    if _skey == "setup":
+        st.caption("Pick the quarter-end month you're closing. The next step loads what Stage 3 "
+                   "already recorded for that month, straight from the ledger — no OPD pull.")
+        _cprev = dt.date.today().replace(day=1) - dt.timedelta(days=1)
+        _lcy, _lcm, _lcsp = st.columns([1, 1, 2])
         _co_year = int(_lcy.number_input(
             "Year", min_value=2024, max_value=dt.date.today().year,
-            value=_cprev.year, step=1, format="%d", key="closeout_load_year"))
+            value=_cprev.year, step=1, format="%d", key="closeout_year_w"))
         _co_month = int(_lcm.selectbox(
             "Closeout month (quarter end)", list(range(1, 13)), index=_cprev.month - 1,
-            format_func=lambda m: dt.date(2000, m, 1).strftime("%B"), key="closeout_load_month"))
-        _lcb.markdown('<div style="height: 1.85rem"></div>', unsafe_allow_html=True)
-        if _lcb.button("Load recorded closeout", key="closeout_load_btn", type="primary"):
+            format_func=lambda m: dt.date(2000, m, 1).strftime("%B"), key="closeout_month_w"))
+
+        # If a closeout is already loaded (Stage 3 just ran, or a prior load), let
+        # the operator continue straight into it without reloading.
+        _loaded = SS.get("closeout_recap")
+        if _loaded:
+            _lm = SS.get("closeout_month")
+            _lm_txt = f" for {dt.date(_lm[0], _lm[1], 1):%B %Y}" if _lm else ""
+            st.success(f"A closeout is already loaded ({len(_loaded)} clinic(s){_lm_txt}). "
+                       "Continue into it, or load a different month below.",
+                       icon=":material/task_alt:")
+
+        st.divider()
+        _contcol, _loadcol = st.columns(2)
+        if _loaded and _contcol.button("Continue ▶", key="closeout_continue",
+                                       type="primary", use_container_width=True):
+            SS["closeout_step"] = 1
+            st.rerun()
+        _load_lbl = "Load this month instead ▶" if _loaded else "Load this month ▶"
+        if _loadcol.button(_load_lbl, key="closeout_load_btn", type="primary",
+                           use_container_width=True):
             _pays_all, _ = ledger.load()
             _incl = flex_closeout.recap_from_ledger(
                 flex_clinics, _pays_all.get("payments", []), _co_year, _co_month)
@@ -2725,50 +2761,37 @@ with tab_closeout, safe_stage("Stage 4 — Closeout"):
                     "check the month you closed.")
             else:
                 SS["closeout_recap"] = _incl
+                SS["closeout_month"] = (_co_year, _co_month)
                 SS["closeout_group_spread"] = [
                     {"amount": m["amount"], "from": m["from_clinic"], "to": m["to_clinic"]}
                     for m in flex_overage.group_overage_spread(_incl) if m.get("from_clinic")
                 ]
-                SS["closeout_step"] = 0
-                st.success(f"Loaded {len(_incl)} clinic(s) from the recorded Stage 3 for "
-                           f"{dt.date(_co_year, _co_month, 1):%B %Y}.")
+                SS["closeout_step"] = 1
                 st.rerun()
 
-    _recap = SS.get("closeout_recap")
-    _preview = not _recap
-    if _preview:
-        st.info(
-            "**Preview.** No closeout is loaded yet, so no clinics are filled in. Use "
-            "**Load a month's closeout** above to pull in a month Stage 3 already recorded, or "
-            "run **Stage 3 (Unused / Overage)**. You can still walk the steps to see what the "
-            "closeout will ask you to do.",
-            icon=":material/visibility:",
-        )
-    # Always render the wizard. With no recap the worklist is empty, so each step
-    # shows its instructions and an empty-state message rather than clinic rows.
-    _worklist = flex_closeout.build_worklist(
-        flex_clinics, _recap or [], SS.get("closeout_group_spread"))
-    SS.setdefault("closeout_step", 0)
-    SS["closeout_step"] = max(0, min(SS["closeout_step"], len(flex_closeout.STEPS) - 1))
-    _skey, _slabel = flex_closeout.STEPS[SS["closeout_step"]]
-    st.markdown(f"**Step {SS['closeout_step'] + 1} of {len(flex_closeout.STEPS)} — {_slabel}**"
-                + ("  ·  _preview_" if _preview else ""))
-    st.progress((SS["closeout_step"] + 1) / len(flex_closeout.STEPS))
-    st.caption(" · ".join(
-        (f"**{lbl}**" if i == SS["closeout_step"] else lbl)
-        for i, (_, lbl) in enumerate(flex_closeout.STEPS)
-    ))
-    st.divider()
-    flex_closeout.render_step(_skey, _worklist)
+    else:
+        _recap = SS.get("closeout_recap")
+        if not _recap:
+            st.info("No closeout is loaded. Go back to **Select month** and load a month first.",
+                    icon=":material/visibility:")
+        else:
+            _lm = SS.get("closeout_month")
+            if _lm:
+                st.caption(f"Closeout for **{dt.date(_lm[0], _lm[1], 1):%B %Y}** · "
+                           f"{len(_recap)} clinic(s), from the ledger.")
+            _worklist = flex_closeout.build_worklist(
+                flex_clinics, _recap, SS.get("closeout_group_spread"))
+            flex_closeout.render_step(_skey, _worklist)
+
     st.divider()
     _cb, _csp, _cn = st.columns([1, 4, 1])
     if SS["closeout_step"] > 0:
         if _cb.button("← Back", key="closeout_back", use_container_width=True):
             SS["closeout_step"] -= 1
             st.rerun()
-    if SS["closeout_step"] < len(flex_closeout.STEPS) - 1:
+    if _skey != "setup" and SS["closeout_step"] < len(CLOSEOUT_STEPS) - 1:
         if _cn.button("Next →", key="closeout_next", type="primary", use_container_width=True):
             SS["closeout_step"] += 1
             st.rerun()
-    else:
+    elif SS["closeout_step"] == len(CLOSEOUT_STEPS) - 1:
         _cn.markdown("**Done ✓**")
