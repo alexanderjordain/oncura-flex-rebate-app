@@ -314,50 +314,15 @@ def _render_clinics(worklist: dict) -> None:
         "green = overage. No action here — just confirm the list."
     )
 
-    rows = []
+    # Clean color-coded list: outcome badge, clinic, and the unused/overage amount.
+    # Threshold, activity, and payment counts belong to the QBO tie-up step, not this
+    # confirm-the-list picture.
     for c in clinics:
-        label, _ = _OUTCOME_STYLE.get(c["outcome"], (c["outcome"], None))
-        rows.append({
-            "Clinic": c["qb_name"],
-            "Outcome": label,
-            "Group": c["group"] or "",
-            "Finance co": c["finance_company"] or "",
-            "Threshold": c["threshold"],
-            "Activity": c["activity"],
-            "Payments": _payments_str(c["payments"]),
-            "Unused / Overage": _outcome_amount(c),
-        })
-
-    try:
-        import pandas as pd
-
-        df = pd.DataFrame(rows)
-
-        def _style_outcome(val):
-            style = _OUTCOME_STYLE.get(
-                "unused" if val == "UNUSED"
-                else "overage" if val == "OVERAGE"
-                else "zero"
-            )
-            color = style[1] if style else None
-            return f"color: {color}; font-weight: 600" if color else "color: #6b7280"
-
-        styled = df.style.applymap(_style_outcome, subset=["Outcome"]).format(
-            {"Threshold": "${:,.2f}", "Activity": "${:,.2f}",
-             "Unused / Overage": "${:,.2f}"}
+        st.markdown(
+            f"- {_outcome_badge(c['outcome'])} **{c['qb_name']}** · "
+            f"{_money(_outcome_amount(c))}",
+            unsafe_allow_html=True,
         )
-        st.dataframe(styled, use_container_width=True, hide_index=True)
-    except Exception:
-        # No pandas / styler — fall back to a clean colored list.
-        for c in clinics:
-            st.markdown(
-                f"- {_outcome_badge(c['outcome'])} &nbsp; **{c['qb_name']}** "
-                f"&nbsp;·&nbsp; threshold {_money(c['threshold'])} "
-                f"&nbsp;·&nbsp; activity {_money(c['activity'])} "
-                f"&nbsp;·&nbsp; {_payments_str(c['payments'])} pmts "
-                f"&nbsp;·&nbsp; {_money(_outcome_amount(c))}",
-                unsafe_allow_html=True,
-            )
 
 
 def _render_tieup(worklist: dict) -> None:
