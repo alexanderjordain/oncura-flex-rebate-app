@@ -5,7 +5,9 @@ Read-only. Nothing here writes to QBO, OPD, or the ledger. Pick a month, then:
   Clinic walkthrough: step through every clinic that closed that month, one at a
     time — the quarter's finance payments and credit memos (dates + amounts), the
     recorded unused/overage, the hurdle, what QBO should show after tie-up, and
-    any exceptions to check. All from the ledger; no OPD pull.
+    any exceptions to check. All from the ledger; no OPD pull. Optionally drop in
+    a QBO 4320 Flex Discount transaction report to show the QBO figure (credit
+    memos + recapture) beside the app's on each clinic — read-only comparison.
 
   Recorded totals: the quarter-end unused/overage Stage 3 recorded for the month,
     from the ledger, with reversal / calendar-mismatch notes and an optional live
@@ -14,11 +16,13 @@ Read-only. Nothing here writes to QBO, OPD, or the ledger. Pick a month, then:
 from __future__ import annotations
 
 import datetime as dt
+import io
 
 import pandas as pd
 import streamlit as st
 
-from core import flex_closeout, flex_unused, ledger, loaders, monthly_audit, opd_api, ui
+from core import (flex_closeout, flex_unused, ledger, loaders, monthly_audit,
+                  opd_api, qbo_reconcile, ui)
 
 ui.header(
     "Review & Verify",
@@ -57,6 +61,12 @@ def _money(v):
         return "-"
 
 
+@st.cache_data(show_spinner=False)
+def _load_qbo(data: bytes):
+    """Parse an uploaded QBO Transaction Report once per file (cached on bytes)."""
+    return qbo_reconcile.parse_report(io.BytesIO(data))
+
+
 # Period picker (shared default: previous calendar month).
 _prev = dt.date.today().replace(day=1) - dt.timedelta(days=1)
 pc1, pc2, _pc3 = st.columns([1, 1, 3])
@@ -76,6 +86,22 @@ tab_walk, tab_recap = st.tabs(["Clinic walkthrough", "Recorded totals"])
 # CLINIC WALKTHROUGH — one closing clinic at a time (tie-up verification)
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_walk:
+    _qdf = None
+    with st.expander("Compare against QBO (optional) — drop in a Flex Discount transaction report"):
+        st.caption("Export QBO's Transaction Report for the 4320 Flex Discount account (xlsx) and "
+                   "upload it here. Each clinic below then shows the QBO figure beside the app's. "
+                   "Read-only — nothing is written to QBO or the ledger.")
+        _up = st.file_uploader("QBO Transaction Report (.xlsx)", type=["xlsx"], key="rv_qbo_up")
+        if _up is not None:
+            try:
+                _qdf = _load_qbo(_up.getvalue())
+                st.success(f"Loaded {len(_qdf)} transactions across {_qdf['nname'].nunique()} "
+                           "names. Comparison shows on each clinic below.",
+                           icon=":material/fact_check:")
+            except Exception as e:  # noqa: BLE001 - surface any parse error plainly
+                _qdf = None
+                st.error(f"Could not read that file: {type(e).__name__}: {e}")
+
     _slides = flex_closeout.closeout_walkthrough(flex_clinics, _all_payments, year, month)
     if not _slides:
         st.info(f"No clinics closed for {dt.date(year, month, 1):%B %Y}. Pick the month a "
@@ -156,6 +182,57 @@ with tab_walk:
                 st.warning(_e, icon=":material/flag:")
         else:
             st.success("No exceptions flagged.", icon=":material/check_circle:")
+
+        # ── Compared to QBO (only when a transaction report is loaded) ──────────
+        if _qdf is not None and not _qdf.empty:
+            st.markdown("**Compared to QBO (4320 Flex Discount)**")
+            _names = s.get("member_qb_names") or [s["qb_name"]]
+            _qm = flex_closeout._quarter_months(year, month)
+            _summ = qbo_reconcile.clinic_summary(_qdf, _names, _qm, year, month)
+            if not _summ["matched"]:
+                st.info("No QBO rows found under this clinic's name. It may be recorded under a "
+                        "different name in QBO (for example, a group partner's name).",
+                        icon=":material/help:")
+            else:
+                _exp_cm = 3 * max(1, len(_names))
+                _qcm = _summ["cm"]
+                _delta = _qcm["count"] - _exp_cm
+                _verdict = ("matches" if _delta == 0
+                            else f"QBO short {abs(_delta)}" if _delta < 0
+                            else f"QBO extra {_delta}")
+                _qc, _rc = st.columns(2)
+                with _qc:
+                    _zero = f"  ·  +{_qcm['zero_count']} $0 dup" if _qcm["zero_count"] else ""
+                    st.markdown(
+                        f"Credit memos — app recorded **{len(s['credit_memos'])}**, "
+                        f"QBO holds **{_qcm['count']}** of {_exp_cm} expected "
+                        f"({_verdict}), total {_money(_qcm['total'])}{_zero}")
+                    if _qcm["rows"]:
+                        st.dataframe(pd.DataFrame([
+                            {"Date": r["date"], "Coverage": r["coverage"],
+                             "Amount": r["amount"], "QBO #": r["num"]} for r in _qcm["rows"]]),
+                            hide_index=True, use_container_width=True,
+                            column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")})
+                    if _delta == 0:
+                        st.success("Credit-memo count ties to QBO.", icon=":material/check_circle:")
+                    else:
+                        st.warning(f"Credit-memo count differs: {_verdict}.", icon=":material/flag:")
+                with _rc:
+                    _app_rc = (f"overage {_money(s['overage'])}" if s["overage"] > 0
+                               else f"unused {_money(s['unused'])}" if s["unused"] > 0 else "none")
+                    _rcp = _summ["recap"]
+                    st.markdown(
+                        f"Quarter recapture — app: **{_app_rc}**  ·  "
+                        f"QBO posted: **{'none' if not _rcp['count'] else _money(_rcp['total'])}**")
+                    if _rcp["rows"]:
+                        st.dataframe(pd.DataFrame([
+                            {"Date": r["date"], "Amount": r["amount"], "Description": r["desc"]}
+                            for r in _rcp["rows"]]),
+                            hide_index=True, use_container_width=True,
+                            column_config={"Amount": st.column_config.NumberColumn(format="$%.2f")})
+                    else:
+                        st.caption("Not yet posted in QBO for this quarter — expected, since this "
+                                   "is the closeout being verified.")
 
         st.divider()
         _b, _spacer, _n = st.columns([1, 4, 1])

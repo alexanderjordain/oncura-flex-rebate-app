@@ -330,6 +330,8 @@ def closeout_walkthrough(flex_clinics, ledger_payments, year, end_month):
             "qb_name": c.get("qb_name") or c.get("clinic_name"),
             "finance_company": c.get("finance_company"),
             "group_member_count": clinic_count if members else None,
+            "member_qb_names": sorted(
+                {g.get("qb_name") or g.get("clinic_name") for g in group if (g.get("qb_name") or g.get("clinic_name"))}),
             "hurdle": threshold,
             "activity": round(threshold - unused + overage, 2),
             "payments": pmts,
