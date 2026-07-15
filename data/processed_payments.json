@@ -239,6 +239,14 @@
       "uploaded_at": "2026-07-15T16:00:51",
       "row_count": 24,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-07-08"
+    },
+    {
+      "sha256": "93f4ed9aa180d69e0b197a9d607cb3946705c4f12dbcf578bdc507fffdf7b85e",
+      "filename": "Remittance Detail Downloadable (5).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-07-15T16:04:08",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-07-13"
     }
   ],
   "payments": [
@@ -8243,6 +8251,36 @@
       "payment_date": "2026-07-08",
       "amount": 920.8,
       "recorded_at": "2026-07-15T16:00:51"
+    },
+    {
+      "fingerprint": "ce3a1abbf0c36e74cf8f944690b79050dce0e3abb65fd07087bb114aeaecfe18",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42236862",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-07-13",
+      "amount": 935.08,
+      "recorded_at": "2026-07-15T16:04:08"
+    },
+    {
+      "fingerprint": "43a744357efc1fb93215ab34018d2fa6a46bab951dbae8836f21aed7832d0888",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42237077",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "2026-07-13",
+      "amount": 804.56,
+      "recorded_at": "2026-07-15T16:04:08"
+    },
+    {
+      "fingerprint": "a95721d18e679b9875cd02e17301042bc63e46531a25337c1c6b524a54ff49a0",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42237151",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "2026-07-13",
+      "amount": 920.8,
+      "recorded_at": "2026-07-15T16:04:08"
     }
   ]
 }
