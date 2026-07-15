@@ -671,6 +671,25 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
             if recorded_this_session:
                 seen_fps = set(all_fps)
 
+            # Force re-generate: after intentionally clearing these from QBO, let the
+            # operator re-post the FULL import even though the ledger already has them.
+            # The ledger is unchanged (the record step still dedups); this only rebuilds
+            # the downloadable import so it can go back into QBO.
+            force_reimport = False
+            if seen_fps:
+                force_reimport = st.checkbox(
+                    "Re-post to QBO: re-generate the full import even though these payments are "
+                    "already in the ledger. Use only after clearing them from QBO. The ledger is "
+                    "not changed.",
+                    key="remit_force_reimport",
+                )
+                if force_reimport:
+                    st.info(
+                        f":material/refresh: Re-generating the full import ({len(all_rows)} row(s)). "
+                        "These stay in the ledger and will not be re-recorded; re-upload the files "
+                        "to QBO as needed.",
+                    )
+
             # ── Reissue check: rows that weren't exact-duplicates but match an existing
             #    ledger row on (company, kind, contract, amount) with a DIFFERENT payment_date.
             #    These look like reissues — same money, different date — and shouldn't be
@@ -719,7 +738,7 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
 
             # Rows to drop from the downloads + ledger: exact dups already in the
             # ledger, plus any suspected reissues the operator hasn't confirmed.
-            skip_fps = set(seen_fps) | reissue_fps
+            skip_fps = set() if force_reimport else (set(seen_fps) | reissue_fps)
 
             if skip_fps:
                 # The yellow 'removed from downloads' note only helps on a PARTIAL
