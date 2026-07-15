@@ -2676,14 +2676,48 @@ with tab_closeout, safe_stage("Stage 4 — Closeout"):
         "OPD marks FLEX invoices paid automatically — you only tie up QBO, flip the overage "
         "clinics to Past Due, and settle the group / corporate billing."
     )
+
+    # Load a month's closeout directly, without an in-session Stage 3 run: recompute the
+    # recapture live from OPD for the chosen quarter-end month (the same computation Stage 3
+    # runs) and populate the wizard from it. Read-only; nothing posts here.
+    _cprev = dt.date.today().replace(day=1) - dt.timedelta(days=1)
+    with st.expander("Load a month's closeout", expanded=not SS.get("closeout_recap")):
+        _lcy, _lcm, _lcb = st.columns([1, 1, 2])
+        _co_year = int(_lcy.number_input(
+            "Year", min_value=2024, max_value=dt.date.today().year,
+            value=_cprev.year, step=1, format="%d", key="closeout_load_year"))
+        _co_month = int(_lcm.selectbox(
+            "Closeout month (quarter end)", list(range(1, 13)), index=_cprev.month - 1,
+            format_func=lambda m: dt.date(2000, m, 1).strftime("%B"), key="closeout_load_month"))
+        _lcb.markdown('<div style="height: 1.85rem"></div>', unsafe_allow_html=True)
+        if _lcb.button("Load closeout from OPD", key="closeout_load_btn", type="primary"):
+            try:
+                _ws, _we = flex_unused.quarter_window(_co_year, _co_month)
+                _act, _rawdf, _orph = opd_api.flex_activity_for_quarter(_co_year, _co_month)
+                _pays = ledger.flex_payments_in_window(_ws, _we)
+                _rc = flex_unused.compute_recapture(
+                    flex_clinics, _act, _co_year, _co_month, ledger_payments_for_quarter=_pays)
+                _incl = [r for r in _rc if not r.get("excluded_no_payments")]
+                SS["closeout_recap"] = _incl
+                SS["closeout_group_spread"] = [
+                    {"amount": m["amount"], "from": m["from_clinic"], "to": m["to_clinic"]}
+                    for m in flex_overage.group_overage_spread(_incl) if m.get("from_clinic")
+                ]
+                SS["closeout_step"] = 0
+                st.success(f"Loaded {len(_incl)} clinic(s) closing for "
+                           f"{dt.date(_co_year, _co_month, 1):%B %Y}.")
+                st.rerun()
+            except Exception as _e:  # noqa: BLE001 - surface OPD/auth errors plainly
+                st.error(f"Could not load the closeout from OPD: {type(_e).__name__}: {_e}")
+
     _recap = SS.get("closeout_recap")
     _preview = not _recap
     if _preview:
         st.info(
-            "**Preview.** Stage 3 has not produced a closeout set in this session yet, so no "
-            "clinics are filled in. You can still walk the steps to see exactly what the "
-            "closeout will ask you to do. Run **Stage 3 (Unused / Overage)** to populate the "
-            "specific clinics for each step.",
+            "**Preview.** No closeout is loaded yet, so no clinics are filled in. Use "
+            "**Load a month's closeout** above to pull a month in from OPD, or run "
+            "**Stage 3 (Unused / Overage)**. You can still walk the steps to see what the "
+            "closeout will ask you to do.",
             icon=":material/visibility:",
         )
     # Always render the wizard. With no recap the worklist is empty, so each step
