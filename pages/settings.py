@@ -16,7 +16,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from core import accounting_handoff, assist_report, audit, auth, ledger, loaders, store, ui
+from core import (accounting_handoff, assist_report, audit, auth, ledger, loaders,
+                  store, ui, wol_training_email)
 
 ui.header(
     "Settings",
@@ -373,6 +374,37 @@ with st.expander(":material/outgoing_mail: Open assistance email", expanded=Fals
             html_body=_html,
             heading="Weekly Assistance Update",
         )
+
+    st.divider()
+    st.caption(
+        "WOL — installed clinics with no training scheduled. Pulls live from HubSpot "
+        "(deals + companies + calls), groups by training sonographer, and offers the "
+        "draft email plus .eml and .xlsx downloads. Read-only; nothing sends automatically."
+    )
+    if st.button("Build WOL training email", key="wol_email_build"):
+        try:
+            with st.spinner("Pulling WOL data from HubSpot…"):
+                st.session_state["wol_email"] = wol_training_email.build_email()
+        except Exception as e:  # noqa: BLE001 - surface any HubSpot/build error plainly
+            st.error(f"Could not build WOL email: {e}")
+            st.session_state.pop("wol_email", None)
+    _wol = st.session_state.get("wol_email")
+    if _wol:
+        st.success(
+            f"WOL email ready — {_wol['row_count']} clinics across "
+            f"{_wol['trainer_count']} trainers."
+        )
+        st.markdown("**Subject:** " + _wol["subject"])
+        st.markdown("**To:** " + ", ".join(_wol["to"]))
+        st.markdown("**Cc:** " + ", ".join(_wol["cc"]))
+        _wc = st.columns(2)
+        _wc[0].download_button(
+            "Download .eml", data=_wol["eml_bytes"], file_name=_wol["eml_filename"],
+            mime="message/rfc822", key="wol_dl_eml")
+        _wc[1].download_button(
+            "Download xlsx", data=_wol["xlsx_bytes"], file_name=_wol["xlsx_filename"],
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="wol_dl_xlsx")
 
 st.divider()
 
