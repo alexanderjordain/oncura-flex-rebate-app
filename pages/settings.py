@@ -352,7 +352,7 @@ st.divider()
 # ═════════════════════════════════════════════════════════════════════════════
 # Sonographer assistance email (utility — opens a ready-to-send draft)
 # ═════════════════════════════════════════════════════════════════════════════
-with st.expander(":material/outgoing_mail: Open assistance email", expanded=False):
+with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
     st.caption(
         "Pulls finalized-assist counts from OPD (weekly + daily, by sonographer) and "
         "opens a ready-to-send draft to the assisting sonographers — the same email "
