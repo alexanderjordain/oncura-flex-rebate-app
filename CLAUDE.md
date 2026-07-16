@@ -46,7 +46,7 @@ pages/
   flex_cycle.py               # 3-tab wizard wrapped in safe_stage() guards; live-OPD Stage 3
   overage_tracker.py          # overage billed/paid + 3-month lockout watch (Pass-Through nav)
   flex_tutorial.py            # operator-facing walkthrough of the FLEX program model
-  review_verify.py            # Admin: read-only month/quarter verification (recorded vs recompute)
+  (Review & Verify)           # read-only month/quarter verification — now Stage 5 of flex_cycle, body in core/review_ui.py
   audit_log.py                # browse + verify the audit manifest (password-gated admin view)
   settings.py                 # config.json editor + backup/restore + ledger summary (admin-only)
 tests/                        # pytest suite — `python -m pytest tests/` (165 tests, ~1s)

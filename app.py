@@ -44,7 +44,6 @@ pages = {
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
-        st.Page("pages/review_verify.py", title="Review & Verify"),
         st.Page("pages/settings.py", title="Settings"),
         st.Page("pages/audit_log.py", title="Audit & Tracking"),
     ],
@@ -66,7 +65,6 @@ with st.sidebar:
         st.page_link("pages/flex_master.py", label="Clinic Roster")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
-        st.page_link("pages/review_verify.py", label="Review & Verify")
         st.page_link("pages/settings.py", label="Settings")
         st.page_link("pages/audit_log.py", label="Audit & Tracking")
     st.markdown('</div>', unsafe_allow_html=True)

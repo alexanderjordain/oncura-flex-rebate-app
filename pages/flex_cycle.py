@@ -16,7 +16,7 @@ import streamlit as st
 from core import (
     accounting_handoff, audit, auth, errors, flex_closeout, flex_credits,
     flex_finance, flex_overage, flex_unused, ledger, loaders, monthly_audit,
-    opd_adapter, opd_api, overage_ledger, saasant, store, ui,
+    opd_adapter, opd_api, overage_ledger, review_ui, saasant, store, ui,
 )
 
 
@@ -42,12 +42,13 @@ ui.header("Payment Cycle",
 flex = loaders.flex_master()
 flex_clinics = flex.get("clinics", [])
 
-tab_overview, tab_remit, tab_credits, tab_recap, tab_closeout = st.tabs([
+tab_overview, tab_remit, tab_credits, tab_recap, tab_closeout, tab_review = st.tabs([
     "Overview",
     "1. Finance Payment Imports",
     "2. Monthly Credit Memos",
     "3. Unused / Overage",
     "4. Closeout",
+    "5. Review & Verify",
 ])
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2795,3 +2796,17 @@ with tab_closeout, safe_stage("Stage 4 — Closeout"):
             st.rerun()
     elif SS["closeout_step"] == len(CLOSEOUT_STEPS) - 1:
         _cn.markdown("**Done ✓**")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# STAGE 5 — REVIEW & VERIFY (read-only; body rendered from core.review_ui)
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_review, safe_stage("Stage 5 — Review & Verify"):
+    ui.banner("To be completed during month close process")
+    st.subheader("Stage 5 — Review & Verify")
+    st.caption(
+        "Read-only check of the cycle: step through each closing clinic (with an optional "
+        "QBO comparison) and reconcile the recorded unused/overage totals against a live OPD "
+        "recompute. Nothing here writes to QBO, OPD, or the ledger."
+    )
+    review_ui.render()
