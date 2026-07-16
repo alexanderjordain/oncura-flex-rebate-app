@@ -68,6 +68,18 @@ CO_PROPS = [
     "state",
 ]
 
+# ---------- OPD certification cross-check ----------
+# A "finalized certification" in OPD is a Finalized consult carrying one of these
+# ConsultService ServiceNames. Abdomen -> abdominal training, Basic Echo ->
+# cardiac. GlobalFAST certs are neither and are ignored for the remaining counts.
+CERT_ABDOMINAL = "Certification - Abdomen"
+CERT_CARDIAC = "Certification - Basic Echocardiography"
+# Internal Oncura entities dropped from the WOL list (not customer clinics).
+EXCLUDE_CLINICS = {"oncura partners fort worth", "oncura partners - fort worth"}
+# The two Training-Remaining deal properties the OPD certs reduce.
+REMAIN_ABDOMINAL = "migrated_00nus000001e6htmak"
+REMAIN_CARDIAC = "migrated_00nus000001e6jvma0"
+
 
 def recipients(kind: str) -> list[str]:
     return list(_TO) if kind == "to" else list(_CC)
@@ -78,11 +90,65 @@ def _chunks(lst, n):
         yield lst[i : i + n]
 
 
+def _norm(s):
+    return " ".join(str(s or "").casefold().split())
+
+
 def _num(v):
     try:
         return int(v) if v and str(v) != "(No value)" else 0
     except (TypeError, ValueError):
         return 0
+
+
+def _num_or_none(v):
+    """Parse a Training-Remaining value to int, or None if blank / not a number.
+    None means 'unknown' — we keep the clinic on the list but compute no target."""
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s or s == "(No value)":
+        return None
+    try:
+        return int(float(s))
+    except (TypeError, ValueError):
+        return None
+
+
+def _opd_cert_map(auth):
+    """{consult_id (str): {'abdominal': bool, 'cardiac': bool}} for every
+    Certification service line in OPD (any status), via two filtered live reads
+    of ConsultService. Joined to Consults by ConsultServiceCost_Consult = Consult.ID.
+    """
+    from . import opd_api  # lazy import; avoids pulling opd_api at module load
+    base = "https://telehealth.oncurapartners.com/odata/Consults/ConsultService"
+    out: dict = {}
+    for stype, key in ((CERT_ABDOMINAL, "abdominal"), (CERT_CARDIAC, "cardiac")):
+        rows, _ = opd_api._fetch_all(base, auth=auth,
+                                     params={"$filter": f"ServiceName eq '{stype}'"})
+        for r in rows:
+            cid = str(r.get("ConsultServiceCost_Consult") or "").strip()
+            if cid:
+                out.setdefault(cid, {"abdominal": False, "cardiac": False})[key] = True
+    return out
+
+
+def _finalized_certs(auth, clinic_internal_id, cert_map):
+    """[(types_dict, finalized_date)] for this clinic's Finalized certification
+    consults. finalized_date is the local (Eastern) billing date."""
+    from . import opd_api
+    rows, _ = opd_api._fetch_all(
+        "https://telehealth.oncurapartners.com/odata/Consults/Consult", auth=auth,
+        params={"$filter": f"Consult_Clinic eq {clinic_internal_id} and CaseStatus eq 'Finalized'",
+                "$select": "ID,FinalizedDate"})
+    out = []
+    for r in rows:
+        types = cert_map.get(str(r.get("ID") or "").strip())
+        if not types:
+            continue
+        fd = opd_api._utc_to_billing_date(opd_api._parse_dt(r.get("FinalizedDate")))
+        out.append((types, fd))
+    return out
 
 
 def _days_color(d):
@@ -172,6 +238,10 @@ def build_email() -> dict:
             continue
         if _num(dp.get("abdominal_trainings")) > 0 or _num(dp.get("cardiac_trainings")) > 0:
             continue
+        # Drop internal Oncura entities (e.g. Oncura Partners - Fort Worth). A null
+        # Training-Remaining value is NOT grounds for removal — those clinics stay.
+        if _norm(co.get("name")) in EXCLUDE_CLINICS:
+            continue
         candidates.append({"deal_id": did, "company_id": co_id, "company": co,
                            "deal": dp, "install_dt": install_dt})
 
@@ -228,6 +298,46 @@ def build_email() -> dict:
         company_calls[co_id] = cd_list
         time.sleep(0.03)
 
+    # OPD certification cross-check (live). Best-effort: if OPD is unreachable the
+    # report still builds with cert columns blank. Finalized OPD certifications
+    # (abdominal / basic-echo) dated AFTER the install date reduce Training Remaining.
+    opd_error = None
+    cert_after: dict = {}
+    try:
+        from . import opd_api  # lazy import
+        _oauth = opd_api.auth_from_secrets()
+        _cert_map = _opd_cert_map(_oauth)
+        _by_oname: dict = {}
+        for _iid, _nm in opd_api.fetch_clinic_index(_oauth).items():
+            _by_oname.setdefault(_norm(_nm), _iid)
+        _fin_cache: dict = {}
+        for c in candidates:
+            _oid = _by_oname.get(_norm(c["company"].get("name")))
+            if not _oid:
+                continue
+            if _oid not in _fin_cache:
+                _fin_cache[_oid] = _finalized_certs(_oauth, _oid, _cert_map)
+            _inst = c["install_dt"]
+            cert_after[c["deal_id"]] = {
+                "abdominal": sum(1 for t, fd in _fin_cache[_oid]
+                                 if t["abdominal"] and fd and fd > _inst),
+                "cardiac": sum(1 for t, fd in _fin_cache[_oid]
+                               if t["cardiac"] and fd and fd > _inst),
+            }
+    except Exception as e:  # noqa: BLE001 - OPD is best-effort enrichment
+        opd_error = f"{type(e).__name__}: {e}"
+
+    def _targets(dp, did):
+        """(rem_abd, tgt_abd, rem_car, tgt_car) for a deal — target = remaining
+        minus post-install certs, floored at 0; target is None when remaining is
+        blank (unknown) so the clinic stays listed but gets no computed change."""
+        certs = cert_after.get(did, {"abdominal": 0, "cardiac": 0})
+        ra = _num_or_none(dp.get(REMAIN_ABDOMINAL))
+        rc = _num_or_none(dp.get(REMAIN_CARDIAC))
+        ta = max(0, ra - certs["abdominal"]) if ra is not None else None
+        tc = max(0, rc - certs["cardiac"]) if rc is not None else None
+        return certs, ra, ta, rc, tc
+
     # Build report rows.
     rows = []
     for c in candidates:
@@ -241,6 +351,7 @@ def build_email() -> dict:
         except (ValueError, TypeError):
             tes_dt = None
 
+        _certs, _ra, _ta, _rc, _tc = _targets(dp, c["deal_id"])
         calls = company_calls.get(co_id, [])
         last_call = max((cx["ts"] for cx in calls), default=None)
         rows.append({
@@ -258,6 +369,10 @@ def build_email() -> dict:
             "Expiration Date": (dp.get("expiration_date") or "")[:10],
             "Remaining Abdominal": dp.get("migrated_00nus000001e6htmak") or "",
             "Remaining Cardiac": dp.get("migrated_00nus000001e6jvma0") or "",
+            "OPD Certs Abd (post-install)": _certs["abdominal"],
+            "OPD Certs Card (post-install)": _certs["cardiac"],
+            "Remaining Abd -> target": ("" if _ta is None else _ta),
+            "Remaining Card -> target": ("" if _tc is None else _tc),
             "City": co.get("city") or "",
             "State": co.get("state") or "",
         })
@@ -269,6 +384,25 @@ def build_email() -> dict:
     trainer_counts = Counter(r["Training Sonographer"] for r in rows)
     for kt in KNOWN_TRAINERS:
         trainer_counts.setdefault(kt, 0)
+
+    # Review-then-apply worklist: deals where post-install OPD certs actually
+    # change a numeric Training-Remaining value. Null remaining -> no adjustment
+    # (the clinic still appears on the list, just with nothing to apply).
+    adjustments = []
+    for c in candidates:
+        certs, ra, ta, rc, tc = _targets(c["deal"], c["deal_id"])
+        chg_a = certs["abdominal"] > 0 and ta is not None and ta != ra
+        chg_c = certs["cardiac"] > 0 and tc is not None and tc != rc
+        if not (chg_a or chg_c):
+            continue
+        adjustments.append({
+            "deal_id": c["deal_id"],
+            "clinic": c["company"].get("name") or "",
+            "abd_current": ra, "abd_certs": certs["abdominal"],
+            "abd_target": ta if chg_a else None,
+            "car_current": rc, "car_certs": certs["cardiac"],
+            "car_target": tc if chg_c else None,
+        })
 
     # xlsx bytes.
     xlsx_bio = io.BytesIO()
@@ -396,4 +530,29 @@ def build_email() -> dict:
         "eml_filename": eml_filename,
         "row_count": len(rows),
         "trainer_count": sum(1 for t, n in trainer_counts.items() if n > 0),
+        "adjustments": adjustments,
+        "opd_error": opd_error,
     }
+
+
+def apply_remaining(deal_id, abd_target=None, car_target=None):
+    """WRITE the computed Training-Remaining targets back to a HubSpot deal.
+
+    This is the only write in the module. Sets the fields to a target computed
+    from OPD (remaining minus post-install certs), so it is idempotent — running
+    it twice does not double-decrement. Requires the HUBSPOT_TOKEN to carry the
+    crm.objects.deals.write scope; read-only tokens get a 403 surfaced to the UI.
+    """
+    if not TOKEN:
+        raise RuntimeError("HUBSPOT_TOKEN is not set in Streamlit secrets or env.")
+    props = {}
+    if abd_target is not None:
+        props[REMAIN_ABDOMINAL] = str(abd_target)
+    if car_target is not None:
+        props[REMAIN_CARDIAC] = str(car_target)
+    if not props:
+        return None
+    r = requests.patch(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}",
+                       headers=H, json={"properties": props}, timeout=30)
+    r.raise_for_status()
+    return r.json()
