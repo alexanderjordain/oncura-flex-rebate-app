@@ -53,7 +53,7 @@ CC_RECIPIENTS = [
     ("Tanya White", "tanya@oncurapartners.com"),
     ("Craig Presnall", "craig@oncurapartners.com"),
 ]
-SUBJECT = "Re: Weekly Assistance Update"
+SUBJECT = "Weekly Assistance Update"
 WEEKLY_GOAL = 50   # per week
 DAILY_GOAL = 10    # per day
 # Trailing windows shown in the email (both end at the last COMPLETE period).
