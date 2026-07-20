@@ -26,7 +26,9 @@ from . import ema_renewals
 RENEWAL_PRICE = ema_renewals.RENEWAL_PRICE          # 4500
 OUTREACH_LEAD_DAYS = ema_renewals.OUTREACH_LEAD_DAYS  # 14 (business day)
 COMPANY_ADDR = "Oncura Partners  ·  6628 Bryant Irvin Rd, Suite 205, Fort Worth, TX 76132"
-SENDER = "Mark McIlwain, Oncura Partners"
+# Sender is the Oncura Partners brand, not a named individual. Mark is referenced
+# in the body only as the person the clinic would speak with on the call.
+SENDER = "The Oncura Partners Team"
 PER_RUN_CAP = 25   # guardrail: never send more than this in one run
 
 
