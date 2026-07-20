@@ -44,14 +44,15 @@ def reach_out_date(expiry: dt.date) -> dt.date:
     return prev_business_day(expiry - dt.timedelta(days=OUTREACH_LEAD_DAYS))
 
 
-def fetch_active_ema(auth=None):
-    """Every clinic with an active hardware EMA and an end date, live from OPD.
-    Read-only. Returns a list of dicts sorted by hardware EMA expiry."""
+def fetch_all_ema(auth=None):
+    """Every clinic with a hardware EMA end date, live from OPD — ACTIVE and
+    EXPIRED alike (the HardwareEMA flag flips to false on expiry, so we key off
+    the date, not the flag). Read-only. Sorted by expiry; carries hardware_active.
+    """
     auth = auth or opd_api.auth_from_secrets()
     rows, _ = opd_api._fetch_all(
         CLINIC_PATH, auth=auth,
-        params={"$filter": "HardwareEMA eq true and HardwareEMAEndDate ne null",
-                "$select": _EMA_SELECT})
+        params={"$filter": "HardwareEMAEndDate ne null", "$select": _EMA_SELECT})
     out = []
     for r in rows:
         end = _date(r.get("HardwareEMAEndDate"))
@@ -63,12 +64,38 @@ def fetch_active_ema(auth=None):
             "state": (r.get("State") or "").strip(),
             "city": (r.get("City") or "").strip(),
             "hardware_end": end,
+            "hardware_active": str(r.get("HardwareEMA")).lower() == "true",
             "support_end": _date(r.get("SupportEMAEndDate")),
             "admin_email": (r.get("AdminEmail") or "").strip(),
             "billing_email": (r.get("BillingEmail") or "").strip(),
         })
     out.sort(key=lambda x: x["hardware_end"])
     return out
+
+
+def fetch_active_ema(auth=None):
+    """Clinics whose hardware EMA has not yet expired (flag true). Used by the
+    read-only review page."""
+    return [c for c in fetch_all_ema(auth=auth) if c["hardware_active"]]
+
+
+def expired_batch(clinics, today: dt.date, max_age_days: int | None = None):
+    """Clinics whose hardware EMA has ALREADY lapsed (end date < today) — the
+    renewal-backlog batch, most-recently-expired first. `max_age_days` optionally
+    excludes very old lapses. Each row carries days_expired, best email, price."""
+    batch = []
+    for c in clinics:
+        past = (today - c["hardware_end"]).days
+        if past > 0 and (max_age_days is None or past <= max_age_days):
+            batch.append({
+                **c,
+                "days_expired": past,
+                "status": "expired",
+                "email": c["admin_email"] or c["billing_email"],
+                "renewal_price": RENEWAL_PRICE,
+            })
+    batch.sort(key=lambda x: x["hardware_end"], reverse=True)  # newest lapse first
+    return batch
 
 
 def renewal_batch(clinics, today: dt.date, window_days: int = OUTREACH_LEAD_DAYS):
