@@ -41,53 +41,85 @@ def _opd_auth():
     return HTTPBasicAuth(u, p) if u and p else None
 
 
+# ── Call-slot proposer ────────────────────────────────────────────────────────
+# We present a specific pre-arranged time ("we've set aside {call_date} at
+# {call_time}"), spread across business-day slots so a batch doesn't collide. The
+# Calendly link lets the clinic keep/confirm or reschedule. NOTE: these are
+# proposed holds — they only become real calendar events once Mark's Calendly
+# calendar is connected and the clinic confirms via the link.
+CALL_TIMES = ["10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+              "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM"]  # US Eastern, per business day
+
+
+def _next_business_day(d: dt.date) -> dt.date:
+    d += dt.timedelta(days=1)
+    while d.weekday() >= 5:
+        d += dt.timedelta(days=1)
+    return d
+
+
+def assign_call_slot(index: int, start: dt.date) -> tuple[dt.date, str]:
+    """Assign clinic #index a proposed call slot: sequential business-day slots
+    from `start`, CALL_TIMES per day, so a run's calls are spread out."""
+    day = start
+    for _ in range((index // len(CALL_TIMES)) + 1):
+        day = _next_business_day(day)
+    return day, CALL_TIMES[index % len(CALL_TIMES)] + " ET"
+
+
 # ── Outreach copy (reference for the HubSpot email template; previewed in dry-run) ──
-# Call-first framing: we've set them up with a call so they have someone to talk
-# to about the EMA; if they'd rather skip the conversation, the renew link is right
-# there. Wording adapts for already-lapsed vs. still-active EMAs.
+# Framing per the approved brief: the call is already ARRANGED (not "schedule a
+# call") for a specific date/time; keep it, or skip the conversation and renew
+# online. From the Oncura Partners brand, not an individual.
 def email_copy(clinic: str, expiry: dt.date, payment_link: str, calendly_link: str,
-               status: str = "upcoming") -> tuple[str, str, str]:
+               call_date: dt.date, call_time: str, status: str = "upcoming") -> tuple[str, str, str]:
     exp = expiry.strftime("%B %d, %Y")
+    cd = call_date.strftime("%A, %B %d, %Y")
     price = f"${RENEWAL_PRICE:,.0f}"
     if status == "expired":
-        subject = "Your Oncura ultrasound coverage has lapsed — let's get you covered again"
-        opener = (f"Our records show your Oncura Extended Maintenance Agreement (EMA) lapsed on {exp}, "
-                  f"so your ultrasound isn't currently covered for repair or replacement.")
-        opener_html = (f"Our records show your Oncura <b>Extended Maintenance Agreement (EMA)</b> lapsed on "
-                       f"<b>{exp}</b>, so your ultrasound isn't currently covered for repair or replacement.")
+        subject = "Your Oncura EMA has lapsed — your renewal call is set"
+        exp_line = f"Your EMA expired on {exp}, so your ultrasound isn't currently covered."
+        exp_html = f"Your EMA expired on <b>{exp}</b>, so your ultrasound isn't currently covered."
         resume = "resumes"
     else:
-        subject = "Your Oncura equipment warranty (EMA) is up for renewal"
-        opener = f"Your Oncura Extended Maintenance Agreement (EMA) is set to expire on {exp}."
-        opener_html = f"Your Oncura <b>Extended Maintenance Agreement (EMA)</b> is set to expire on <b>{exp}</b>."
+        subject = "Your Oncura EMA renewal — your call is set"
+        exp_line = f"Your EMA is set to expire on {exp}."
+        exp_html = f"Your EMA is set to expire on <b>{exp}</b>."
         resume = "continues"
     plain = (
-        f"Hello {clinic},\n\n"
-        f"{opener} Renewing keeps it fully protected for another year — Oncura repairs or replaces any "
-        f"failed system and provides a loaner while it's serviced.\n\n"
-        f"So you have someone to walk you through it, we've set you up with a call with Mark McIlwain, "
-        f"who handles EMA renewals — grab whatever time works for you here:\n     {calendly_link}\n\n"
-        f"Prefer to skip the conversation and simply renew? You can do it in under a minute — renewal is "
-        f"{price} for a 12-month term and coverage {resume} immediately:\n     {payment_link}\n\n"
-        f"Per your agreement, the EMA renews for successive 12-month terms unless you cancel in writing — "
-        f"please treat this as your renewal notice. Questions? Just reply here.\n\n"
-        f"Thank you,\n{SENDER}\n{COMPANY_ADDR}\n"
+        f"Hi {clinic},\n\n"
+        f"{exp_line}\n\n"
+        f"To help keep your ultrasound coverage active, we've set aside time for you to speak with "
+        f"Mark McIlwain about your renewal:\n\n"
+        f"     {cd} at {call_time}\n\n"
+        f"Mark can answer any questions and walk you through your options — there's nothing you need to "
+        f"do to keep this call. Confirm or reschedule here:\n     {calendly_link}\n\n"
+        f"If you'd rather take care of it now, you can skip the conversation and renew securely online. "
+        f"Coverage {resume} immediately once payment is received.\n\n"
+        f"     Renewal: {price}\n     {payment_link}\n\n"
+        f"Your EMA renews for successive 12-month terms unless cancelled in writing; please treat this "
+        f"as your renewal notice.\n\n"
+        f"Thank you,\n{SENDER}\n\n6628 Bryant Irvin Rd, Suite 205\nFort Worth, TX 76132\n"
     )
     html = (
         f'<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#2A3742;">'
-        f"<p>Hello {clinic},</p>"
-        f"<p>{opener_html} Renewing keeps it fully protected for another year — Oncura repairs or replaces "
-        f"any failed system and provides a loaner while it's serviced.</p>"
-        f"<p>So you have someone to walk you through it, we've <b>set you up with a call with Mark McIlwain</b>, "
-        f"who handles EMA renewals:</p>"
+        f"<p>Hi {clinic},</p>"
+        f"<p>{exp_html}</p>"
+        f"<p>To help keep your ultrasound coverage active, we've <b>set aside time for you to speak with "
+        f"Mark McIlwain</b> about your renewal:</p>"
+        f'<p style="font-size:16px;font-weight:600;color:#2F567E;">{cd} at {call_time}</p>'
+        f"<p>Mark can answer any questions and walk you through your options — there's nothing you need "
+        f"to do to keep this call.</p>"
         f'<p><a href="{calendly_link}" style="background:#2F567E;color:#fff;padding:10px 18px;'
-        f'border-radius:6px;text-decoration:none;font-weight:600;">Book your call — pick a time</a></p>'
-        f"<p>Prefer to skip the conversation and simply renew? It takes under a minute — renewal is "
-        f'<b>{price}</b> for 12 months and coverage {resume} immediately: '
-        f'<a href="{payment_link}">renew and pay securely here</a>.</p>'
-        f'<p style="color:#6B7785;font-size:12px;">Per your agreement, the EMA renews for successive '
-        f"12-month terms unless you cancel in writing — please treat this as your renewal notice.</p>"
-        f"<p>Thank you,<br>{SENDER}<br><span style=\"color:#6B7785;\">{COMPANY_ADDR}</span></p></div>"
+        f'border-radius:6px;text-decoration:none;font-weight:600;">Confirm or reschedule your call</a></p>'
+        f"<p>Prefer to take care of it now? Skip the conversation and renew securely online — coverage "
+        f"{resume} immediately once payment is received.</p>"
+        f'<p><b>Renewal: {price}</b> &nbsp; <a href="{payment_link}">renew online</a></p>'
+        f'<p style="color:#6B7785;font-size:12px;">Your EMA renews for successive 12-month terms unless '
+        f"cancelled in writing; please treat this as your renewal notice.</p>"
+        f'<p>Thank you,<br>{SENDER}</p>'
+        f'<p style="color:#6B7785;font-size:12px;">6628 Bryant Irvin Rd, Suite 205<br>Fort Worth, TX 76132</p>'
+        f"</div>"
     )
     return subject, plain, html
 
@@ -132,13 +164,16 @@ def build_plan(mode: str = "upcoming", today: dt.date | None = None,
         batch = batch[:limit]
     payment_link = _cfg("EMA_PAYMENT_LINK")
     plans = []
-    for c in batch:
-        subj, plain, html = email_copy(c["clinic"], c["hardware_end"], payment_link,
-                                       "{{ per-clinic Calendly link generated at send }}", status=status)
+    for i, c in enumerate(batch):
+        call_date, call_time = assign_call_slot(i, today)
+        subj, plain, html = email_copy(
+            c["clinic"], c["hardware_end"], payment_link,
+            "{{ per-clinic Calendly link generated at send }}", call_date, call_time, status=status)
         plans.append({
             "clinic": c["clinic"], "clinic_id": c["clinic_id"], "state": c["state"],
             "email": c["email"], "expiry": c["hardware_end"].isoformat(), "status": status,
             "days_to_expiry": c.get("days_to_expiry"), "days_expired": c.get("days_expired"),
+            "call_date": call_date.isoformat(), "call_time": call_time,
             "renewal_price": RENEWAL_PRICE, "payment_link": payment_link,
             "subject": subj, "plain": plain, "html": html,
         })
