@@ -83,17 +83,18 @@ def _headers(token: str | None = None) -> dict:
 
 
 def _recips(x) -> list[dict]:
-    """Normalise a 'Name <email>' / bare-email string, or list thereof, into the
-    Graph emailAddress shape."""
-    from email.utils import parseaddr
+    """Normalise recipients into the Graph emailAddress shape. Accepts a
+    'Name <email>' / bare-email string, a list of them, OR a single string that
+    packs several comma/semicolon-separated addresses (OPD stores some clinic
+    contacts that way) — getaddresses splits those correctly while preserving
+    display names."""
+    from email.utils import getaddresses
 
     items = x if isinstance(x, (list, tuple)) else ([x] if x else [])
+    items = [str(a).replace(";", ",") for a in items if a]
     out = []
-    for a in items:
-        if not a:
-            continue
-        name, addr = parseaddr(str(a))
-        if not addr:
+    for name, addr in getaddresses(items):
+        if not addr or "@" not in addr:
             continue
         ea = {"address": addr}
         if name:

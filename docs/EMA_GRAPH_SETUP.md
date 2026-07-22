@@ -15,14 +15,14 @@ already includes Entra ID.
 
 Two **Application** permissions on Microsoft Graph:
 
-| Permission | Why |
-|---|---|
-| `Mail.Send` | Send the branded renewal email as the organizer mailbox (lands in its Sent Items). |
-| `Calendars.ReadWrite` | Create the renewal call on the organizer's calendar (inviting the clinic), and cancel it if the clinic pays first. |
+| Permission | Why | Mailbox it acts on |
+|---|---|---|
+| `Mail.Send` | Send the branded renewal email (lands in that mailbox's Sent Items). | `AJordain@oncurapartners.com` (until a shared inbox exists) |
+| `Calendars.ReadWrite` | Create the renewal call on the calendar (inviting the clinic) and cancel it if the clinic pays first. | `mark@oncurapartners.com` (Mark owns the call) |
 
 Application permissions are **tenant-wide by default** (the app could send/read as
 *any* mailbox). We lock that down in step 5 with an **Application Access Policy**
-so the bot can only touch the single organizer mailbox.
+so the bot can only touch those two mailboxes — nothing else.
 
 ---
 
@@ -64,22 +64,28 @@ this doc to whoever administers Microsoft 365 and ask them to complete steps 1�
 ## 5. Scope the bot to one mailbox (strongly recommended)
 
 Without this, `Mail.Send`/`Calendars.ReadWrite` apply to every mailbox in the
-tenant. An **Application Access Policy** restricts the app to just the organizer
-mailbox. Run in Exchange Online PowerShell (`Connect-ExchangeOnline`):
+tenant. An **Application Access Policy** restricts the app to just the two
+mailboxes it uses (the email sender + the calendar owner). Run in Exchange Online
+PowerShell (`Connect-ExchangeOnline`):
 
 ```powershell
-# One mail-enabled security group holding just the organizer mailbox
+# One mail-enabled security group holding both bot mailboxes
 New-DistributionGroup -Name "EMA Bot Mailboxes" -Type Security `
-  -Members mark@oncurapartners.com -PrimarySmtpAddress ema-bot-scope@oncurapartners.com
+  -Members ajordain@oncurapartners.com,mark@oncurapartners.com `
+  -PrimarySmtpAddress ema-bot-scope@oncurapartners.com
 
 New-ApplicationAccessPolicy -AppId <GRAPH_CLIENT_ID> `
   -PolicyScopeGroupId ema-bot-scope@oncurapartners.com `
   -AccessRight RestrictAccess `
-  -Description "EMA renewal bot may only act on the organizer mailbox"
+  -Description "EMA renewal bot may only act on the sender + organizer mailboxes"
 
-# Verify (should return Granted / AccessCheckResult = Granted)
+# Verify (should return AccessCheckResult = Granted for each)
+Test-ApplicationAccessPolicy -Identity ajordain@oncurapartners.com -AppId <GRAPH_CLIENT_ID>
 Test-ApplicationAccessPolicy -Identity mark@oncurapartners.com -AppId <GRAPH_CLIENT_ID>
 ```
+
+When the shared inbox is ready, add it to the `EMA Bot Mailboxes` group and set
+`EMA_EMAIL_SENDER` to it — no code or app-registration change needed.
 
 ## 6. Give the bot the secrets
 
@@ -90,7 +96,8 @@ Test-ApplicationAccessPolicy -Identity mark@oncurapartners.com -AppId <GRAPH_CLI
 GRAPH_TENANT_ID      = "<Directory (tenant) ID>"
 GRAPH_CLIENT_ID      = "<Application (client) ID>"
 GRAPH_CLIENT_SECRET  = "<client secret value>"
-EMA_ORGANIZER        = "mark@oncurapartners.com"   # calendar owner + email sender
+EMA_EMAIL_SENDER     = "AJordain@oncurapartners.com"   # renewal email sends as this
+EMA_ORGANIZER        = "mark@oncurapartners.com"       # calendar owner of the call
 EMA_PAYMENT_LINK     = "https://go.oncurapartners.com/hs/payments/…"
 OPD_ODATA_USER / OPD_ODATA_PASS                    # already used elsewhere
 HUBSPOT_TOKEN                                      # for CRM documentation

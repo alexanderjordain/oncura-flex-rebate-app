@@ -34,6 +34,16 @@ def test_recips_parses_named_bare_and_lists():
     assert ema_graph._recips(None) == []
 
 
+def test_recips_splits_multi_address_string():
+    # OPD packs some clinic contacts as one comma-separated string
+    assert ema_graph._recips("a@x.com, LSRICH10@aol.com") == [
+        {"emailAddress": {"address": "a@x.com"}},
+        {"emailAddress": {"address": "LSRICH10@aol.com"}}]
+    assert ema_graph._recips("a@x.com; b@y.com") == [
+        {"emailAddress": {"address": "a@x.com"}},
+        {"emailAddress": {"address": "b@y.com"}}]
+
+
 def test_graph_dt_is_naive_wallclock():
     d = dt.datetime(2026, 7, 30, 10, 0, 0)
     assert ema_graph._graph_dt(d) == "2026-07-30T10:00:00"
