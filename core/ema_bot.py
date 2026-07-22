@@ -73,17 +73,21 @@ def send_one(p: dict, data: dict, *, organizer: str, sender: str, hs_on: bool,
         organizer, p["event_subject"], p["event_html"], start, end, p["email"])
     ok_mail, mail_info = ema_graph.send_mail(
         sender, p["subject"], p["html"], p["email"], reply_to=sender)
-    note_info = "hubspot off"
+    note_ok, note_info = False, "hubspot off"
     if hs_on:
         from . import ema_hubspot
-        _, note_info = ema_hubspot.log_outreach(
+        note_ok, note_info = ema_hubspot.log_outreach(
             p["clinic"], p["call_date"], p["call_time"], p["expiry"], p["status"])
+    # PERSISTED ROW: no clinic email and no raw Graph error text — the repo is
+    # public, so the ledger carries only what dedup/cancel need. The email is read
+    # fresh from OPD at send time; raw errors stay in the in-memory result only.
     ema_ledger.append_outreach(data, {
         "clinic_id": p["clinic_id"], "clinic_name": p["clinic"], "mode": p["status"],
         "expiry": p["expiry"], "contacted_at": now_iso, "call_datetime": p["call_start"],
-        "call_time": p["call_time"], "organizer": organizer, "email": p["email"],
-        "graph_event_id": event_id, "email_status": mail_info,
-        "event_status": evt_info if ok_evt else f"FAILED {evt_info}", "hs_note": note_info,
+        "call_time": p["call_time"],
+        "graph_event_id": event_id if ok_evt else "",
+        "email_sent": bool(ok_mail), "event_created": bool(ok_evt),
+        "hs_note_id": note_info if (hs_on and note_ok) else "",
     })
     return {"clinic": p["clinic"], "email": p["email"], "event_ok": ok_evt,
             "event": event_id if ok_evt else evt_info, "mail_ok": ok_mail,

@@ -8,11 +8,17 @@ Persistence goes through core.store (GitHub Contents API when GITHUB_TOKEN is se
 else local file). On Render the filesystem is ephemeral between cron runs, so set
 GITHUB_TOKEN there to make the ledger durable in the repo.
 
+**The repo is PUBLIC**, so this ledger deliberately carries NO clinic email or
+other contact PII, and no raw Graph error text (which can echo a recipient). It
+holds only what dedup and cancel need: the OPD clinic_id, the calendar event id,
+booleans, and dates. The clinic email is read fresh from OPD at send time.
+
 Schema (data/ema_outreach_ledger.json):
   {"outreach": [
     {clinic_id, clinic_name, mode ("expired"|"upcoming"), expiry ("YYYY-MM-DD"),
-     contacted_at (ISO datetime), call_datetime (ISO), call_time, organizer,
-     email, graph_event_id, email_status, status ("open"|"renewed"|"cancelled")},
+     contacted_at (ISO datetime), call_datetime (ISO), call_time,
+     graph_event_id, email_sent (bool), event_created (bool), hs_note_id,
+     status ("open"|"renewed"|"cancelled")},
     ...]}
 
 The functional core (has_recent / append_outreach / latest_open / set_status)
