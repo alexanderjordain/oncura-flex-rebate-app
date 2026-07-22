@@ -8,7 +8,7 @@ Deploy:       Streamlit Cloud, app file = app.py. Set APP_PASSWORD (+ GITHUB_TOK
 """
 import streamlit as st
 
-from core import auth, ui, graph_email
+from core import auth, ui, graph_email, ema_graph_delegated
 
 st.set_page_config(page_title="Pass-Through & Rebate Programs Ledger", page_icon="*", layout="wide")
 
@@ -16,16 +16,26 @@ st.set_page_config(page_title="Pass-Through & Rebate Programs Ledger", page_icon
 auth.require_login()
 ui.inject()
 
-# OAuth callback handler — Microsoft Graph redirects here with ?code=... after sign-in
+# OAuth callback handler — Microsoft Graph redirects here with ?code=... after sign-in.
+# Two delegated flows share this redirect (the assistance-email button and the EMA
+# renewal sender, which use different app registrations), so route by `state`.
 _qp = st.query_params
-if _qp.get("code") and graph_email.is_configured():
-    ok, info = graph_email.handle_callback(_qp["code"])
+if _qp.get("code"):
+    _state = _qp.get("state", "")
+    if _state == ema_graph_delegated.STATE and ema_graph_delegated.is_configured():
+        _ok, _info = ema_graph_delegated.handle_callback(_qp["code"])
+        _label = "EMA sending"
+    elif graph_email.is_configured():
+        _ok, _info = graph_email.handle_callback(_qp["code"])
+        _label = "Outlook"
+    else:
+        _ok, _info, _label = None, None, None
     # Clear the code from the URL so a refresh doesn't try to re-exchange it
     st.query_params.clear()
-    if ok:
-        st.success(f"Outlook connected. {info}")
-    else:
-        st.error(f"Outlook connection failed: {info}")
+    if _ok is True:
+        st.success(f"{_label} connected. {_info}")
+    elif _ok is False:
+        st.error(f"{_label} connection failed: {_info}")
 
 # Register all pages with st.navigation but suppress its auto-rendered sidebar nav
 # (position="hidden"). We render the sidebar manually below using st.expander so the

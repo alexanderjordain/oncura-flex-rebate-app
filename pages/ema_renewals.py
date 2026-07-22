@@ -15,7 +15,8 @@ import os
 import pandas as pd
 import streamlit as st
 
-from core import auth, ema_bot, ema_graph, ema_ledger, ema_outreach, ema_renewals, ui
+from core import (auth, ema_bot, ema_graph_delegated, ema_ledger, ema_outreach,
+                  ema_renewals, ui)
 
 
 def _bridge_secrets_to_env():
@@ -104,32 +105,41 @@ st.caption("EMA status is maintained by accounting; this tool never writes it. O
 st.divider()
 st.subheader("Renewal outreach")
 
-_graph_ok = ema_graph.is_configured()
-if _graph_ok:
-    st.caption(f"Sending is connected. Emails send as **{ema_bot.sender_mailbox()}**; each call is "
-               f"created on **{ema_bot.organizer_mailbox()}**'s calendar and the clinic is invited.")
+_backend = ema_graph_delegated.DelegatedBackend()
+_connected = ema_graph_delegated.is_connected()
+if _connected:
+    _who = ema_graph_delegated.connected_user() or "your Outlook"
+    st.caption(f"Connected as **{_who}**. Emails send as you; each call is created on **your** "
+               f"calendar with **{ema_bot.organizer_mailbox()}** and the clinic invited.")
+elif ema_graph_delegated.is_configured():
+    st.warning("Outlook isn't connected in this session. Connect it to enable sending — you "
+               "approve for yourself, no admin needed.", icon=":material/link_off:")
+    st.link_button("Connect Outlook", ema_graph_delegated.get_auth_url())
 else:
-    st.info("Sending isn't connected yet — add the Microsoft Graph app credentials to enable it "
-            "(see `docs/EMA_GRAPH_SETUP.md`). You can still preview the batch below.",
+    st.info("Sending isn't configured yet (needs GRAPH_CLIENT_ID / GRAPH_TENANT_ID in secrets; "
+            "see `docs/EMA_GRAPH_SETUP.md`). You can still preview the batch below.",
             icon=":material/info:")
 
 with st.expander("Verify sending — do this before the first real batch", expanded=False):
     if not auth.can("admin"):
         st.caption("Admin-only.")
     else:
-        st.caption("Confirms the Graph app-only token, calendar access to the organizer, and "
-                   "(via a test email) that send-as works — without contacting any clinic.")
+        st.caption("Confirms your connected Outlook + calendar access and (via a test email) that "
+                   "sending works — without contacting any clinic.")
         vc1, vc2 = st.columns([1, 2])
-        if vc1.button("Test Graph connection", key="ema_test_conn"):
-            with st.spinner("Checking token + calendar access…"):
-                _res = ema_bot.check_connection()
+        if vc1.button("Test connection", key="ema_test_conn"):
+            with st.spinner("Checking Outlook + calendar access…"):
+                _res = _backend.check()
             (st.success if _res["ok"] else st.error)(_res["detail"])
         _test_addr = vc2.text_input("Send a test email to", key="ema_test_addr",
                                     placeholder="you@oncurapartners.com")
         if vc2.button("Send test email", key="ema_test_send",
-                      disabled=not (_test_addr and _graph_ok)):
+                      disabled=not (_test_addr and _connected)):
             with st.spinner("Sending test…"):
-                _ok, _info = ema_bot.send_test(_test_addr)
+                _ok, _info = ema_graph_delegated.send_mail(
+                    "Oncura EMA bot — test send",
+                    "<p>Test from the EMA renewal bot. If you received this, sending works.</p>",
+                    _test_addr)
             (st.success if _ok else st.error)(f"Test send: {_info}")
 
 oc1, oc2, oc3 = st.columns([1.4, 1, 2.6])
@@ -163,11 +173,14 @@ if _batch:
                          hide_index=True, use_container_width=True)
 
     _is_admin = auth.can("admin")
-    _can_send = _is_admin and _graph_ok and bool(_capped)
+    _can_send = _is_admin and _connected and bool(_capped)
     if not _is_admin:
         st.warning("Sending renewal outreach is admin-only.")
-    st.markdown(f"Sending will email **{len(_capped)}** clinic(s) and place a call on "
-                f"**{ema_bot.organizer_mailbox()}**'s calendar for each — this contacts real clinics.")
+    elif not _connected:
+        st.warning("Connect Outlook above to enable sending.")
+    st.markdown(f"Sending will email **{len(_capped)}** clinic(s) and place a call on **your** "
+                f"calendar with **{ema_bot.organizer_mailbox()}** + the clinic invited — this "
+                f"contacts real clinics.")
     _initials = ui.initials_input("ema_send", disabled=not _can_send)
     _confirm = st.checkbox(
         f"I reviewed the {len(_capped)} clinic(s) above and approve contacting them.",
@@ -175,7 +188,7 @@ if _batch:
     if ui.record_button(f"Send {len(_capped)} renewal outreach", key="ema_send_btn",
                         disabled=not (_can_send and _confirm and _initials)):
         with st.spinner(f"Contacting {len(_capped)} clinic(s)…"):
-            _results = ema_bot.send_batch(_capped, _batch["ledger"])
+            _results = ema_bot.send_batch(_capped, _batch["ledger"], backend=_backend)
             ema_ledger.save(_batch["ledger"], _batch["sha"],
                             message=f"EMA outreach (app) by {_initials}: {len(_results)} contacted")
         _ok = sum(1 for r in _results if r["mail_ok"] and r["event_ok"])

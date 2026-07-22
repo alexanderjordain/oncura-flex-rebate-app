@@ -38,6 +38,33 @@ def hubspot_enabled() -> bool:
         return False
 
 
+# ── Send backends ─────────────────────────────────────────────────────────────
+# The orchestration (below) is auth-agnostic; a backend supplies the actual Graph
+# calls. AppOnlyBackend uses client-credentials (headless/cron; needs admin
+# consent). The delegated backend (core.ema_graph_delegated.DelegatedBackend) uses
+# the operator's signed-in Outlook — no admin consent — and is what the app button
+# uses. Both expose: ready(), check(), send_mail(), create_call(), cancel().
+class AppOnlyBackend:
+    label = "app-only"
+
+    def ready(self) -> bool:
+        return ema_graph.is_configured()
+
+    def check(self) -> dict:
+        return check_connection()
+
+    def send_mail(self, subject: str, html: str, to):
+        s = sender_mailbox()
+        return ema_graph.send_mail(s, subject, html, to, reply_to=s)
+
+    def create_call(self, subject, html, start, end, clinic_email):
+        # organizer owns the event; the clinic is invited.
+        return ema_graph.create_event(organizer_mailbox(), subject, html, start, end, clinic_email)
+
+    def cancel(self, event_id: str):
+        return ema_graph.cancel_event(organizer_mailbox(), event_id)
+
+
 def check_connection() -> dict:
     """Actively verify Graph works (not just that secrets are present): acquire an
     app-only token and read the organizer's calendar. Returns
@@ -101,16 +128,14 @@ def plan_batch(mode: str = "expired", limit: int | None = None,
             "skipped": skipped, "ledger": data, "sha": sha, "today": today}
 
 
-def send_one(p: dict, data: dict, *, organizer: str, sender: str, hs_on: bool,
-             now_iso: str) -> dict:
+def send_one(p: dict, data: dict, *, backend, hs_on: bool, now_iso: str) -> dict:
     """Contact one clinic (calendar invite + email + optional HubSpot note) and
     append its ledger row. Returns a result dict for display/logging."""
     start = dt.datetime.fromisoformat(p["call_start"])
     end = dt.datetime.fromisoformat(p["call_end"])
-    ok_evt, event_id, evt_info = ema_graph.create_event(
-        organizer, p["event_subject"], p["event_html"], start, end, p["email"])
-    ok_mail, mail_info = ema_graph.send_mail(
-        sender, p["subject"], p["html"], p["email"], reply_to=sender)
+    ok_evt, event_id, evt_info = backend.create_call(
+        p["event_subject"], p["event_html"], start, end, p["email"])
+    ok_mail, mail_info = backend.send_mail(p["subject"], p["html"], p["email"])
     note_ok, note_info = False, "hubspot off"
     if hs_on:
         from . import ema_hubspot
@@ -132,22 +157,25 @@ def send_one(p: dict, data: dict, *, organizer: str, sender: str, hs_on: bool,
             "mail": mail_info, "note": note_info}
 
 
-def send_batch(capped: list[dict], data: dict, *, today: dt.date | None = None) -> list[dict]:
-    """Send every capped plan. Mutates `data` with new ledger rows; the caller
-    persists it via ema_ledger.save(data, sha, message)."""
+def send_batch(capped: list[dict], data: dict, *, backend=None,
+               today: dt.date | None = None) -> list[dict]:
+    """Send every capped plan via `backend` (default app-only). Mutates `data` with
+    new ledger rows; the caller persists it via ema_ledger.save(data, sha, message)."""
     del today  # timestamp uses the real clock at send time
+    backend = backend or AppOnlyBackend()
     now_iso = dt.datetime.now().isoformat(timespec="seconds")
-    org, snd, hs_on = organizer_mailbox(), sender_mailbox(), hubspot_enabled()
-    return [send_one(p, data, organizer=org, sender=snd, hs_on=hs_on, now_iso=now_iso)
+    hs_on = hubspot_enabled()
+    return [send_one(p, data, backend=backend, hs_on=hs_on, now_iso=now_iso)
             for p in capped]
 
 
-def reconcile(renewed_ids: list[str]) -> list[dict]:
+def reconcile(renewed_ids: list[str], *, backend=None) -> list[dict]:
     """Clinics that have paid: cancel the pending call (notifying the clinic),
     mark the ledger renewed, and document the renewal. Loads and saves the ledger
     itself. `renewed_ids` come from the HubSpot payment workflow (or by hand)."""
+    backend = backend or AppOnlyBackend()
     data, sha = ema_ledger.load()
-    org, hs_on = organizer_mailbox(), hubspot_enabled()
+    hs_on = hubspot_enabled()
     results = []
     for cid in renewed_ids:
         row = ema_ledger.latest_open(data, cid)
@@ -155,8 +183,8 @@ def reconcile(renewed_ids: list[str]) -> list[dict]:
             results.append({"clinic_id": cid, "status": "no open outreach"})
             continue
         cancel = "no event on file"
-        if row.get("graph_event_id") and ema_graph.is_configured():
-            ok, info = ema_graph.cancel_event(org, row["graph_event_id"])
+        if row.get("graph_event_id") and backend.ready():
+            ok, info = backend.cancel(row["graph_event_id"])
             cancel = "cancelled" if ok else info
         ema_ledger.set_status(data, cid, "renewed")
         if hs_on:
