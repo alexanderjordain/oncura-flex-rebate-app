@@ -1,18 +1,39 @@
-"""EMA Renewals — Phase 1 review (read-only).
+"""EMA Renewals — review + renewal outreach.
 
-Surfaces clinics with an active hardware EMA due for renewal outreach (expiring
-within the selected window), pulled live from OPD, with a business-day reach-out
-date. No outreach, no writes — the review surface before the HubSpot-quote
-(e-sign + payment link) and Calendly-invite phase.
+Top half: read-only review of clinics with an active hardware EMA expiring within
+the selected window, live from OPD. Bottom half: the renewal-outreach batch —
+preview who would be contacted, and (admin-only, with confirmation) send: for each
+clinic a branded renewal email as the sender mailbox plus a pre-arranged call on
+Mark's Outlook calendar, logged to HubSpot and the dedup ledger. Sending is the
+same code path as scripts/ema_run.py (core.ema_bot).
 """
 from __future__ import annotations
 
 import datetime as dt
+import os
 
 import pandas as pd
 import streamlit as st
 
-from core import ema_renewals, ui
+from core import auth, ema_bot, ema_graph, ema_ledger, ema_outreach, ema_renewals, ui
+
+
+def _bridge_secrets_to_env():
+    """The EMA engine reads os.environ (it's host-agnostic and runs on Render too).
+    On Community Cloud the values live in st.secrets, so mirror the ones it needs
+    into the environment for this process."""
+    for k in ("GRAPH_TENANT_ID", "GRAPH_CLIENT_ID", "GRAPH_CLIENT_SECRET",
+              "EMA_EMAIL_SENDER", "EMA_ORGANIZER", "EMA_PAYMENT_LINK",
+              "HUBSPOT_TOKEN", "OPD_ODATA_USER", "OPD_ODATA_PASS"):
+        try:
+            v = st.secrets.get(k)
+        except Exception:
+            v = None
+        if v and k not in os.environ:
+            os.environ[k] = str(v)
+
+
+_bridge_secrets_to_env()
 
 ui.header(
     "EMA Renewals",
@@ -77,3 +98,75 @@ else:
 st.divider()
 st.caption("EMA status is maintained by accounting; this tool never writes it. On payment the "
            "renewal runs 1 year from the payment date and accounting is notified to update the record.")
+
+
+# ── Renewal outreach ──────────────────────────────────────────────────────────
+st.divider()
+st.subheader("Renewal outreach")
+
+_graph_ok = ema_graph.is_configured()
+if _graph_ok:
+    st.caption(f"Sending is connected. Emails send as **{ema_bot.sender_mailbox()}**; each call is "
+               f"created on **{ema_bot.organizer_mailbox()}**'s calendar and the clinic is invited.")
+else:
+    st.info("Sending isn't connected yet — add the Microsoft Graph app credentials to enable it "
+            "(see `docs/EMA_GRAPH_SETUP.md`). You can still preview the batch below.",
+            icon=":material/info:")
+
+oc1, oc2, oc3 = st.columns([1.4, 1, 2.6])
+_mode_label = oc1.selectbox("Batch", ["Expired (backlog)", "Upcoming (expiring soon)"],
+                            key="ema_out_mode")
+_mode = "expired" if _mode_label.startswith("Expired") else "upcoming"
+_cap = int(oc2.number_input("Max this run", min_value=1, max_value=100,
+                            value=ema_outreach.PER_RUN_CAP, step=1, key="ema_out_cap"))
+oc3.write("")
+oc3.write("")
+if oc3.button("Preview outreach batch", key="ema_preview"):
+    with st.spinner("Building the outreach batch from OPD…"):
+        st.session_state["ema_batch"] = ema_bot.plan_batch(mode=_mode, limit=_cap)
+
+_batch = st.session_state.get("ema_batch")
+if _batch:
+    _capped = _batch["capped"]
+    st.markdown(
+        f"**{_batch['candidates']}** candidates  ·  **{len(_batch['eligible'])}** eligible  ·  "
+        f"**{len(_capped)}** in this run (cap {_cap})  ·  **{len(_batch['skipped'])}** skipped")
+    if _capped:
+        st.dataframe(pd.DataFrame([{
+            "Clinic": p["clinic"], "OPD ID": p["clinic_id"], "State": p["state"],
+            "EMA": p["status"], "Expiry": p["expiry"], "Contact email": p["email"],
+            "Call (pre-arranged)": f"{p['call_date']}  {p['call_time']}",
+        } for p in _capped]), hide_index=True, use_container_width=True)
+    if _batch["skipped"]:
+        with st.expander(f"Skipped ({len(_batch['skipped'])})"):
+            st.dataframe(pd.DataFrame([{"Clinic": p["clinic"], "OPD ID": p["clinic_id"],
+                                        "Reason": p["skip_reason"]} for p in _batch["skipped"]]),
+                         hide_index=True, use_container_width=True)
+
+    _is_admin = auth.can("admin")
+    _can_send = _is_admin and _graph_ok and bool(_capped)
+    if not _is_admin:
+        st.warning("Sending renewal outreach is admin-only.")
+    st.markdown(f"Sending will email **{len(_capped)}** clinic(s) and place a call on "
+                f"**{ema_bot.organizer_mailbox()}**'s calendar for each — this contacts real clinics.")
+    _initials = ui.initials_input("ema_send", disabled=not _can_send)
+    _confirm = st.checkbox(
+        f"I reviewed the {len(_capped)} clinic(s) above and approve contacting them.",
+        key="ema_confirm", disabled=not _can_send)
+    if ui.record_button(f"Send {len(_capped)} renewal outreach", key="ema_send_btn",
+                        disabled=not (_can_send and _confirm and _initials)):
+        with st.spinner(f"Contacting {len(_capped)} clinic(s)…"):
+            _results = ema_bot.send_batch(_capped, _batch["ledger"])
+            ema_ledger.save(_batch["ledger"], _batch["sha"],
+                            message=f"EMA outreach (app) by {_initials}: {len(_results)} contacted")
+        _ok = sum(1 for r in _results if r["mail_ok"] and r["event_ok"])
+        st.success(f"Contacted {_ok}/{len(_results)} clinic(s) cleanly. Ledger updated.",
+                   icon=":material/mark_email_read:")
+        _fails = [r for r in _results if not (r["mail_ok"] and r["event_ok"])]
+        if _fails:
+            st.warning("Some sends had issues — review and re-run for these:")
+            st.dataframe(pd.DataFrame([{
+                "Clinic": r["clinic"], "Email sent": "yes" if r["mail_ok"] else r["mail"],
+                "Calendar": "yes" if r["event_ok"] else r["event"], "HubSpot note": r["note"],
+            } for r in _fails]), hide_index=True, use_container_width=True)
+        st.session_state.pop("ema_batch", None)

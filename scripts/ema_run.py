@@ -17,17 +17,13 @@ call is created on EMA_ORGANIZER's calendar (default mark@). See docs/EMA_GRAPH_
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import os
 import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from core import ema_graph, ema_ledger, ema_outreach  # noqa: E402
-
-DEFAULT_SENDER = "AJordain@oncurapartners.com"
-DEFAULT_ORGANIZER = "mark@oncurapartners.com"
+from core import ema_bot, ema_graph, ema_ledger, ema_outreach  # noqa: E402
 
 
 def _load_secrets_into_env():
@@ -47,11 +43,11 @@ def _load_secrets_into_env():
 
 
 def _sender() -> str:
-    return ema_outreach._cfg("EMA_EMAIL_SENDER", DEFAULT_SENDER)
+    return ema_bot.sender_mailbox()
 
 
 def _organizer() -> str:
-    return ema_outreach._cfg("EMA_ORGANIZER", DEFAULT_ORGANIZER)
+    return ema_bot.organizer_mailbox()
 
 
 def check_graph() -> int:
@@ -88,29 +84,15 @@ def send_test(addr: str) -> int:
 
 def outreach(mode: str, limit: int, live: bool, window_days: int,
              max_age_days: int | None, cooldown_days: int) -> int:
-    plans = ema_outreach.build_plan(mode=mode, window_days=window_days,
-                                    limit=None, max_age_days=max_age_days)
-    data, sha = ema_ledger.load()
-    today = dt.date.today()
-    now_iso = dt.datetime.now().isoformat(timespec="seconds")
-
-    # cooldown + missing-email filter, then cap
-    eligible, skipped = [], []
-    for p in plans:
-        if ema_ledger.has_recent(data, p["clinic_id"], today, cooldown_days):
-            skipped.append((p["clinic"], "cooldown"))
-        elif not p["email"]:
-            skipped.append((p["clinic"], "no email on file"))
-        else:
-            eligible.append(p)
-    capped = eligible[:limit]
-
+    b = ema_bot.plan_batch(mode=mode, limit=limit, window_days=window_days,
+                           max_age_days=max_age_days, cooldown_days=cooldown_days)
+    capped, skipped = b["capped"], b["skipped"]
     print(f"=== EMA outreach  mode={mode}  {'LIVE' if live else 'DRY-RUN'}  "
-          f"{today.isoformat()} ===")
-    print(f"candidates={len(plans)}  eligible={len(eligible)}  "
+          f"{b['today'].isoformat()} ===")
+    print(f"candidates={b['candidates']}  eligible={len(b['eligible'])}  "
           f"sending={len(capped)} (cap {limit})  skipped={len(skipped)}")
-    for name, why in skipped[:20]:
-        print(f"   skip: {name}  ({why})")
+    for p in skipped[:20]:
+        print(f"   skip: {p['clinic']}  ({p['skip_reason']})")
 
     if not live:
         for p in capped:
@@ -123,72 +105,26 @@ def outreach(mode: str, limit: int, live: bool, window_days: int,
         print("ABORT: --live but Graph not configured. See docs/EMA_GRAPH_SETUP.md.")
         return 1
 
-    try:
-        from core import ema_hubspot
-        hs_on = ema_hubspot.is_configured()
-    except Exception:
-        hs_on = False
-
-    org, sender = _organizer(), _sender()
-    sent = 0
-    for p in capped:
-        start = dt.datetime.fromisoformat(p["call_start"])
-        end = dt.datetime.fromisoformat(p["call_end"])
-        ok_evt, event_id, evt_info = ema_graph.create_event(
-            org, p["event_subject"], p["event_html"], start, end, p["email"])
-        ok_mail, mail_info = ema_graph.send_mail(
-            sender, p["subject"], p["html"], p["email"], reply_to=sender)
-        note_info = "hubspot off"
-        if hs_on:
-            n_ok, note_info = ema_hubspot.log_outreach(
-                p["clinic"], p["call_date"], p["call_time"], p["expiry"], p["status"])
-        ema_ledger.append_outreach(data, {
-            "clinic_id": p["clinic_id"], "clinic_name": p["clinic"], "mode": p["status"],
-            "expiry": p["expiry"], "contacted_at": now_iso, "call_datetime": p["call_start"],
-            "call_time": p["call_time"], "organizer": org, "email": p["email"],
-            "graph_event_id": event_id, "email_status": mail_info,
-            "event_status": evt_info if ok_evt else f"FAILED {evt_info}", "hs_note": note_info,
-        })
-        sent += 1
-        print(f"   sent: {p['clinic']}  event={'ok' if ok_evt else evt_info}  "
-              f"mail={'ok' if ok_mail else mail_info}  note={note_info}")
-
-    if sent:
-        ema_ledger.save(data, sha, message=f"EMA outreach {today.isoformat()}: {sent} contacted")
-    print(f"\nLIVE: contacted {sent}, ledger updated.")
+    results = ema_bot.send_batch(capped, b["ledger"], today=b["today"])
+    for r in results:
+        print(f"   sent: {r['clinic']}  event={'ok' if r['event_ok'] else r['event']}  "
+              f"mail={'ok' if r['mail_ok'] else r['mail']}  note={r['note']}")
+    if results:
+        ema_ledger.save(b["ledger"], b["sha"],
+                        message=f"EMA outreach {b['today'].isoformat()}: {len(results)} contacted")
+    print(f"\nLIVE: contacted {len(results)}, ledger updated.")
     return 0
 
 
 def reconcile(renewed_ids: list[str]) -> int:
-    """Clinics that have paid: cancel their pending call (notifying the clinic) and
-    document the renewal. Marks the ledger renewed so the daily sweep leaves them
-    alone. `renewed_ids` come from the HubSpot payment workflow (or provided by hand)."""
     if not renewed_ids:
         print("No --renewed clinic ids provided.")
         return 1
-    data, sha = ema_ledger.load()
-    org = _organizer()
-    try:
-        from core import ema_hubspot
-        hs_on = ema_hubspot.is_configured()
-    except Exception:
-        hs_on = False
-    changed = 0
-    for cid in renewed_ids:
-        row = ema_ledger.latest_open(data, cid)
-        if not row:
-            print(f"   {cid}: no open outreach — skipped")
-            continue
-        if row.get("graph_event_id") and ema_graph.is_configured():
-            ok, info = ema_graph.cancel_event(org, row["graph_event_id"])
-            print(f"   {cid}: cancel call -> {'ok' if ok else info}")
-        ema_ledger.set_status(data, cid, "renewed")
-        if hs_on:
-            ema_hubspot.log_renewal(row.get("clinic_name", cid))
-        changed += 1
-    if changed:
-        ema_ledger.save(data, sha, message=f"EMA reconcile: {changed} renewed/cancelled")
-    print(f"reconcile: {changed} clinic(s) marked renewed.")
+    for r in ema_bot.reconcile(renewed_ids):
+        if r["status"] == "renewed":
+            print(f"   {r['clinic_id']} ({r.get('clinic')}): cancel -> {r['cancel']}; marked renewed")
+        else:
+            print(f"   {r['clinic_id']}: {r['status']} — skipped")
     return 0
 
 
