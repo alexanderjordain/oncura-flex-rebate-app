@@ -38,6 +38,44 @@ def hubspot_enabled() -> bool:
         return False
 
 
+def check_connection() -> dict:
+    """Actively verify Graph works (not just that secrets are present): acquire an
+    app-only token and read the organizer's calendar. Returns
+    {ok, detail, sender, organizer}. Used by the CLI --check-graph and the in-app
+    'Verify sending' control."""
+    org, snd = organizer_mailbox(), sender_mailbox()
+    if not ema_graph.is_configured():
+        return {"ok": False, "detail": "Graph credentials are not set (GRAPH_TENANT_ID/"
+                "CLIENT_ID/CLIENT_SECRET).", "sender": snd, "organizer": org}
+    import requests
+    try:
+        tok = ema_graph._token()
+    except Exception as e:  # noqa: BLE001 - surface any auth failure to the operator
+        return {"ok": False, "detail": f"Token failed (check secret / admin consent): {e}",
+                "sender": snd, "organizer": org}
+    try:
+        r = requests.get(f"{ema_graph.GRAPH_BASE}/users/{org}/calendar",
+                         headers={"Authorization": f"Bearer {tok}"}, timeout=30)
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "detail": f"Calendar check network error: {e}",
+                "sender": snd, "organizer": org}
+    if r.status_code == 200:
+        return {"ok": True, "detail": f"Token OK; calendar access to {org} OK. "
+                f"(Email send-as {snd} is verified by a test send.)",
+                "sender": snd, "organizer": org}
+    return {"ok": False, "detail": f"Calendar access to {org} failed {r.status_code}: "
+            f"{r.text[:200]} (check Calendars.ReadWrite + the ApplicationAccessPolicy).",
+            "sender": snd, "organizer": org}
+
+
+def send_test(to_addr: str) -> tuple[bool, str]:
+    """Send one test email as the sender mailbox — proves Mail.Send end-to-end."""
+    return ema_graph.send_mail(
+        sender_mailbox(), "Oncura EMA bot — test send",
+        "<p>This is a test from the EMA renewal bot. If you received it, sending works.</p>",
+        to_addr)
+
+
 def plan_batch(mode: str = "expired", limit: int | None = None,
                window_days: int = ema_outreach.OUTREACH_LEAD_DAYS,
                max_age_days: int | None = None,

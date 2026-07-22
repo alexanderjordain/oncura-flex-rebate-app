@@ -113,6 +113,25 @@ else:
             "(see `docs/EMA_GRAPH_SETUP.md`). You can still preview the batch below.",
             icon=":material/info:")
 
+with st.expander("Verify sending — do this before the first real batch", expanded=False):
+    if not auth.can("admin"):
+        st.caption("Admin-only.")
+    else:
+        st.caption("Confirms the Graph app-only token, calendar access to the organizer, and "
+                   "(via a test email) that send-as works — without contacting any clinic.")
+        vc1, vc2 = st.columns([1, 2])
+        if vc1.button("Test Graph connection", key="ema_test_conn"):
+            with st.spinner("Checking token + calendar access…"):
+                _res = ema_bot.check_connection()
+            (st.success if _res["ok"] else st.error)(_res["detail"])
+        _test_addr = vc2.text_input("Send a test email to", key="ema_test_addr",
+                                    placeholder="you@oncurapartners.com")
+        if vc2.button("Send test email", key="ema_test_send",
+                      disabled=not (_test_addr and _graph_ok)):
+            with st.spinner("Sending test…"):
+                _ok, _info = ema_bot.send_test(_test_addr)
+            (st.success if _ok else st.error)(f"Test send: {_info}")
+
 oc1, oc2, oc3 = st.columns([1.4, 1, 2.6])
 _mode_label = oc1.selectbox("Batch", ["Expired (backlog)", "Upcoming (expiring soon)"],
                             key="ema_out_mode")

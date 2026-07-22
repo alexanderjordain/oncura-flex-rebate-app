@@ -51,33 +51,14 @@ def _organizer() -> str:
 
 
 def check_graph() -> int:
-    if not ema_graph.is_configured():
-        print("Graph not configured — set GRAPH_TENANT_ID/CLIENT_ID/CLIENT_SECRET "
-              "(see docs/EMA_GRAPH_SETUP.md).")
-        return 1
-    import requests
-    try:
-        tok = ema_graph._token()
-    except RuntimeError as e:
-        print(f"Token FAILED: {e}")
-        return 1
-    print("Token OK (app-only).")
-    org = _organizer()
-    r = requests.get(f"{ema_graph.GRAPH_BASE}/users/{org}/calendar",
-                     headers={"Authorization": f"Bearer {tok}"}, timeout=30)
-    print(f"Calendar access for organizer {org}: "
-          f"{'OK' if r.status_code == 200 else f'FAILED {r.status_code} {r.text[:200]}'}")
-    print(f"Email will send as {_sender()} (Mail.Send is only verifiable by a live "
-          f"send — use --send-test).")
-    return 0 if r.status_code == 200 else 1
+    res = ema_bot.check_connection()
+    print(res["detail"])
+    print(f"Email sends as {res['sender']}; calls created on {res['organizer']}'s calendar.")
+    return 0 if res["ok"] else 1
 
 
 def send_test(addr: str) -> int:
-    if not ema_graph.is_configured():
-        print("Graph not configured.")
-        return 1
-    ok, info = ema_graph.send_mail(_sender(), "Oncura EMA bot — test",
-                                   "<p>This is a test send from the EMA renewal bot.</p>", addr)
+    ok, info = ema_bot.send_test(addr)
     print(f"send_test -> {'OK' if ok else 'FAILED'}: {info}")
     return 0 if ok else 1
 

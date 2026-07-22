@@ -49,6 +49,39 @@ def test_send_batch_creates_event_emails_and_records(monkeypatch):
     assert row["status"] == "open"
 
 
+def test_check_connection_ok(monkeypatch):
+    monkeypatch.setattr(ema_bot.ema_graph, "is_configured", lambda: True)
+    monkeypatch.setattr(ema_bot.ema_graph, "_token", lambda: "TOK")
+
+    class _R:
+        status_code = 200
+        text = ""
+    monkeypatch.setattr("requests.get", lambda *a, **k: _R())
+    res = ema_bot.check_connection()
+    assert res["ok"] and "OK" in res["detail"]
+
+
+def test_check_connection_token_failure(monkeypatch):
+    monkeypatch.setattr(ema_bot.ema_graph, "is_configured", lambda: True)
+
+    def _boom():
+        raise RuntimeError("bad secret")
+    monkeypatch.setattr(ema_bot.ema_graph, "_token", _boom)
+    res = ema_bot.check_connection()
+    assert not res["ok"] and "Token failed" in res["detail"]
+
+
+def test_check_connection_not_configured(monkeypatch):
+    monkeypatch.setattr(ema_bot.ema_graph, "is_configured", lambda: False)
+    res = ema_bot.check_connection()
+    assert not res["ok"] and "not set" in res["detail"]
+
+
+def test_send_test_delegates_to_graph(monkeypatch):
+    monkeypatch.setattr(ema_bot.ema_graph, "send_mail", lambda *a, **k: (True, "sent"))
+    assert ema_bot.send_test("you@x.com") == (True, "sent")
+
+
 def test_reconcile_cancels_call_and_marks_renewed(monkeypatch):
     data = ema_ledger._empty()
     ema_ledger.append_outreach(data, {
