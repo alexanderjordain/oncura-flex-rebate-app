@@ -24,10 +24,10 @@ except Exception:  # pragma: no cover - tzdata missing
     _ET = None
 
 # ── Report configuration ──────────────────────────────────────────────────────
-# The 11 tracked sonographers, in report-column order.
+# The 10 tracked sonographers, in report-column order.
 SONOGRAPHERS = [
     "Becky Tiner", "Chelsea Parsons", "Denice Rodriguez", "Elyce Thomas",
-    "Francisco Zuniga", "Katie Heuer", "Lanis Davis", "Liza Gonzalez",
+    "Francisco Zuniga", "Katie Heuer", "Lanis Davis",
     "Luis Romero", "Lyannette Curiel", "Megan DuCasse",
 ]
 _SSET = {s.lower(): s for s in SONOGRAPHERS}
@@ -43,7 +43,6 @@ TO_RECIPIENTS = [
     ("Francisco Zuniga", "francisco@oncurapartners.com"),
     ("Katie Heuer", "kheuer@oncurapartners.com"),
     ("Lanis Davis", "ldavis@oncurapartners.com"),
-    ("Liza Gonzalez", "lgonzalez@oncurapartners.com"),
     ("Luis Romero", "lromero@oncurapartners.com"),
     ("Lyannette Curiel", "lyannette@oncurapartners.com"),
     ("Megan DuCasse", "mducasse@oncurapartners.com"),

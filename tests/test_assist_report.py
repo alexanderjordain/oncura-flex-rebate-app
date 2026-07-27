@@ -8,14 +8,17 @@ from core import accounting_handoff as ah
 def test_recipients_shape():
     to = ar.recipients("to")
     cc = ar.recipients("cc")
-    assert len(to) == 12 and len(cc) == 3
+    assert len(to) == 11 and len(cc) == 3
     assert to[0] == "Melissa Colpitts <mcolpitts@oncurapartners.com>"
     assert cc[0] == "Marty McCutchen <marty@oncurapartners.com>"
     assert all(r.count("<") == 1 and r.endswith(">") for r in to + cc)
-    assert len(ar.SONOGRAPHERS) == 11
+    assert len(ar.SONOGRAPHERS) == 10
     # Elyce Thomas is a report column but intentionally not on the To list.
     assert "Elyce Thomas" in ar.SONOGRAPHERS
     assert not any("Elyce" in r for r in to)
+    # Liza Gonzalez was removed from both the tracked columns and the recipients.
+    assert "Liza Gonzalez" not in ar.SONOGRAPHERS
+    assert not any("Liza" in r for r in to)
 
 
 def test_eastern_date_conversion():
