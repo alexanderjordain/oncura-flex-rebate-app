@@ -74,8 +74,9 @@ CO_PROPS = [
 # cardiac. GlobalFAST certs are neither and are ignored for the remaining counts.
 CERT_ABDOMINAL = "Certification - Abdomen"
 CERT_CARDIAC = "Certification - Basic Echocardiography"
-# Internal Oncura entities dropped from the WOL list (not customer clinics).
-EXCLUDE_CLINICS = {"oncura partners fort worth", "oncura partners - fort worth"}
+# Internal Oncura entities (Oncura Partners - Fort Worth, - ATX, etc.) are not customer
+# clinics; any company whose name starts with this prefix is dropped from the list.
+EXCLUDE_PREFIX = "oncura partners"
 # The two Training-Remaining deal properties the OPD certs reduce.
 REMAIN_ABDOMINAL = "migrated_00nus000001e6htmak"
 REMAIN_CARDIAC = "migrated_00nus000001e6jvma0"
@@ -149,16 +150,6 @@ def _finalized_certs(auth, clinic_internal_id, cert_map):
         fd = opd_api._utc_to_billing_date(opd_api._parse_dt(r.get("FinalizedDate")))
         out.append((types, fd))
     return out
-
-
-def _days_color(d):
-    if not isinstance(d, (int, float)) or d == "":
-        return ""
-    if d > 90:
-        return "background:#F8CBAD;font-weight:600;"
-    if d > 30:
-        return "background:#FCE4D6;"
-    return "background:#FFF2CC;"
 
 
 def build_email() -> dict:
@@ -238,9 +229,9 @@ def build_email() -> dict:
             continue
         if _num(dp.get("abdominal_trainings")) > 0 or _num(dp.get("cardiac_trainings")) > 0:
             continue
-        # Drop internal Oncura entities (e.g. Oncura Partners - Fort Worth). A null
-        # Training-Remaining value is NOT grounds for removal — those clinics stay.
-        if _norm(co.get("name")) in EXCLUDE_CLINICS:
+        # Drop internal Oncura entities (Oncura Partners - Fort Worth, - ATX, etc.). A null
+        # Training-Remaining value is NOT grounds for removal; those clinics stay.
+        if _norm(co.get("name")).startswith(EXCLUDE_PREFIX):
             continue
         candidates.append({"deal_id": did, "company_id": co_id, "company": co,
                            "deal": dp, "install_dt": install_dt})
@@ -427,7 +418,7 @@ def build_email() -> dict:
     )
 
     # Plain body.
-    plain = ["Team,", "",
+    plain = ["Training Team,", "",
              f'This week the WOL "installed but no training scheduled" list is '
              f"{len(rows)} clinics.",
              "Sorted by install date, oldest first, per trainer.", ""]
@@ -450,16 +441,15 @@ def build_email() -> dict:
                 f"{tes_bit}{call_bit}"
             )
         plain.append("")
-    plain += ["Full detail in the attached spreadsheet, one tab per trainer.", "", "- Alexander"]
+    plain += ["Full detail in the attached spreadsheet, one tab per trainer."]
     plain_body = "\n".join(plain)
 
     # HTML body.
     html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;">',
-            "<p>Team,</p>",
+            "<p>Training Team,</p>",
             f'<p>This week the WOL "installed but no training scheduled" list is '
             f"<b>{len(rows)}</b> clinics. "
-            "Sorted by install date, oldest first, per trainer. "
-            "Days columns colored amber (0-30) &rarr; orange (31-90) &rarr; red (90+).</p>"]
+            "Sorted by install date, oldest first, per trainer.</p>"]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
@@ -485,19 +475,17 @@ def build_email() -> dict:
                 f'<td>{r["Clinic"]}</td>'
                 f'<td>{r["City"]}, {r["State"]}</td>'
                 f'<td>{r["US Install Date"]}</td>'
-                f'<td style="{_days_color(r["Days Since Install"])}">{r["Days Since Install"]}</td>'
+                f'<td>{r["Days Since Install"]}</td>'
                 f'<td>{r["Training Email Sent"]}</td>'
-                f'<td style="{_days_color(r["Days on Training List"]) if r["Days on Training List"] != "" else ""}">'
-                f'{r["Days on Training List"]}</td>'
+                f'<td>{r["Days on Training List"]}</td>'
                 f'<td>{r["Last Call"]}</td>'
-                f'<td style="{_days_color(r["Days Since Last Call"]) if r["Days Since Last Call"] != "" else ""}">'
-                f'{r["Days Since Last Call"]}</td>'
+                f'<td>{r["Days Since Last Call"]}</td>'
                 f'<td>{r[f"Calls in Last {CALL_WINDOW_DAYS}d"]}</td>'
                 f"</tr>"
             )
         html.append("</table>")
     html += ["<p>Full detail in the attached spreadsheet, one tab per trainer.</p>",
-             "<p>Thanks,<br>Alexander</p></body></html>"]
+             "</body></html>"]
     html_body = "\n".join(html)
 
     # .eml with xlsx attached.

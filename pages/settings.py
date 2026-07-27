@@ -350,12 +350,12 @@ st.info(
 st.divider()
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Sonographer assistance email (utility — opens a ready-to-send draft)
+# Sonographer assistance email (utility that opens a ready-to-send draft)
 # ═════════════════════════════════════════════════════════════════════════════
 with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
     st.caption(
         "Pulls finalized-assist counts from OPD (weekly + daily, by sonographer) and "
-        "opens a ready-to-send draft to the assisting sonographers — the same email "
+        "opens a ready-to-send draft to the assisting sonographers, the same email "
         "hand-off card the FLEX cycle uses. Leadership is cc'd. Nothing sends automatically."
     )
     if st.button("Build assistance email", key="assist_email_build"):
@@ -377,9 +377,10 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
 
     st.divider()
     st.caption(
-        "WOL — installed clinics with no training scheduled. Pulls live from HubSpot "
-        "(deals + companies + calls), groups by training sonographer, and offers the "
-        "draft email plus .eml and .xlsx downloads. Read-only; nothing sends automatically."
+        "WOL, installed clinics with no training scheduled. Pulls live from HubSpot "
+        "(deals + companies + calls), groups by training sonographer, and opens a "
+        "ready-to-send draft with the spreadsheet attached, the same card the assistance "
+        "email uses. Read-only; nothing sends automatically."
     )
     if st.button("Build WOL training email", key="wol_email_build"):
         try:
@@ -403,17 +404,17 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
             heading="WOL - Installed, No Training Scheduled",
         )
 
-        # OPD certification adjustments — review, then apply to HubSpot.
+        # OPD certification adjustments: review, then apply to HubSpot.
         if _wol.get("opd_error"):
-            st.warning(f"OPD cross-check unavailable — cert adjustments not computed. "
+            st.warning(f"OPD cross-check unavailable; cert adjustments not computed. "
                        f"({_wol['opd_error']})", icon=":material/link_off:")
         _adj = _wol.get("adjustments") or []
         if _adj:
             st.divider()
-            st.markdown(f"**OPD certification adjustments ({len(_adj)})** — review, then apply")
+            st.markdown(f"**OPD certification adjustments ({len(_adj)})**, review then apply")
             st.caption("Finalized OPD certifications dated after install reduce the HubSpot "
                        "Training-Remaining fields. Each Apply writes to HubSpot (needs the deals "
-                       "write scope) and is idempotent — it sets the field to a computed target.")
+                       "write scope) and is idempotent; it sets the field to a computed target.")
             for _a in _adj:
                 with st.container(border=True):
                     st.markdown(f"**{_a['clinic']}**  ·  deal `{_a['deal_id']}`")
