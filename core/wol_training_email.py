@@ -31,10 +31,20 @@ CALL_WINDOW_DAYS = 90
 
 
 # ---------- Recipients / trainer roster / from-address ----------
-# Kept OUT of this (public) repo: read from the [wol] table in Streamlit secrets
-# so no employee names or emails live in version control. See secrets.toml.example
-# for the block to paste. Missing config -> empty lists (the draft still builds;
-# the operator fills recipients in when sending).
+# Hardcoded like the weekly assistance report (core/assist_report.py). These are
+# internal Oncura training-team addresses. The optional [wol] secrets table still
+# overrides any of them (to / cc / trainers / from_addr) if present.
+DEFAULT_TO = [
+    "Carla Erickson <carla@oncurapartners.com>",
+    "John Paul Amberger <jpamberger@oncurapartners.com>",
+    "Mariah Hernandez <mariah@oncurapartners.com>",
+    "Rosie Haro <rharo@oncurapartners.com>",
+    "Sarah Ervin <servin@oncurapartners.com>",
+]
+DEFAULT_CC = ["Melissa Colpitts <mcolpitts@oncurapartners.com>"]
+DEFAULT_FROM = "Alexander Jordain <ajordain@oncurapartners.com>"
+
+
 def _wol_secret(key, default):
     try:
         import streamlit as st  # noqa: PLC0415
@@ -43,11 +53,11 @@ def _wol_secret(key, default):
         return default
 
 
-_TO = list(_wol_secret("to", []))
-_CC = list(_wol_secret("cc", []))
+_TO = list(_wol_secret("to", DEFAULT_TO))
+_CC = list(_wol_secret("cc", DEFAULT_CC))
 # Trainers who should always appear in the breakdown even when their count is 0.
 KNOWN_TRAINERS = list(_wol_secret("trainers", []))
-_FROM = _wol_secret("from_addr", "")
+_FROM = _wol_secret("from_addr", DEFAULT_FROM)
 
 # ---------- HubSpot property names (verified against portal 8772207 as of 2026-07-16) ----------
 DEAL_PROPS = [
