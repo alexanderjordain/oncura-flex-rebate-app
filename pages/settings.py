@@ -391,20 +391,17 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
     _wol = st.session_state.get("wol_email")
     if _wol:
         st.success(
-            f"WOL email ready — {_wol['row_count']} clinics across "
+            f"WOL email ready. {_wol['row_count']} clinics across "
             f"{_wol['trainer_count']} trainers."
         )
-        st.markdown("**Subject:** " + _wol["subject"])
-        st.markdown("**To:** " + ", ".join(_wol["to"]))
-        st.markdown("**Cc:** " + ", ".join(_wol["cc"]))
-        _wc = st.columns(2)
-        _wc[0].download_button(
-            "Download .eml", data=_wol["eml_bytes"], file_name=_wol["eml_filename"],
-            mime="message/rfc822", key="wol_dl_eml")
-        _wc[1].download_button(
-            "Download xlsx", data=_wol["xlsx_bytes"], file_name=_wol["xlsx_filename"],
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="wol_dl_xlsx")
+        # Same editable-draft card as the assistance email: Graph draft in Outlook
+        # (or .eml fallback), with the spreadsheet attached and a preview.
+        accounting_handoff.render_handoff(
+            _wol["subject"], _wol["plain"], key_prefix="wol_email",
+            attachments=[(_wol["xlsx_filename"], _wol["xlsx_bytes"])],
+            to=_wol["to"], cc=_wol["cc"], html_body=_wol["html"],
+            heading="WOL - Installed, No Training Scheduled",
+        )
 
         # OPD certification adjustments — review, then apply to HubSpot.
         if _wol.get("opd_error"):

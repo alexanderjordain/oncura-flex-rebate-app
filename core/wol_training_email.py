@@ -454,7 +454,7 @@ def build_email() -> dict:
     plain_body = "\n".join(plain)
 
     # HTML body.
-    html = ['<html><body style="font-family:Segoe UI,Arial,sans-serif;font-size:13px;">',
+    html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;">',
             "<p>Team,</p>",
             f'<p>This week the WOL "installed but no training scheduled" list is '
             f"<b>{len(rows)}</b> clinics. "
@@ -469,9 +469,10 @@ def build_email() -> dict:
             html.append('<p style="color:#666;margin:0 0 12px 0;">No clinics this week.</p>')
             continue
         html.append('<table cellspacing="0" cellpadding="4" '
-                    'style="border-collapse:collapse;border:1px solid #ccc;font-size:12px;">')
+                    'style="border-collapse:collapse;border:1px solid #d9dde3;'
+                    'font-family:Calibri,Arial,sans-serif;font-size:12px;">')
         html.append(
-            '<tr style="background:#1F4E78;color:white;">'
+            '<tr style="background:#5f93a3;color:#0e2a33;">'
             "<th align='left'>Clinic</th><th align='left'>Location</th>"
             "<th align='left'>Installed</th><th align='left'>Days Installed</th>"
             "<th align='left'>Training Email</th><th align='left'>Days On List</th>"
@@ -480,7 +481,7 @@ def build_email() -> dict:
         )
         for r in sub:
             html.append(
-                f'<tr style="border-top:1px solid #eee;">'
+                f'<tr style="border-top:1px solid #d9dde3;">'
                 f'<td>{r["Clinic"]}</td>'
                 f'<td>{r["City"]}, {r["State"]}</td>'
                 f'<td>{r["US Install Date"]}</td>'
@@ -496,7 +497,7 @@ def build_email() -> dict:
             )
         html.append("</table>")
     html += ["<p>Full detail in the attached spreadsheet, one tab per trainer.</p>",
-             "<p>&mdash; Alexander</p></body></html>"]
+             "<p>Thanks,<br>Alexander</p></body></html>"]
     html_body = "\n".join(html)
 
     # .eml with xlsx attached.
