@@ -377,10 +377,11 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
 
     st.divider()
     st.caption(
-        "WOL, installed clinics with no training scheduled. Pulls live from HubSpot "
-        "(deals + companies + calls), groups by training sonographer, and opens a "
-        "ready-to-send draft with the spreadsheet attached, the same card the assistance "
-        "email uses. Read-only; nothing sends automatically."
+        "WOL, installed clinics that still need training: sold a modality (abdominal "
+        "and/or cardiac) with no finalized OPD certification for it yet. Pulls live from "
+        "HubSpot (deals + companies + calls), cross-checks OPD certs, groups by training "
+        "sonographer, and opens a ready-to-send draft with the spreadsheet attached, the "
+        "same card the assistance email uses. Read-only; nothing sends automatically."
     )
     if st.button("Build WOL training email", key="wol_email_build"):
         try:
@@ -401,7 +402,7 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
             _wol["subject"], _wol["plain"], key_prefix="wol_email",
             attachments=[(_wol["xlsx_filename"], _wol["xlsx_bytes"])],
             to=_wol["to"], cc=_wol["cc"], html_body=_wol["html"],
-            heading="WOL - Installed, No Training Scheduled",
+            heading="WOL - Installed, Training Incomplete",
         )
 
         # OPD certification adjustments: review, then apply to HubSpot.

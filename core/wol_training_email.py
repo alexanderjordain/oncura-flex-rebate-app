@@ -1,17 +1,24 @@
-"""WOL training email — "installed but training NOT scheduled" weekly draft.
+"""WOL training email — installed clinics that still need training, weekly draft.
 
-Mirrors core/assist_report.py: read-only, recipients() + build_email(), returns
-subject/plain/html plus .eml and .xlsx bytes for the Settings-page button. Pulls
-live from HubSpot (deals search + company/call batch reads). Nothing writes back
-to HubSpot or any other system.
+Mirrors core/assist_report.py: recipients() + build_email(), returns subject/plain/
+html plus .eml and .xlsx bytes for the Settings-page button. Pulls live from HubSpot
+(deals search + company/call batch reads) and cross-checks OPD certifications.
+
+A clinic lands on the list when it was SOLD a training modality (abdominal and/or
+cardiac allotment on the deal) and OPD holds no finalized certification for that
+modality dated after install. abdominal_trainings / cardiac_trainings is the
+allotment sold (2/2 is the standard package), not a scheduled or remaining counter,
+so completion is decided against OPD, the only reliable record. Clinics that finish
+drop off automatically. The one write in the module is the optional apply_remaining().
 
 Secret: HUBSPOT_TOKEN (Streamlit secrets, falling back to the same env var for
 local dev). If the deployment names the token differently, change the two lines
-at the top that read it — that is the only environment-specific edit.
+at the top that read it. That is the only environment-specific edit.
 """
 from __future__ import annotations
 import io
 import os
+import re
 import time
 import datetime as _dt
 from collections import Counter
@@ -65,8 +72,8 @@ DEAL_PROPS = [
     "funding_received_date_stamp",         # date — the WOL qualifier
     "migrated_00nus000001e6ghma0",         # date — Training Email Sent
     "expiration_date",                     # date — training expiration
-    "abdominal_trainings",                 # enum — number scheduled ("0", "1", "2"...)
-    "cardiac_trainings",                   # enum — same
+    "abdominal_trainings",                 # enum - abdominal training ALLOTMENT sold (2 = standard)
+    "cardiac_trainings",                   # enum - cardiac training allotment sold (not a to-do count)
     "migrated_00nus000001e6htmak",         # string — Training Remaining from Order Abdominal
     "migrated_00nus000001e6jvma0",         # string — Training Remaining from Order Cardiac
 ]
@@ -124,6 +131,70 @@ def _num_or_none(v):
         return int(float(s))
     except (TypeError, ValueError):
         return None
+
+
+# ---------- OPD clinic matching ----------
+# HubSpot clinic names embed the OPD business-key code as a suffix ("- SVS38583").
+# That code is a far more reliable join to OPD than the display name, which carries
+# franchise prefixes (NVA-, TVC-), parentheticals ("(VetCor)"), and "Lost" tags.
+_FRANCHISE_PREFIX = re.compile(r"^(nva|tvc|cvp|cah|ssa/svp|obt|aaha|svp)\s*[-/]\s*", re.I)
+
+
+def _clean_clinic_name(nm):
+    """Normalized clinic name with parentheticals, 'Lost' tags, a trailing OPD code,
+    and franchise prefixes stripped, for the name-based fallback match."""
+    n = re.sub(r"\((?:[^)]*)\)", "", nm or "")
+    n = re.sub(r"\b(lost|no longer active)\b.*$", "", n, flags=re.I)
+    n = re.split(r"\s-\s[A-Za-z0-9]{4,10}\s*$", n)[0]
+    return _norm(_FRANCHISE_PREFIX.sub("", n))
+
+
+def _opd_clinic_lookup(auth):
+    """({business_code -> internal_id}, {clean_name -> internal_id}) for every OPD
+    clinic. The business code (Clinic.ClinicID, e.g. 'SVS38583') is the primary key
+    HubSpot names are matched against; the cleaned name is the fallback."""
+    from . import opd_api  # lazy import
+    rows, _ = opd_api._fetch_all(opd_api.CLINIC_PATH, auth=auth,
+                                 params={"$select": "ClinicID,ClinicName"})
+    by_code: dict = {}
+    by_name: dict = {}
+    for r in rows:
+        m = opd_api._CLINIC_ID_RE.search(r.get("_entry_id") or "")
+        if not m:
+            continue
+        try:
+            iid = int(m.group(1))
+        except ValueError:
+            continue
+        code = (r.get("ClinicID") or "").strip().upper()
+        if code:
+            by_code.setdefault(code, iid)
+        key = _clean_clinic_name(r.get("ClinicName"))
+        if key:
+            by_name.setdefault(key, iid)
+    return by_code, by_name
+
+
+def _match_opd_id(name, by_code, by_name):
+    """(internal_id, matched_bool). Try the trailing business-key code first, then a
+    cleaned-name lookup. Returns (None, False) when the clinic can't be matched."""
+    base = re.sub(r"\((?:[^)]*)\)", "", name or "")
+    base = re.sub(r"\b(lost|no longer active)\b.*$", "", base, flags=re.I).strip()
+    toks = [t for t in re.split(r"[\s\-/]+", base) if t]
+    if toks:
+        cand = toks[-1].upper()
+        if cand in by_code:
+            return by_code[cand], True
+    key = _clean_clinic_name(name)
+    if key and key in by_name:
+        return by_name[key], True
+    return None, False
+
+
+def _needs_training(allot_a, allot_c, cert_a, cert_c):
+    """(needs_abdominal, needs_cardiac): a modality is still owed when it was sold
+    (allotment > 0) and OPD holds no post-install certification for it."""
+    return (allot_a > 0 and cert_a == 0, allot_c > 0 and cert_c == 0)
 
 
 def _opd_cert_map(auth):
@@ -222,7 +293,11 @@ def build_email() -> dict:
             companies[row["id"]] = row.get("properties", {})
         time.sleep(0.05)
 
-    # Filter to installed + no training.
+    # ---- Candidate pool: installed + funded + at least one training modality sold ----
+    # abdominal_trainings / cardiac_trainings is the training ALLOTMENT on the deal
+    # (2/2 is the standard package), NOT a scheduled or remaining counter. A deal that
+    # sold no training (0/0) is not a trainer task and is dropped here. Whether a sold
+    # modality is DONE is decided below against OPD, the only reliable completion record.
     candidates = []
     for did in deal_ids:
         dp = deal_by_id.get(did, {})
@@ -237,16 +312,62 @@ def build_email() -> dict:
             install_dt = _dt.date.fromisoformat(install_str[:10])
         except (ValueError, TypeError):
             continue
-        if _num(dp.get("abdominal_trainings")) > 0 or _num(dp.get("cardiac_trainings")) > 0:
-            continue
-        # Drop internal Oncura entities (Oncura Partners - Fort Worth, - ATX, etc.). A null
-        # Training-Remaining value is NOT grounds for removal; those clinics stay.
+        # Drop internal Oncura entities (Oncura Partners - Fort Worth, - ATX, etc.).
         if _norm(co.get("name")).startswith(EXCLUDE_PREFIX):
             continue
+        allot_a = _num(dp.get("abdominal_trainings"))
+        allot_c = _num(dp.get("cardiac_trainings"))
+        if allot_a == 0 and allot_c == 0:
+            continue
         candidates.append({"deal_id": did, "company_id": co_id, "company": co,
-                           "deal": dp, "install_dt": install_dt})
+                           "deal": dp, "install_dt": install_dt,
+                           "allot_a": allot_a, "allot_c": allot_c})
 
-    # Resolve sonographer owner IDs to names.
+    # ---- OPD certification cross-check (source of truth for "already trained") ----
+    # Match each clinic to OPD by its embedded business-key code (e.g. "- SVS38583"),
+    # falling back to a cleaned name. Finalized abdominal / basic-echo certifications
+    # dated after install mark that modality complete. If OPD is unreachable we fail
+    # OPEN: nothing can be confirmed trained, so every candidate stays and is flagged.
+    opd_error = None
+    cert_after: dict = {}
+    verified: dict = {}
+    try:
+        from . import opd_api  # lazy import
+        _oauth = opd_api.auth_from_secrets()
+        _cert_map = _opd_cert_map(_oauth)
+        _by_code, _by_name = _opd_clinic_lookup(_oauth)
+        _fin_cache: dict = {}
+        for c in candidates:
+            _oid, _ok = _match_opd_id(c["company"].get("name"), _by_code, _by_name)
+            verified[c["deal_id"]] = _ok
+            if not _ok:
+                continue
+            if _oid not in _fin_cache:
+                _fin_cache[_oid] = _finalized_certs(_oauth, _oid, _cert_map)
+            _inst = c["install_dt"]
+            cert_after[c["deal_id"]] = {
+                "abdominal": sum(1 for t, fd in _fin_cache[_oid]
+                                 if t["abdominal"] and fd and fd > _inst),
+                "cardiac": sum(1 for t, fd in _fin_cache[_oid]
+                               if t["cardiac"] and fd and fd > _inst),
+            }
+    except Exception as e:  # noqa: BLE001 - OPD is the cross-check; fail open on error
+        opd_error = f"{type(e).__name__}: {e}"
+
+    # ---- Membership: keep clinics still owed a modality they were sold ----
+    # needs_<m> = sold that modality AND OPD shows no post-install certification for it.
+    members = []
+    for c in candidates:
+        certs = cert_after.get(c["deal_id"], {"abdominal": 0, "cardiac": 0})
+        c["certs"] = certs
+        c["needs_a"], c["needs_c"] = _needs_training(
+            c["allot_a"], c["allot_c"], certs["abdominal"], certs["cardiac"])
+        c["verified"] = verified.get(c["deal_id"], False)
+        if c["needs_a"] or c["needs_c"]:
+            members.append(c)
+    candidates = members
+
+    # ---- Resolve sonographer owner IDs to names (members only). ----
     owner_ids = {c["company"].get("test_training_sonographer")
                  for c in candidates
                  if c["company"].get("test_training_sonographer")}
@@ -263,7 +384,7 @@ def build_email() -> dict:
             )
         time.sleep(0.03)
 
-    # Call activity per company (last 90 days).
+    # ---- Call activity per company, last 90 days (members only). ----
     company_calls = {}
     window_ms = int((_dt.datetime.now() - _dt.timedelta(days=CALL_WINDOW_DAYS)).timestamp() * 1000)
     for c in candidates:
@@ -299,35 +420,6 @@ def build_email() -> dict:
         company_calls[co_id] = cd_list
         time.sleep(0.03)
 
-    # OPD certification cross-check (live). Best-effort: if OPD is unreachable the
-    # report still builds with cert columns blank. Finalized OPD certifications
-    # (abdominal / basic-echo) dated AFTER the install date reduce Training Remaining.
-    opd_error = None
-    cert_after: dict = {}
-    try:
-        from . import opd_api  # lazy import
-        _oauth = opd_api.auth_from_secrets()
-        _cert_map = _opd_cert_map(_oauth)
-        _by_oname: dict = {}
-        for _iid, _nm in opd_api.fetch_clinic_index(_oauth).items():
-            _by_oname.setdefault(_norm(_nm), _iid)
-        _fin_cache: dict = {}
-        for c in candidates:
-            _oid = _by_oname.get(_norm(c["company"].get("name")))
-            if not _oid:
-                continue
-            if _oid not in _fin_cache:
-                _fin_cache[_oid] = _finalized_certs(_oauth, _oid, _cert_map)
-            _inst = c["install_dt"]
-            cert_after[c["deal_id"]] = {
-                "abdominal": sum(1 for t, fd in _fin_cache[_oid]
-                                 if t["abdominal"] and fd and fd > _inst),
-                "cardiac": sum(1 for t, fd in _fin_cache[_oid]
-                               if t["cardiac"] and fd and fd > _inst),
-            }
-    except Exception as e:  # noqa: BLE001 - OPD is best-effort enrichment
-        opd_error = f"{type(e).__name__}: {e}"
-
     def _targets(dp, did):
         """(rem_abd, tgt_abd, rem_car, tgt_car) for a deal — target = remaining
         minus post-install certs, floored at 0; target is None when remaining is
@@ -352,12 +444,15 @@ def build_email() -> dict:
         except (ValueError, TypeError):
             tes_dt = None
 
-        _certs, _ra, _ta, _rc, _tc = _targets(dp, c["deal_id"])
         calls = company_calls.get(co_id, [])
         last_call = max((cx["ts"] for cx in calls), default=None)
+        needs = ("Abdominal + Cardiac" if c["needs_a"] and c["needs_c"]
+                 else "Abdominal" if c["needs_a"] else "Cardiac")
         rows.append({
             "Training Sonographer": trainer,
             "Clinic": co.get("name") or "",
+            "Needs Training": needs,
+            "OPD Match": "Verified" if c["verified"] else "UNVERIFIED - confirm in OPD",
             "Deal ID": c["deal_id"],
             "Funding Received": (dp.get("funding_received_date_stamp") or "")[:10],
             "US Install Date": c["install_dt"].isoformat(),
@@ -368,12 +463,10 @@ def build_email() -> dict:
             "Days Since Last Call": (today - last_call.date()).days if last_call else "",
             f"Calls in Last {CALL_WINDOW_DAYS}d": len(calls),
             "Expiration Date": (dp.get("expiration_date") or "")[:10],
-            "Remaining Abdominal": dp.get("migrated_00nus000001e6htmak") or "",
-            "Remaining Cardiac": dp.get("migrated_00nus000001e6jvma0") or "",
-            "OPD Certs Abd (post-install)": _certs["abdominal"],
-            "OPD Certs Card (post-install)": _certs["cardiac"],
-            "Remaining Abd -> target": ("" if _ta is None else _ta),
-            "Remaining Card -> target": ("" if _tc is None else _tc),
+            "Abd Allotted": c["allot_a"],
+            "Card Allotted": c["allot_c"],
+            "OPD Certs Abd (post-install)": c["certs"]["abdominal"],
+            "OPD Certs Card (post-install)": c["certs"]["cardiac"],
             "City": co.get("city") or "",
             "State": co.get("state") or "",
         })
@@ -423,15 +516,16 @@ def build_email() -> dict:
     xlsx_bytes = xlsx_bio.getvalue()
 
     subject = (
-        f"WOL - Installed clinics with no training scheduled "
+        f"WOL - Installed clinics still needing training "
         f"({len(rows)} open) - {today.isoformat()}"
     )
 
     # Plain body.
     plain = ["Training Team,", "",
-             f'This week the WOL "installed but no training scheduled" list is '
-             f"{len(rows)} clinics.",
-             "Sorted by install date, oldest first, per trainer.", ""]
+             f"This week {len(rows)} installed clinics still need training: they were "
+             f"sold a modality and OPD has no finalized certification for it yet.",
+             "Sorted by install date, oldest first, per trainer. Each line notes which "
+             "modality is outstanding.", ""]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
@@ -445,10 +539,11 @@ def build_email() -> dict:
                         if r["Days Since Last Call"] != "" else ", no calls in 90d")
             tes_bit = (f", email sent {r['Days on Training List']}d ago"
                        if r["Days on Training List"] != "" else ", no training email")
+            flag = "" if r["OPD Match"] == "Verified" else "  [UNVERIFIED in OPD]"
             plain.append(
-                f"  {r['Clinic']}  ({r['City']}, {r['State']})  "
+                f"  {r['Clinic']}  ({r['City']}, {r['State']})  needs {r['Needs Training']}  -  "
                 f"installed {r['US Install Date']} ({r['Days Since Install']}d ago)"
-                f"{tes_bit}{call_bit}"
+                f"{tes_bit}{call_bit}{flag}"
             )
         plain.append("")
     plain += ["Full detail in the attached spreadsheet, one tab per trainer."]
@@ -457,9 +552,9 @@ def build_email() -> dict:
     # HTML body.
     html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;">',
             "<p>Training Team,</p>",
-            f'<p>This week the WOL "installed but no training scheduled" list is '
-            f"<b>{len(rows)}</b> clinics. "
-            "Sorted by install date, oldest first, per trainer.</p>"]
+            f"<p>This week <b>{len(rows)}</b> installed clinics still need training: "
+            f"they were sold a modality and OPD has no finalized certification for it yet. "
+            f"Sorted by install date, oldest first, per trainer.</p>"]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
@@ -473,16 +568,21 @@ def build_email() -> dict:
                     'font-family:Calibri,Arial,sans-serif;font-size:12px;">')
         html.append(
             '<tr style="background:#5f93a3;color:#0e2a33;">'
-            "<th align='left'>Clinic</th><th align='left'>Location</th>"
+            "<th align='left'>Clinic</th><th align='left'>Needs</th>"
+            "<th align='left'>Location</th>"
             "<th align='left'>Installed</th><th align='left'>Days Installed</th>"
             "<th align='left'>Training Email</th><th align='left'>Days On List</th>"
             "<th align='left'>Last Call</th><th align='left'>Days Since Call</th>"
             "<th align='left'>Calls 90d</th></tr>"
         )
         for r in sub:
+            unv = r["OPD Match"] != "Verified"
+            clinic_cell = (f'{r["Clinic"]}<span style="color:#b26a00;"> (unverified in OPD)</span>'
+                           if unv else r["Clinic"])
             html.append(
                 f'<tr style="border-top:1px solid #d9dde3;">'
-                f'<td>{r["Clinic"]}</td>'
+                f'<td>{clinic_cell}</td>'
+                f'<td>{r["Needs Training"]}</td>'
                 f'<td>{r["City"]}, {r["State"]}</td>'
                 f'<td>{r["US Install Date"]}</td>'
                 f'<td>{r["Days Since Install"]}</td>'
