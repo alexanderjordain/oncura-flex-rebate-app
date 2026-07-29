@@ -113,8 +113,11 @@ def _norm(s):
 
 
 def _num(v):
+    if not v or str(v).strip() == "(No value)":
+        return 0
     try:
-        return int(v) if v and str(v) != "(No value)" else 0
+        # tolerate "2", "2.0", and multi-value enums like "2;3" (take the first)
+        return int(float(str(v).split(";")[0].strip()))
     except (TypeError, ValueError):
         return 0
 
@@ -126,22 +129,31 @@ def _num(v):
 _FRANCHISE_PREFIX = re.compile(r"^(nva|tvc|cvp|cah|ssa/svp|obt|aaha|svp)\s*[-/]\s*", re.I)
 
 
+# Corporate legal suffixes to drop from the tail of a clinic name (LLC, Inc, PC...)
+# so "The Cat Doctor LLC" matches OPD's "The Cat Doctor" and "...Clinic Pc" matches.
+_CORP_SUFFIX = re.compile(r"[,\s]+(l\.?l\.?c\.?|p\.?l\.?l\.?c\.?|inc\.?|p\.?c\.?|ltd\.?|corp\.?)\s*$", re.I)
+
+
 def _clean_clinic_name(nm):
     """Normalized clinic name with parentheticals, 'Lost' tags, a trailing OPD code,
-    and franchise prefixes stripped, for the name-based fallback match."""
+    franchise prefixes, and corporate suffixes stripped, for the name fallback match."""
     n = re.sub(r"\((?:[^)]*)\)", "", nm or "")
     n = re.sub(r"\b(lost|no longer active)\b.*$", "", n, flags=re.I)
-    n = re.split(r"\s-\s[A-Za-z0-9]{4,10}\s*$", n)[0]
+    n = re.split(r"\s-\s[A-Za-z0-9]{2,10}\s*$", n)[0]   # trailing " - CODE"
+    n = _CORP_SUFFIX.sub("", n)
     return _norm(_FRANCHISE_PREFIX.sub("", n))
 
 
 def _opd_clinic_lookup(auth):
-    """({business_code -> internal_id}, {clean_name -> internal_id}) for every OPD
-    clinic. The business code (Clinic.ClinicID, e.g. 'SVS38583') is the primary key
-    HubSpot names are matched against; the cleaned name is the fallback."""
+    """({business_code -> [internal_id]}, {clean_name -> [internal_id]}) for every OPD
+    clinic. Values are LISTS so a duplicated code/name (OPD has several) is detected
+    rather than silently resolving to whichever row came back first."""
     from . import opd_api  # lazy import
-    rows, _ = opd_api._fetch_all(opd_api.CLINIC_PATH, auth=auth,
-                                 params={"$select": "ClinicID,ClinicName"})
+    rows, total = opd_api._fetch_all(opd_api.CLINIC_PATH, auth=auth,
+                                     params={"$select": "ClinicID,ClinicName"})
+    if total is not None and total > len(rows):
+        raise RuntimeError(f"OPD clinic index truncated: server reports {total}, "
+                           f"fetched {len(rows)}. Raise PAGE_SIZE in core.opd_api.")
     by_code: dict = {}
     by_name: dict = {}
     for r in rows:
@@ -153,34 +165,65 @@ def _opd_clinic_lookup(auth):
         except ValueError:
             continue
         code = (r.get("ClinicID") or "").strip().upper()
-        if code:
-            by_code.setdefault(code, iid)
+        if code and iid not in by_code.setdefault(code, []):
+            by_code[code].append(iid)
         key = _clean_clinic_name(r.get("ClinicName"))
-        if key:
-            by_name.setdefault(key, iid)
+        if key and iid not in by_name.setdefault(key, []):
+            by_name[key].append(iid)
     return by_code, by_name
 
 
-def _match_opd_id(name, by_code, by_name):
-    """(internal_id, matched_bool). Try the trailing business-key code first, then a
-    cleaned-name lookup. Returns (None, False) when the clinic can't be matched."""
+def _extract_code_ids(name, by_code):
+    """OPD internal ids for the embedded business-key code in a HubSpot name, or None.
+    Scans every token (so a trailing 'Lost'/'No longer active' after the code, or the
+    code after that text, is still found) and matches against the OPD code set."""
     base = re.sub(r"\((?:[^)]*)\)", "", name or "")
-    base = re.sub(r"\b(lost|no longer active)\b.*$", "", base, flags=re.I).strip()
-    toks = [t for t in re.split(r"[\s\-/]+", base) if t]
-    if toks:
-        cand = toks[-1].upper()
-        if cand in by_code:
-            return by_code[cand], True
-    key = _clean_clinic_name(name)
-    if key and key in by_name:
-        return by_name[key], True
-    return None, False
+    for tok in reversed([t for t in re.split(r"[\s\-/]+", base) if t]):
+        ids = by_code.get(tok.upper())
+        if ids:
+            return ids
+    return None
+
+
+def _match_opd_id(name, by_code, by_name):
+    """(ids, verified). ids = OPD internal ids to union certs over. A business-code
+    match (unique, or a same-code family) is trusted. A name match is trusted only
+    when it is unique; an ambiguous name (maps to >1 OPD clinic) returns ([], False)
+    so the clinic stays listed and flagged rather than mapped to a guess."""
+    ids = _extract_code_ids(name, by_code)
+    if ids:
+        return ids, True
+    named = by_name.get(_clean_clinic_name(name))
+    if named and len(named) == 1:
+        return named, True
+    return [], False
 
 
 def _needs_training(allot_a, allot_c, cert_a, cert_c):
     """(needs_abdominal, needs_cardiac): a modality is still owed when it was sold
     (allotment > 0) and OPD holds no post-install certification for it."""
     return (allot_a > 0 and cert_a == 0, allot_c > 0 and cert_c == 0)
+
+
+def _count_certs(cert_list, install_date, grace_days=CERT_GRACE_DAYS):
+    """(abdominal, cardiac) certs dated within grace_days before install or any time
+    after. cert_list = [(types_dict, date), ...] as returned by _finalized_certs."""
+    cutoff = install_date - _dt.timedelta(days=grace_days)
+    a = sum(1 for t, fd in cert_list if t.get("abdominal") and fd and fd >= cutoff)
+    c = sum(1 for t, fd in cert_list if t.get("cardiac") and fd and fd >= cutoff)
+    return a, c
+
+
+def _safe_sheet_name(name, used):
+    """Excel-safe, unique worksheet name (<=31 chars, forbidden chars replaced)."""
+    base = (re.sub(r"[\[\]:*?/\\]", "-", name or "").strip() or "Unassigned")[:31]
+    candidate, i = base, 2
+    while candidate.lower() in used:
+        suffix = f" ({i})"
+        candidate = base[:31 - len(suffix)] + suffix
+        i += 1
+    used.add(candidate.lower())
+    return candidate
 
 
 def _opd_cert_map(auth):
@@ -192,8 +235,11 @@ def _opd_cert_map(auth):
     base = "https://telehealth.oncurapartners.com/odata/Consults/ConsultService"
     out: dict = {}
     for stype, key in ((CERT_ABDOMINAL, "abdominal"), (CERT_CARDIAC, "cardiac")):
-        rows, _ = opd_api._fetch_all(base, auth=auth,
-                                     params={"$filter": f"ServiceName eq '{stype}'"})
+        rows, total = opd_api._fetch_all(base, auth=auth,
+                                         params={"$filter": f"ServiceName eq '{stype}'"})
+        if total is not None and total > len(rows):
+            raise RuntimeError(f"OPD cert map truncated for '{stype}': server reports "
+                               f"{total}, fetched {len(rows)}. Raise PAGE_SIZE in core.opd_api.")
         for r in rows:
             cid = str(r.get("ConsultServiceCost_Consult") or "").strip()
             if cid:
@@ -203,12 +249,21 @@ def _opd_cert_map(auth):
 
 def _finalized_certs(auth, clinic_internal_id, cert_map):
     """[(types_dict, finalized_date)] for this clinic's Finalized certification
-    consults. finalized_date is the local (Eastern) billing date."""
+    consults. finalized_date is the local (Eastern) billing date. Retries a couple
+    times on a transient OPD connection error before giving up."""
     from . import opd_api
-    rows, _ = opd_api._fetch_all(
-        "https://telehealth.oncurapartners.com/odata/Consults/Consult", auth=auth,
-        params={"$filter": f"Consult_Clinic eq {clinic_internal_id} and CaseStatus eq 'Finalized'",
-                "$select": "ID,FinalizedDate"})
+    rows = None
+    for attempt in range(3):
+        try:
+            rows, _ = opd_api._fetch_all(
+                "https://telehealth.oncurapartners.com/odata/Consults/Consult", auth=auth,
+                params={"$filter": f"Consult_Clinic eq {clinic_internal_id} and CaseStatus eq 'Finalized'",
+                        "$select": "ID,FinalizedDate"})
+            break
+        except Exception:  # noqa: BLE001 - transient OPD/network error; retry then raise
+            if attempt == 2:
+                raise
+            time.sleep(1.5 * (attempt + 1))
     out = []
     for r in rows:
         types = cert_map.get(str(r.get("ID") or "").strip())
@@ -253,7 +308,8 @@ def build_email() -> dict:
     deal_ids = [d["id"] for d in deals]
     deal_by_id = {d["id"]: d.get("properties", {}) for d in deals}
 
-    # Deal -> primary Company association.
+    # Deal -> primary Company association. Prefer the HubSpot-primary label; fall back
+    # to the first association only when none is flagged primary.
     deal_to_co = {}
     for batch in _chunks(deal_ids, 100):
         r = s.post(
@@ -261,10 +317,18 @@ def build_email() -> dict:
             json={"inputs": [{"id": d} for d in batch]},
             timeout=30,
         )
+        r.raise_for_status()
         for row in r.json().get("results", []):
-            for t in row.get("to", []):
-                deal_to_co[row["from"]["id"]] = str(t["toObjectId"])
-                break
+            tos = row.get("to", [])
+            primary = next(
+                (t for t in tos
+                 if any("primary" in str(at.get("label", "")).lower()
+                        for at in t.get("associationTypes", []))),
+                None,
+            )
+            chosen = primary or (tos[0] if tos else None)
+            if chosen:
+                deal_to_co[row["from"]["id"]] = str(chosen["toObjectId"])
         time.sleep(0.05)
 
     # Company details (sonographer and install date).
@@ -275,6 +339,7 @@ def build_email() -> dict:
             json={"properties": CO_PROPS, "inputs": [{"id": c} for c in batch]},
             timeout=30,
         )
+        r.raise_for_status()
         for row in r.json().get("results", []):
             companies[row["id"]] = row.get("properties", {})
         time.sleep(0.05)
@@ -309,6 +374,23 @@ def build_email() -> dict:
                            "deal": dp, "install_dt": install_dt,
                            "allot_a": allot_a, "allot_c": allot_c})
 
+    # Collapse to one row per company: a company can carry several funded deals (an
+    # original install plus an upgrade). Merge the allotment as the max sold per
+    # modality and keep the most-recently-funded deal's fields for display.
+    by_company: dict = {}
+    for c in candidates:
+        prev = by_company.get(c["company_id"])
+        if prev is None:
+            by_company[c["company_id"]] = c
+            continue
+        prev["allot_a"] = max(prev["allot_a"], c["allot_a"])
+        prev["allot_c"] = max(prev["allot_c"], c["allot_c"])
+        if (c["deal"].get("funding_received_date_stamp") or "") > \
+           (prev["deal"].get("funding_received_date_stamp") or ""):
+            prev["deal"] = c["deal"]
+            prev["deal_id"] = c["deal_id"]
+    candidates = list(by_company.values())
+
     # ---- OPD certification cross-check (source of truth for "already trained") ----
     # Match each clinic to OPD by its embedded business-key code (e.g. "- SVS38583"),
     # falling back to a cleaned name. Finalized abdominal / basic-echo certifications
@@ -325,19 +407,29 @@ def build_email() -> dict:
         _by_code, _by_name = _opd_clinic_lookup(_oauth)
         _fin_cache: dict = {}
         for c in candidates:
-            _oid, _ok = _match_opd_id(c["company"].get("name"), _by_code, _by_name)
+            _ids, _ok = _match_opd_id(c["company"].get("name"), _by_code, _by_name)
             verified[c["deal_id"]] = _ok
             if not _ok:
                 continue
-            if _oid not in _fin_cache:
-                _fin_cache[_oid] = _finalized_certs(_oauth, _oid, _cert_map)
-            _cutoff = c["install_dt"] - _dt.timedelta(days=CERT_GRACE_DAYS)
-            cert_after[c["deal_id"]] = {
-                "abdominal": sum(1 for t, fd in _fin_cache[_oid]
-                                 if t["abdominal"] and fd and fd >= _cutoff),
-                "cardiac": sum(1 for t, fd in _fin_cache[_oid]
-                               if t["cardiac"] and fd and fd >= _cutoff),
-            }
+            # Union finalized certs across every matched OPD id (a duplicated business
+            # code can point at sibling records). One flaky per-clinic read flips just
+            # that clinic to unverified rather than aborting the whole cross-check.
+            _merged, _failed = [], False
+            for _oid in _ids:
+                if _oid not in _fin_cache:
+                    try:
+                        _fin_cache[_oid] = _finalized_certs(_oauth, _oid, _cert_map)
+                    except Exception:  # noqa: BLE001 - one clinic's read failed
+                        _fin_cache[_oid] = None
+                if _fin_cache[_oid] is None:
+                    _failed = True
+                    break
+                _merged.extend(_fin_cache[_oid])
+            if _failed:
+                verified[c["deal_id"]] = False
+                continue
+            _ca, _cc = _count_certs(_merged, c["install_dt"])
+            cert_after[c["deal_id"]] = {"abdominal": _ca, "cardiac": _cc}
     except Exception as e:  # noqa: BLE001 - OPD is the cross-check; fail open on error
         opd_error = f"{type(e).__name__}: {e}"
 
@@ -378,13 +470,16 @@ def build_email() -> dict:
         co_id = c["company_id"]
         if co_id in company_calls:
             continue
-        r = s.get(
-            f"https://api.hubapi.com/crm/v4/objects/companies/{co_id}/associations/calls",
-            params={"limit": 500}, timeout=30,
-        )
-        call_ids = [str(x["toObjectId"]) for x in r.json().get("results", [])]
+        # Call activity is display-only enrichment; a failure here must not drop the
+        # clinic or abort the report, so it degrades to "no calls" on any error.
         cd_list = []
-        if call_ids:
+        try:
+            r = s.get(
+                f"https://api.hubapi.com/crm/v4/objects/companies/{co_id}/associations/calls",
+                params={"limit": 500}, timeout=30,
+            )
+            r.raise_for_status()
+            call_ids = [str(x["toObjectId"]) for x in r.json().get("results", [])]
             for batch in _chunks(call_ids, 100):
                 rr = s.post(
                     "https://api.hubapi.com/crm/v3/objects/calls/batch/read",
@@ -392,6 +487,7 @@ def build_email() -> dict:
                           "inputs": [{"id": ci} for ci in batch]},
                     timeout=30,
                 )
+                rr.raise_for_status()
                 for row in rr.json().get("results", []):
                     p = row.get("properties", {})
                     ts_raw = p.get("hs_timestamp")
@@ -404,6 +500,8 @@ def build_email() -> dict:
                     if ts.timestamp() * 1000 < window_ms:
                         continue
                     cd_list.append({"ts": ts, "direction": p.get("hs_call_direction")})
+        except Exception:  # noqa: BLE001 - call activity is optional; skip on error
+            cd_list = []
         company_calls[co_id] = cd_list
         time.sleep(0.03)
 
@@ -412,7 +510,7 @@ def build_email() -> dict:
     for c in candidates:
         dp, co, co_id = c["deal"], c["company"], c["company_id"]
         trainer_id = co.get("test_training_sonographer")
-        trainer = owner_names.get(str(trainer_id) if trainer_id else "", "Unassigned")
+        trainer = owner_names.get(str(trainer_id) if trainer_id else "", "") or "Unassigned"
 
         tes_raw = dp.get("migrated_00nus000001e6ghma0")
         try:
@@ -464,12 +562,18 @@ def build_email() -> dict:
                                key=lambda x: (x[0] == "Unassigned", -x[1]))
         ])
         summary_df.to_excel(w, sheet_name="Summary", index=False)
-        df.to_excel(w, sheet_name="All (by trainer, install)", index=False)
-        for trainer in sorted(trainer_counts.keys(),
-                              key=lambda t: (t == "Unassigned", t)):
-            sub = df[df["Training Sonographer"] == trainer]
-            sheet_name = trainer[:31].replace("/", "-")
-            sub.to_excel(w, sheet_name=sheet_name, index=False)
+        if df.empty:
+            pd.DataFrame(columns=["Training Sonographer", "Clinic", "Needs Training"]).to_excel(
+                w, sheet_name="All (by trainer, install)", index=False)
+        else:
+            df.to_excel(w, sheet_name="All (by trainer, install)", index=False)
+            _used: set = set()
+            for trainer in sorted(trainer_counts.keys(),
+                                  key=lambda t: (t == "Unassigned", t)):
+                sub = df[df["Training Sonographer"] == trainer]
+                if sub.empty:
+                    continue
+                sub.to_excel(w, sheet_name=_safe_sheet_name(trainer, _used), index=False)
     xlsx_bytes = xlsx_bio.getvalue()
 
     subject = (
