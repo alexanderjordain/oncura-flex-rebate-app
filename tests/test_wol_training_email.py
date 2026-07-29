@@ -80,6 +80,31 @@ def test_count_certs_grace_window():
     assert wol._count_certs(certs, install, grace_days=90) == (0, 1)
 
 
+def test_display_name_strips_codes_and_notes():
+    # trailing OPD code dropped, franchise prefix kept for display
+    assert wol._display_name("NVA- Marbletown Animal Hospital - MTAH12484") == \
+        "NVA- Marbletown Animal Hospital"
+    # code + "Lost (2025)" tag dropped
+    assert wol._display_name("Woof Animal Hospital - WAH78626 Lost (2025)") == "Woof Animal Hospital"
+    # freeform internal note ("... lead ...") + code dropped
+    assert wol._display_name("NVA Veterinary Care Group-Forest Hills - CeCe July lead VCGFH11375") == \
+        "NVA Veterinary Care Group-Forest Hills"
+    # real trailing tokens that are NOT codes are preserved
+    assert wol._display_name("Best Friends Pet Hospital - CA") == "Best Friends Pet Hospital - CA"
+    assert wol._display_name("Mount Pleasant Animal Hospital - SC #2") == \
+        "Mount Pleasant Animal Hospital - SC #2"
+    assert wol._display_name("Family Animal Hospital of Friendswood") == \
+        "Family Animal Hospital of Friendswood"
+
+
+def test_exp_status_buckets():
+    today = dt.date(2026, 7, 29)
+    assert wol._exp_status("", today) == ("", "none")
+    assert wol._exp_status("2026-07-28", today) == ("EXPIRED 2026-07-28", "expired")
+    assert wol._exp_status("2026-08-10", today) == ("2026-08-10 (soon)", "soon")
+    assert wol._exp_status("2027-01-01", today) == ("2027-01-01", "future")
+
+
 def test_needs_training_rule():
     # sold both, none certified -> needs both
     assert wol._needs_training(2, 2, 0, 0) == (True, True)

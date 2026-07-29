@@ -20,6 +20,7 @@ import io
 import os
 import re
 import time
+import html as _htmlmod
 import datetime as _dt
 from collections import Counter
 from email.message import EmailMessage
@@ -35,6 +36,8 @@ except Exception:
 
 H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 CALL_WINDOW_DAYS = 90
+HUBSPOT_PORTAL_ID = "8772207"   # for building company deep-links in the report
+EXPIRY_SOON_DAYS = 30           # training window flagged "(soon)" within this many days
 
 
 # ---------- Recipients / trainer roster / from-address ----------
@@ -44,7 +47,7 @@ CALL_WINDOW_DAYS = 90
 DEFAULT_TO = [
     "Carla Erickson <carla@oncurapartners.com>",
     "John Paul Amberger <jpamberger@oncurapartners.com>",
-    "Mariah Hernandez <mariah@oncurapartners.com>",
+    "Mariah Delgado <mariah@oncurapartners.com>",
     "Rosie Haro <rharo@oncurapartners.com>",
     "Sarah Ervin <servin@oncurapartners.com>",
 ]
@@ -79,6 +82,7 @@ CO_PROPS = [
     "name",
     "test_training_sonographer",           # enum(OWNER reference) — the trainer
     "us_install_date__c",                  # date — install date
+    "phone",                               # clinic phone — so the row is a call sheet
     "city",
     "state",
 ]
@@ -212,6 +216,36 @@ def _count_certs(cert_list, install_date, grace_days=CERT_GRACE_DAYS):
     a = sum(1 for t, fd in cert_list if t.get("abdominal") and fd and fd >= cutoff)
     c = sum(1 for t, fd in cert_list if t.get("cardiac") and fd and fd >= cutoff)
     return a, c
+
+
+def _display_name(nm):
+    """Human-facing clinic name: drop a trailing ' - <code/notes>' segment (an OPD
+    code, a 'Lost'/'lead' annotation) and a trailing '(YYYY)'/'Lost' tag, while
+    keeping real names like '... - SC #2' or '... - CA' intact."""
+    n = (nm or "").strip()
+    parts = n.rsplit(" - ", 1)
+    if len(parts) == 2 and re.search(r"[A-Za-z]{2,}\d{2,}|\blost\b|no longer active|\blead\b",
+                                     parts[1], re.I):
+        n = parts[0]
+    n = re.sub(r"\s*\((?:19|20)\d{2}\)\s*$", "", n)
+    n = re.sub(r"\s*\b(lost|no longer active)\b.*$", "", n, flags=re.I)
+    return n.strip(" -")
+
+
+def _exp_status(exp_raw, today):
+    """(label, urgency) for an expiration date string; urgency in
+    {'expired','soon','future','none'}."""
+    if not exp_raw:
+        return "", "none"
+    try:
+        d = _dt.date.fromisoformat(exp_raw)
+    except ValueError:
+        return exp_raw, "none"
+    if d < today:
+        return f"EXPIRED {exp_raw}", "expired"
+    if (d - today).days <= EXPIRY_SOON_DAYS:
+        return f"{exp_raw} (soon)", "soon"
+    return exp_raw, "future"
 
 
 def _safe_sheet_name(name, used):
@@ -518,35 +552,51 @@ def build_email() -> dict:
         except (ValueError, TypeError):
             tes_dt = None
 
+        # Funding is the WOL qualifier and the honest "training owed" clock: the equipment
+        # install can be years earlier, so age + sort off funding, not the install date.
+        fund_raw = (dp.get("funding_received_date_stamp") or "")[:10]
+        try:
+            fund_dt = _dt.date.fromisoformat(fund_raw) if fund_raw else None
+        except (ValueError, TypeError):
+            fund_dt = None
+
         calls = company_calls.get(co_id, [])
         last_call = max((cx["ts"] for cx in calls), default=None)
         needs = ("Abdominal + Cardiac" if c["needs_a"] and c["needs_c"]
                  else "Abdominal" if c["needs_a"] else "Cardiac")
         rows.append({
             "Training Sonographer": trainer,
-            "Clinic": co.get("name") or "",
+            "Clinic": _display_name(co.get("name")),
             "Needs Training": needs,
+            "Phone": co.get("phone") or "",
+            "Expiration Date": (dp.get("expiration_date") or "")[:10],
+            "Days Waiting": (today - fund_dt).days if fund_dt else "",
+            "Training Sold": fund_raw,
             "OPD Match": "Verified" if c["verified"] else "UNVERIFIED - confirm in OPD",
-            "Deal ID": c["deal_id"],
-            "Funding Received": (dp.get("funding_received_date_stamp") or "")[:10],
-            "US Install Date": c["install_dt"].isoformat(),
-            "Days Since Install": (today - c["install_dt"]).days,
-            "Training Email Sent": tes_dt.isoformat() if tes_dt else "",
-            "Days on Training List": (today - tes_dt).days if tes_dt else "",
+            "City": (co.get("city") or "").title(),
+            "State": co.get("state") or "",
             "Last Call": last_call.strftime("%Y-%m-%d") if last_call else "",
             "Days Since Last Call": (today - last_call.date()).days if last_call else "",
             f"Calls in Last {CALL_WINDOW_DAYS}d": len(calls),
-            "Expiration Date": (dp.get("expiration_date") or "")[:10],
+            "Training Email Sent": tes_dt.isoformat() if tes_dt else "",
+            "Days Since Training Email": (today - tes_dt).days if tes_dt else "",
+            "US Install Date": c["install_dt"].isoformat(),
+            "Days Since Install": (today - c["install_dt"]).days,
             "Abd Allotted": c["allot_a"],
             "Card Allotted": c["allot_c"],
             "OPD Certs Abd": c["certs"]["abdominal"],
             "OPD Certs Card": c["certs"]["cardiac"],
-            "City": co.get("city") or "",
-            "State": co.get("state") or "",
+            "HubSpot": f"https://app.hubspot.com/contacts/{HUBSPOT_PORTAL_ID}/company/{co_id}",
+            "Deal ID": c["deal_id"],
         })
 
-    rows.sort(key=lambda r: (r["Training Sonographer"] == "Unassigned",
-                             r["Training Sonographer"], r["US Install Date"]))
+    # Most time-sensitive first: dated expirations (soonest / already expired) ahead of
+    # undated ones, then longest waiting since the training was funded.
+    def _row_sort_key(r):
+        dw = r["Days Waiting"] if isinstance(r["Days Waiting"], int) else -1
+        return (r["Training Sonographer"] == "Unassigned", r["Training Sonographer"],
+                r["Expiration Date"] == "", r["Expiration Date"] or "9999-12-31", -dw)
+    rows.sort(key=_row_sort_key)
     df = pd.DataFrame(rows)
 
     trainer_counts = Counter(r["Training Sonographer"] for r in rows)
@@ -564,9 +614,9 @@ def build_email() -> dict:
         summary_df.to_excel(w, sheet_name="Summary", index=False)
         if df.empty:
             pd.DataFrame(columns=["Training Sonographer", "Clinic", "Needs Training"]).to_excel(
-                w, sheet_name="All (by trainer, install)", index=False)
+                w, sheet_name="All (by trainer)", index=False)
         else:
-            df.to_excel(w, sheet_name="All (by trainer, install)", index=False)
+            df.to_excel(w, sheet_name="All (by trainer)", index=False)
             _used: set = set()
             for trainer in sorted(trainer_counts.keys(),
                                   key=lambda t: (t == "Unassigned", t)):
@@ -582,11 +632,19 @@ def build_email() -> dict:
     )
 
     # Plain body.
-    plain = ["Training Team,", "",
-             f"This week {len(rows)} installed clinics still need training: they were "
-             f"sold a modality and OPD has no finalized certification for it yet.",
-             "Sorted by install date, oldest first, per trainer. Each line notes which "
-             "modality is outstanding.", ""]
+    plain = [
+        "Training Team,", "",
+        f"This week {len(rows)} installed clinics still need training. Each was sold a "
+        f"modality (abdominal and/or cardiac) and OPD has no finalized certification for it "
+        f"yet. Every clinic was cross-checked against OPD; already-certified clinics were "
+        f"removed, and a clinic drops off automatically once OPD shows the finalized cert. If "
+        f"one looks already trained, OPD has no finalized cert on file for it - flag it and "
+        f"we'll check.", "",
+        "Grouped by training sonographer, most time-sensitive first (soonest or already-"
+        "expired training window, then longest waiting since the training was funded). Please "
+        "call your clinics and schedule the outstanding session(s), prioritizing anything "
+        "marked EXPIRED or (soon).", "",
+    ]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
@@ -596,30 +654,38 @@ def build_email() -> dict:
             plain.append("")
             continue
         for r in sub:
-            call_bit = (f", last call {r['Days Since Last Call']}d ago"
-                        if r["Days Since Last Call"] != "" else ", no calls in 90d")
-            tes_bit = (f", email sent {r['Days on Training List']}d ago"
-                       if r["Days on Training List"] != "" else ", no training email")
-            flag = "" if r["OPD Match"] == "Verified" else "  [UNVERIFIED in OPD]"
+            phone = f"  ph {r['Phone']}" if r["Phone"] else "  (no phone on file)"
+            exp_lbl, _urg = _exp_status(r["Expiration Date"], today)
+            exp_bit = f"  |  {exp_lbl}" if exp_lbl else ""
+            wait_bit = f"  |  waiting {r['Days Waiting']}d" if r["Days Waiting"] != "" else ""
+            call_bit = (f"  |  last call {r['Days Since Last Call']}d ago"
+                        if r["Days Since Last Call"] != "" else "  |  no calls in 90d")
+            flag = "  [UNVERIFIED - confirm in OPD]" if r["OPD Match"] != "Verified" else ""
             plain.append(
-                f"  {r['Clinic']}  ({r['City']}, {r['State']})  needs {r['Needs Training']}  -  "
-                f"installed {r['US Install Date']} ({r['Days Since Install']}d ago)"
-                f"{tes_bit}{call_bit}{flag}"
+                f"  {r['Clinic']} ({r['City']}, {r['State']}) - needs {r['Needs Training']}"
+                f"{phone}{exp_bit}{wait_bit}{call_bit}{flag}"
             )
         plain.append("")
-    plain += ["Full detail in the attached spreadsheet, one tab per trainer."]
+    plain += ["Full detail in the attached spreadsheet, one tab per trainer "
+              "(install date, training-email history, and the OPD cert counts)."]
     plain_body = "\n".join(plain)
 
     # HTML body.
-    html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;">',
+    html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;color:#1f2733">',
             "<p>Training Team,</p>",
-            f"<p>This week <b>{len(rows)}</b> installed clinics still need training: "
-            f"they were sold a modality and OPD has no finalized certification for it yet. "
-            f"Sorted by install date, oldest first, per trainer.</p>"]
+            f"<p>This week <b>{len(rows)}</b> installed clinics still need training. Each was "
+            f"sold a modality (abdominal and/or cardiac) and OPD has no finalized certification "
+            f"for it yet. Every clinic was cross-checked against OPD; already-certified clinics "
+            f"were removed, and a clinic drops off automatically once OPD shows the finalized "
+            f"cert. If one looks already trained, OPD has no finalized cert on file for it, so "
+            f"flag it and we'll check.</p>",
+            "<p>Grouped by training sonographer, most time-sensitive first. Please call your "
+            "clinics and schedule the outstanding session(s), prioritizing anything marked "
+            "<b>EXPIRED</b> or <b>(soon)</b>. Clinic names link to HubSpot.</p>"]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
-        html.append(f'<h3 style="margin-bottom:4px;">{trainer} '
+        html.append(f'<h3 style="margin-bottom:4px;">{_htmlmod.escape(trainer)} '
                     f'<span style="color:#666;font-weight:normal;">({len(sub)})</span></h3>')
         if not sub:
             html.append('<p style="color:#666;margin:0 0 12px 0;">No clinics this week.</p>')
@@ -630,32 +696,38 @@ def build_email() -> dict:
         html.append(
             '<tr style="background:#5f93a3;color:#0e2a33;">'
             "<th align='left'>Clinic</th><th align='left'>Needs</th>"
-            "<th align='left'>Location</th>"
-            "<th align='left'>Installed</th><th align='left'>Days Installed</th>"
-            "<th align='left'>Training Email</th><th align='left'>Days On List</th>"
-            "<th align='left'>Last Call</th><th align='left'>Days Since Call</th>"
-            "<th align='left'>Calls 90d</th></tr>"
+            "<th align='left'>Phone</th><th align='left'>Location</th>"
+            "<th align='left'>Expiration</th><th align='left'>Waiting (days)</th>"
+            "<th align='left'>Last Call</th><th align='left'>Calls 90d</th></tr>"
         )
         for r in sub:
-            unv = r["OPD Match"] != "Verified"
-            clinic_cell = (f'{r["Clinic"]}<span style="color:#b26a00;"> (unverified in OPD)</span>'
-                           if unv else r["Clinic"])
+            name = _htmlmod.escape(r["Clinic"])
+            clinic_cell = (f'<a href="{r["HubSpot"]}" style="color:#0b6bcb;'
+                           f'text-decoration:none">{name}</a>')
+            if r["OPD Match"] != "Verified":
+                clinic_cell += '<span style="color:#b26a00"> (unverified - confirm in OPD)</span>'
+            exp_lbl, urg = _exp_status(r["Expiration Date"], today)
+            exp_color = {"expired": "#b3261e", "soon": "#b26a00"}.get(urg)
+            exp_cell = (f'<span style="color:{exp_color};font-weight:700">{_htmlmod.escape(exp_lbl)}</span>'
+                        if exp_color else _htmlmod.escape(exp_lbl))
+            phone_esc = _htmlmod.escape(r["Phone"])
+            loc_esc = _htmlmod.escape(f'{r["City"]}, {r["State"]}')
+            calls90 = r[f"Calls in Last {CALL_WINDOW_DAYS}d"]
             html.append(
-                f'<tr style="border-top:1px solid #d9dde3;">'
+                '<tr style="border-top:1px solid #d9dde3;">'
                 f'<td>{clinic_cell}</td>'
                 f'<td>{r["Needs Training"]}</td>'
-                f'<td>{r["City"]}, {r["State"]}</td>'
-                f'<td>{r["US Install Date"]}</td>'
-                f'<td>{r["Days Since Install"]}</td>'
-                f'<td>{r["Training Email Sent"]}</td>'
-                f'<td>{r["Days on Training List"]}</td>'
+                f'<td>{phone_esc}</td>'
+                f'<td>{loc_esc}</td>'
+                f'<td>{exp_cell}</td>'
+                f'<td>{r["Days Waiting"]}</td>'
                 f'<td>{r["Last Call"]}</td>'
-                f'<td>{r["Days Since Last Call"]}</td>'
-                f'<td>{r[f"Calls in Last {CALL_WINDOW_DAYS}d"]}</td>'
-                f"</tr>"
+                f'<td>{calls90}</td>'
+                "</tr>"
             )
         html.append("</table>")
-    html += ["<p>Full detail in the attached spreadsheet, one tab per trainer.</p>",
+    html += ["<p>Full detail in the attached spreadsheet, one tab per trainer "
+             "(install date, training-email history, OPD cert counts, and a HubSpot link).</p>",
              "</body></html>"]
     html_body = "\n".join(html)
 
