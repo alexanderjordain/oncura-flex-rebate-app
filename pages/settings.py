@@ -405,35 +405,13 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
             heading="WOL - Installed, Training Incomplete",
         )
 
-        # OPD certification adjustments: review, then apply to HubSpot.
+        # OPD cross-check status. When OPD is unreachable the list fails open:
+        # every clinic is kept and flagged UNVERIFIED until OPD is reachable again.
         if _wol.get("opd_error"):
-            st.warning(f"OPD cross-check unavailable; cert adjustments not computed. "
-                       f"({_wol['opd_error']})", icon=":material/link_off:")
-        _adj = _wol.get("adjustments") or []
-        if _adj:
-            st.divider()
-            st.markdown(f"**OPD certification adjustments ({len(_adj)})**, review then apply")
-            st.caption("Finalized OPD certifications dated after install reduce the HubSpot "
-                       "Training-Remaining fields. Each Apply writes to HubSpot (needs the deals "
-                       "write scope) and is idempotent; it sets the field to a computed target.")
-            for _a in _adj:
-                with st.container(border=True):
-                    st.markdown(f"**{_a['clinic']}**  ·  deal `{_a['deal_id']}`")
-                    if _a["abd_target"] is not None:
-                        st.markdown(f"Abdominal: {_a['abd_current']} remaining "
-                                    f"− {_a['abd_certs']} cert(s) → **{_a['abd_target']}**")
-                    if _a["car_target"] is not None:
-                        st.markdown(f"Cardiac: {_a['car_current']} remaining "
-                                    f"− {_a['car_certs']} cert(s) → **{_a['car_target']}**")
-                    if st.button("Apply to HubSpot", key=f"wol_apply_{_a['deal_id']}"):
-                        try:
-                            wol_training_email.apply_remaining(
-                                _a["deal_id"], _a["abd_target"], _a["car_target"])
-                            st.success("Applied to HubSpot.", icon=":material/check_circle:")
-                        except Exception as e:  # noqa: BLE001 - surface write errors plainly
-                            st.error(f"Apply failed: {e}")
-        elif not _wol.get("opd_error"):
-            st.caption("No OPD certification adjustments needed for this list.")
+            st.warning(
+                "OPD cross-check unavailable, so already-trained clinics could not be "
+                "filtered out. Every clinic is shown and flagged UNVERIFIED until OPD is "
+                f"reachable again. ({_wol['opd_error']})", icon=":material/link_off:")
 
 st.divider()
 

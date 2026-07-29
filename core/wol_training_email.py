@@ -9,7 +9,7 @@ cardiac allotment on the deal) and OPD holds no finalized certification for that
 modality dated after install. abdominal_trainings / cardiac_trainings is the
 allotment sold (2/2 is the standard package), not a scheduled or remaining counter,
 so completion is decided against OPD, the only reliable record. Clinics that finish
-drop off automatically. The one write in the module is the optional apply_remaining().
+drop off automatically. The module is read-only; nothing writes back to HubSpot.
 
 Secret: HUBSPOT_TOKEN (Streamlit secrets, falling back to the same env var for
 local dev). If the deployment names the token differently, change the two lines
@@ -74,8 +74,6 @@ DEAL_PROPS = [
     "expiration_date",                     # date — training expiration
     "abdominal_trainings",                 # enum - abdominal training ALLOTMENT sold (2 = standard)
     "cardiac_trainings",                   # enum - cardiac training allotment sold (not a to-do count)
-    "migrated_00nus000001e6htmak",         # string — Training Remaining from Order Abdominal
-    "migrated_00nus000001e6jvma0",         # string — Training Remaining from Order Cardiac
 ]
 CO_PROPS = [
     "name",
@@ -94,9 +92,6 @@ CERT_CARDIAC = "Certification - Basic Echocardiography"
 # Internal Oncura entities (Oncura Partners - Fort Worth, - ATX, etc.) are not customer
 # clinics; any company whose name starts with this prefix is dropped from the list.
 EXCLUDE_PREFIX = "oncura partners"
-# The two Training-Remaining deal properties the OPD certs reduce.
-REMAIN_ABDOMINAL = "migrated_00nus000001e6htmak"
-REMAIN_CARDIAC = "migrated_00nus000001e6jvma0"
 
 
 def recipients(kind: str) -> list[str]:
@@ -117,20 +112,6 @@ def _num(v):
         return int(v) if v and str(v) != "(No value)" else 0
     except (TypeError, ValueError):
         return 0
-
-
-def _num_or_none(v):
-    """Parse a Training-Remaining value to int, or None if blank / not a number.
-    None means 'unknown' — we keep the clinic on the list but compute no target."""
-    if v is None:
-        return None
-    s = str(v).strip()
-    if not s or s == "(No value)":
-        return None
-    try:
-        return int(float(s))
-    except (TypeError, ValueError):
-        return None
 
 
 # ---------- OPD clinic matching ----------
@@ -420,17 +401,6 @@ def build_email() -> dict:
         company_calls[co_id] = cd_list
         time.sleep(0.03)
 
-    def _targets(dp, did):
-        """(rem_abd, tgt_abd, rem_car, tgt_car) for a deal — target = remaining
-        minus post-install certs, floored at 0; target is None when remaining is
-        blank (unknown) so the clinic stays listed but gets no computed change."""
-        certs = cert_after.get(did, {"abdominal": 0, "cardiac": 0})
-        ra = _num_or_none(dp.get(REMAIN_ABDOMINAL))
-        rc = _num_or_none(dp.get(REMAIN_CARDIAC))
-        ta = max(0, ra - certs["abdominal"]) if ra is not None else None
-        tc = max(0, rc - certs["cardiac"]) if rc is not None else None
-        return certs, ra, ta, rc, tc
-
     # Build report rows.
     rows = []
     for c in candidates:
@@ -478,25 +448,6 @@ def build_email() -> dict:
     trainer_counts = Counter(r["Training Sonographer"] for r in rows)
     for kt in KNOWN_TRAINERS:
         trainer_counts.setdefault(kt, 0)
-
-    # Review-then-apply worklist: deals where post-install OPD certs actually
-    # change a numeric Training-Remaining value. Null remaining -> no adjustment
-    # (the clinic still appears on the list, just with nothing to apply).
-    adjustments = []
-    for c in candidates:
-        certs, ra, ta, rc, tc = _targets(c["deal"], c["deal_id"])
-        chg_a = certs["abdominal"] > 0 and ta is not None and ta != ra
-        chg_c = certs["cardiac"] > 0 and tc is not None and tc != rc
-        if not (chg_a or chg_c):
-            continue
-        adjustments.append({
-            "deal_id": c["deal_id"],
-            "clinic": c["company"].get("name") or "",
-            "abd_current": ra, "abd_certs": certs["abdominal"],
-            "abd_target": ta if chg_a else None,
-            "car_current": rc, "car_certs": certs["cardiac"],
-            "car_target": tc if chg_c else None,
-        })
 
     # xlsx bytes.
     xlsx_bio = io.BytesIO()
@@ -629,29 +580,5 @@ def build_email() -> dict:
         "eml_filename": eml_filename,
         "row_count": len(rows),
         "trainer_count": sum(1 for t, n in trainer_counts.items() if n > 0),
-        "adjustments": adjustments,
         "opd_error": opd_error,
     }
-
-
-def apply_remaining(deal_id, abd_target=None, car_target=None):
-    """WRITE the computed Training-Remaining targets back to a HubSpot deal.
-
-    This is the only write in the module. Sets the fields to a target computed
-    from OPD (remaining minus post-install certs), so it is idempotent — running
-    it twice does not double-decrement. Requires the HUBSPOT_TOKEN to carry the
-    crm.objects.deals.write scope; read-only tokens get a 403 surfaced to the UI.
-    """
-    if not TOKEN:
-        raise RuntimeError("HUBSPOT_TOKEN is not set in Streamlit secrets or env.")
-    props = {}
-    if abd_target is not None:
-        props[REMAIN_ABDOMINAL] = str(abd_target)
-    if car_target is not None:
-        props[REMAIN_CARDIAC] = str(car_target)
-    if not props:
-        return None
-    r = requests.patch(f"https://api.hubapi.com/crm/v3/objects/deals/{deal_id}",
-                       headers=H, json={"properties": props}, timeout=30)
-    r.raise_for_status()
-    return r.json()
