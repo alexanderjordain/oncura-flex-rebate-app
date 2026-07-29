@@ -6,7 +6,7 @@ html plus .eml and .xlsx bytes for the Settings-page button. Pulls live from Hub
 
 A clinic lands on the list when it was SOLD a training modality (abdominal and/or
 cardiac allotment on the deal) and OPD holds no finalized certification for that
-modality dated after install. abdominal_trainings / cardiac_trainings is the
+modality (dated around or after install). abdominal_trainings / cardiac_trainings is the
 allotment sold (2/2 is the standard package), not a scheduled or remaining counter,
 so completion is decided against OPD, the only reliable record. Clinics that finish
 drop off automatically. The module is read-only; nothing writes back to HubSpot.
@@ -89,6 +89,11 @@ CO_PROPS = [
 # cardiac. GlobalFAST certs are neither and are ignored for the remaining counts.
 CERT_ABDOMINAL = "Certification - Abdomen"
 CERT_CARDIAC = "Certification - Basic Echocardiography"
+# Certifications completed up to this many days BEFORE the recorded install still
+# count as "trained": training often happens on a loaner unit or just before the
+# install date is stamped in HubSpot. A cert older than this window is treated as a
+# prior, unrelated engagement (stale) and does NOT clear the modality.
+CERT_GRACE_DAYS = 180
 # Internal Oncura entities (Oncura Partners - Fort Worth, - ATX, etc.) are not customer
 # clinics; any company whose name starts with this prefix is dropped from the list.
 EXCLUDE_PREFIX = "oncura partners"
@@ -307,8 +312,9 @@ def build_email() -> dict:
     # ---- OPD certification cross-check (source of truth for "already trained") ----
     # Match each clinic to OPD by its embedded business-key code (e.g. "- SVS38583"),
     # falling back to a cleaned name. Finalized abdominal / basic-echo certifications
-    # dated after install mark that modality complete. If OPD is unreachable we fail
-    # OPEN: nothing can be confirmed trained, so every candidate stays and is flagged.
+    # dated within CERT_GRACE_DAYS before install (or any time after) mark that modality
+    # complete. If OPD is unreachable we fail OPEN: nothing can be confirmed trained, so
+    # every candidate stays and is flagged.
     opd_error = None
     cert_after: dict = {}
     verified: dict = {}
@@ -325,12 +331,12 @@ def build_email() -> dict:
                 continue
             if _oid not in _fin_cache:
                 _fin_cache[_oid] = _finalized_certs(_oauth, _oid, _cert_map)
-            _inst = c["install_dt"]
+            _cutoff = c["install_dt"] - _dt.timedelta(days=CERT_GRACE_DAYS)
             cert_after[c["deal_id"]] = {
                 "abdominal": sum(1 for t, fd in _fin_cache[_oid]
-                                 if t["abdominal"] and fd and fd > _inst),
+                                 if t["abdominal"] and fd and fd >= _cutoff),
                 "cardiac": sum(1 for t, fd in _fin_cache[_oid]
-                               if t["cardiac"] and fd and fd > _inst),
+                               if t["cardiac"] and fd and fd >= _cutoff),
             }
     except Exception as e:  # noqa: BLE001 - OPD is the cross-check; fail open on error
         opd_error = f"{type(e).__name__}: {e}"
@@ -435,8 +441,8 @@ def build_email() -> dict:
             "Expiration Date": (dp.get("expiration_date") or "")[:10],
             "Abd Allotted": c["allot_a"],
             "Card Allotted": c["allot_c"],
-            "OPD Certs Abd (post-install)": c["certs"]["abdominal"],
-            "OPD Certs Card (post-install)": c["certs"]["cardiac"],
+            "OPD Certs Abd": c["certs"]["abdominal"],
+            "OPD Certs Card": c["certs"]["cardiac"],
             "City": co.get("city") or "",
             "State": co.get("state") or "",
         })
