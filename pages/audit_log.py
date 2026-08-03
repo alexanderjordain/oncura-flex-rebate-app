@@ -250,12 +250,12 @@ else:
             _key = (int(_cov[:4]), int(_cov[5:7]))
         except (ValueError, IndexError):
             continue
-        # NewLane's completeness/gating month is its ATTRIBUTION month (coverage + 1),
-        # matching how Stage 2/3 actually count it (core.ledger._attribution_ym): a
-        # remittance received early in month X, labeled coverage X-1, is filed here as
-        # month X's remittance. `uses_coverage` is NewLane-only, so other partners keep
-        # their received/coverage month.
-        if ledger.uses_coverage(_co):
+        # Prior-month-coverage partners (NewLane, OnePlace) are filed by their
+        # ATTRIBUTION month (coverage + 1) — the month the remittance is received and
+        # Stage 2/3 count it — not the coverage-label month (received - 1). A remittance
+        # received early in month X, labeled coverage X-1, is filed here as month X's.
+        # GreatAmerica / FP Leasing already cover the received month, so no shift.
+        if ledger.covers_prior_month(_co):
             _tu = ledger.trueup_ym_for_coverage(_cov)
             if _tu:
                 _key = _tu
@@ -307,13 +307,13 @@ else:
     # ── Stage 1 remittance completeness (per-partner detail) ──────────────────
     st.markdown("##### Stage 1 remittance completeness")
     st.caption(
-        "The per-partner detail behind the Stage 1 checkbox — distinct remittances per "
-        "month. NewLane is filed by the month its remittance arrives and is counted "
-        "(coverage + 1); the other partners by their received month. NewLane, OnePlace and "
-        "FP Leasing send one a month (shown got/1) and gate **Complete**. GreatAmerica's "
-        "cadence is irregular, so its **count** is shown for you to cross-check against GA's "
-        "deposit report — it does not gate Complete. \"—\" means that partner hadn't started "
-        "reporting yet."
+        "The per-partner detail behind the Stage 1 checkbox — distinct remittances by the "
+        "month each arrives and is counted. NewLane and OnePlace cover the prior month, so "
+        "they are filed by coverage + 1 (the received month); GreatAmerica and FP Leasing "
+        "already cover the received month. NewLane, OnePlace and FP Leasing send one a month "
+        "(shown got/1) and gate **Complete**. GreatAmerica's cadence is irregular, so its "
+        "**count** is shown for you to cross-check against GA's deposit report — it does not "
+        "gate Complete. \"—\" means that partner hadn't started reporting yet."
     )
     _crows = []
     for (_y, _m) in _months:

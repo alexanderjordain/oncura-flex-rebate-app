@@ -89,6 +89,13 @@ def uses_coverage(company) -> bool:
     return (company or "").strip().lower() in _COVERAGE_COMPANIES
 
 
+def covers_prior_month(company) -> bool:
+    """True if this partner's remittance covers the month BEFORE it is received
+    (NewLane, OnePlace). For these, the attribution month is coverage + 1, i.e. the
+    received month — used to file them by attribution rather than the coverage label."""
+    return (company or "").strip().lower() in _PRIOR_MONTH_COVERAGE
+
+
 def default_applies_to(received_date) -> str:
     """Best-guess coverage month ('YYYY-MM') for a NewLane payment: the month
     BEFORE the received date. '' on unparseable input. Stage 1 defaults the
