@@ -11,7 +11,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from core import clinic_roster, loaders, ui
+from core import auth, clinic_roster, loaders, store, ui
 
 ui.header(
     "All Clinic Roster",
@@ -54,10 +54,56 @@ if search:
     df = df[mask]
 
 st.caption(f"Showing {len(df)} of {len(rows)} clinics.")
-st.dataframe(
-    df, hide_index=True, use_container_width=True,
-    column_config={"Total Paid": st.column_config.NumberColumn(format="$%.2f")},
-)
-st.caption("Sources: FLEX roster (Clinic Roster page), Stage 1 name matches (name_map), and the "
-           "processed-payments ledger. To edit FLEX terms, use the Clinic Roster page; scan clinics "
-           "are report-only here and are intentionally excluded from the FLEX credit/recapture math.")
+
+_editable = auth.can("admin")
+_colcfg = {
+    "Total Paid": st.column_config.NumberColumn(format="$%.2f"),
+    "Clinic (QBO)": st.column_config.TextColumn(
+        "Clinic (QBO)",
+        help=("The QuickBooks customer name this clinic resolves to. Editing it repoints "
+              "every legal name that maps to it (the name_map), so future finance remittances "
+              "book to the corrected customer. Must match the QuickBooks Display Name exactly."),
+    ),
+}
+
+if _editable:
+    # Only the QBO name is editable; everything else is derived/read-only. Capture the
+    # pre-edit QBO name per row so save can diff old -> new and repoint the mappings.
+    _orig_qb = list(df["Clinic (QBO)"]) if len(df) else []
+    _edited = st.data_editor(
+        df, hide_index=True, use_container_width=True, num_rows="fixed",
+        disabled=[c for c in df.columns if c != "Clinic (QBO)"],
+        column_config=_colcfg, key="all_clinics_editor",
+    )
+    if st.button("Save QBO name changes", type="primary"):
+        _new_qb = list(_edited["Clinic (QBO)"])
+        _changes = [(o, n) for o, n in zip(_orig_qb, _new_qb) if str(n).strip() != str(o).strip()]
+        if not _changes:
+            st.info("No QBO name changes to save.")
+        else:
+            _nm = loaders.name_map()
+            _updated, _n_clinics, _n_legals, _skipped = clinic_roster.apply_qb_edits(_nm, _changes)
+            if _n_clinics:
+                _ok, _info = store.save_json(
+                    "name_map.json", _updated,
+                    f"All Clinic Roster: repoint {_n_clinics} QBO name(s) ({_n_legals} mapping(s))")
+                loaders.clear_caches()
+                (st.success if _ok else st.warning)(
+                    f"Updated {_n_clinics} clinic(s), {_n_legals} legal-name mapping(s). {_info}")
+            if _skipped:
+                st.warning(
+                    "These have no legal-name mapping to repoint, so they were not changed: "
+                    + ", ".join(f"{o} → {n}" for o, n in _skipped)
+                    + ". FLEX clinics: change the QBO name on the FLEX Clinic Roster. "
+                    "Payment-only orphans: reclass the payments in QuickBooks.",
+                    icon=":material/info:")
+            if _n_clinics:
+                st.rerun()
+else:
+    st.dataframe(df, hide_index=True, use_container_width=True, column_config=_colcfg)
+
+st.caption("Sources: FLEX roster (FLEX Clinic Roster page), Stage 1 name matches (name_map), and the "
+           "processed-payments ledger. Editing a clinic's QBO name here repoints its legal-name "
+           "mappings (name_map) so future remittances resolve correctly; it does not rename the "
+           "customer in QuickBooks or move already-posted payments. FLEX financial terms are edited "
+           "on the FLEX Clinic Roster; scan clinics are excluded from the FLEX credit/recapture math.")

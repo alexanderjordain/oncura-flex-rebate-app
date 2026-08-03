@@ -61,3 +61,29 @@ def test_summarize_counts():
 def test_empty_inputs_safe():
     assert clinic_roster.build({}, {}, {}) == []
     assert clinic_roster.summarize([]) == {"total": 0, "flex": 0, "scan": 0, "review": 0}
+
+
+def test_apply_qb_edits_repoints_all_legals():
+    nm = {"version": 1, "map": {
+        "Ark Veterinary Care, Inc.": "Ark Animal Hospital - CA",
+        "Ark Vet Care - North": "Ark Animal Hospital - CA",   # a 2nd legal to same wrong name
+        "Some Other Clinic, LLC": "Some Other Clinic",
+    }}
+    updated, changed, repointed, skipped = clinic_roster.apply_qb_edits(
+        nm, [("Ark Animal Hospital - CA", "Ark Veterinary Care")])
+    assert changed == 1 and repointed == 2 and skipped == []
+    assert updated["map"]["Ark Veterinary Care, Inc."] == "Ark Veterinary Care"
+    assert updated["map"]["Ark Vet Care - North"] == "Ark Veterinary Care"
+    assert updated["map"]["Some Other Clinic, LLC"] == "Some Other Clinic"  # untouched
+    assert updated["version"] == 1                                          # metadata preserved
+
+
+def test_apply_qb_edits_skips_unmapped_and_noops():
+    nm = {"map": {"A Legal, LLC": "A Clinic"}}
+    updated, changed, repointed, skipped = clinic_roster.apply_qb_edits(nm, [
+        ("A Clinic", "A Clinic"),          # no-op (same) -> ignored
+        ("Phantom Clinic", "Real Clinic"),  # no legal maps to it -> skipped
+    ])
+    assert changed == 0 and repointed == 0
+    assert skipped == [("Phantom Clinic", "Real Clinic")]
+    assert updated["map"] == {"A Legal, LLC": "A Clinic"}

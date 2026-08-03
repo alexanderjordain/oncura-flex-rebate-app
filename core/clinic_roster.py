@@ -98,6 +98,32 @@ def build(flex_master: dict, name_map: dict, processed_payments: dict) -> list[d
     return rows
 
 
+def apply_qb_edits(name_map: dict, changes):
+    """Repoint QBO customer names in the name-map. `changes` is [(old_qb, new_qb), ...]
+    (typically the rows whose 'Clinic (QBO)' was edited on the roster). Every legal
+    name currently resolving to old_qb is repointed to new_qb. Returns
+    (updated_name_map, clinics_changed, legals_repointed, skipped) where `skipped` is
+    [(old, new), ...] for names with no legal mapping (FLEX-only rows -> edit on the
+    FLEX Clinic Roster; payment-only orphans -> reclass in QBO). Pure; no I/O."""
+    mp = dict((name_map or {}).get("map", {}) or {})
+    changed = repointed = 0
+    skipped = []
+    for old, new in changes:
+        new = (new or "").strip()
+        old = (old or "").strip()
+        if not new or new == old:
+            continue
+        legals = [legal for legal, qb in mp.items() if qb == old]
+        if not legals:
+            skipped.append((old, new))
+            continue
+        for legal in legals:
+            mp[legal] = new
+        changed += 1
+        repointed += len(legals)
+    return {**(name_map or {}), "map": mp}, changed, repointed, skipped
+
+
 def summarize(rows: list[dict]) -> dict:
     return {
         "total": len(rows),
