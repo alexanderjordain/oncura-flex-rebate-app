@@ -686,8 +686,8 @@
       "ema_end": "2029-07-25",
       "support_ema_end": "2025-03-25",
       "hardware_ema_end": "2029-07-25",
-      "active": true,
-      "notes": "",
+      "active": false,
+      "notes": "FLEX ended March 2026",
       "group_id": null,
       "parent_clinic_id": null
     },
