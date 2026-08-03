@@ -9065,6 +9065,76 @@
       "payment_date": "07/31/2026",
       "amount": 964.92,
       "recorded_at": "2026-08-03T18:28:41"
+    },
+    {
+      "fingerprint": "f2469ac943fbaddc10f7b8d0826d4faa2d168a004553900cc1ad71ae30866e9d",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Best Friends Pet Hospital - CA",
+      "qb_customer": "Best Friends Pet Hospital - CA",
+      "payment_date": "07/31/2026",
+      "amount": 1283.0,
+      "recorded_at": "2026-08-03T18:44:57"
+    },
+    {
+      "fingerprint": "5db90c82fa549c64ba69ee5ebe683d705879d3e446e6aa74b513e1a1c2034705",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Clark Veterinary Hospital",
+      "qb_customer": "Clark Veterinary Hospital",
+      "payment_date": "07/31/2026",
+      "amount": 1978.0,
+      "recorded_at": "2026-08-03T18:44:57"
+    },
+    {
+      "fingerprint": "c5b1a7951c6835b8b3ac04168d29c35a53c6a9f71aeb6571df50ca7f13feec4b",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Love Animal Hospital and Urgent Care",
+      "qb_customer": "Love Animal Hospital and Urgent Care",
+      "payment_date": "07/31/2026",
+      "amount": 9500.0,
+      "recorded_at": "2026-08-03T18:44:57"
+    },
+    {
+      "fingerprint": "fbaa2670c010b62968d6fd5d36ced990aa8869eee054cd44710e05b8d6020758",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Orchard Lake Animal Hospital",
+      "qb_customer": "Orchard Lake Animal Hospital",
+      "payment_date": "07/31/2026",
+      "amount": 663.0,
+      "recorded_at": "2026-08-03T18:44:57"
+    },
+    {
+      "fingerprint": "78180cfccf8dc5c5172bd325083fdc3466ae4b1115419ef90ede10aaf00c7364",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Sycamore Veterinary Services",
+      "qb_customer": "Sycamore Veterinary Services",
+      "payment_date": "07/31/2026",
+      "amount": 5437.0,
+      "recorded_at": "2026-08-03T18:44:57"
+    },
+    {
+      "fingerprint": "f46f88dd41ce85a5ffd4460372e1def78a3b33063006b19333c8921877ccb829",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Town and Country Animal Hospital - TN",
+      "qb_customer": "Town and Country Animal Hospital - TN",
+      "payment_date": "07/31/2026",
+      "amount": 4288.0,
+      "recorded_at": "2026-08-03T18:44:57"
+    },
+    {
+      "fingerprint": "f0515af6a24016e3c4f908d34a15a0c6b8ed46c3ff928a87ce82de1316a437d4",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Woodland Veterinary Clinic - CO",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "07/31/2026",
+      "amount": 5180.0,
+      "recorded_at": "2026-08-03T18:44:57"
     }
   ]
 }
