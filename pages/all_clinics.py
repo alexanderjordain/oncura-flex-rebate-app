@@ -14,7 +14,7 @@ import streamlit as st
 from core import clinic_roster, loaders, ui
 
 ui.header(
-    "All Clinics",
+    "All Clinic Roster",
     "Every clinic the app has seen: the FLEX roster, every Stage 1 name match, and "
     "every clinic paid. Read-only, and it grows automatically as new clinics are matched.",
     kicker="Pass-Through · All Clinics",

@@ -250,6 +250,15 @@ else:
             _key = (int(_cov[:4]), int(_cov[5:7]))
         except (ValueError, IndexError):
             continue
+        # NewLane's completeness/gating month is its ATTRIBUTION month (coverage + 1),
+        # matching how Stage 2/3 actually count it (core.ledger._attribution_ym): a
+        # remittance received early in month X, labeled coverage X-1, is filed here as
+        # month X's remittance. `uses_coverage` is NewLane-only, so other partners keep
+        # their received/coverage month.
+        if ledger.uses_coverage(_co):
+            _tu = ledger.trueup_ym_for_coverage(_cov)
+            if _tu:
+                _key = _tu
         _s1_received[_key][_co].add(str(_pr.get("payment_date") or "")[:10])
 
     # Earliest coverage month each partner has reported = when it joined.
@@ -299,10 +308,12 @@ else:
     st.markdown("##### Stage 1 remittance completeness")
     st.caption(
         "The per-partner detail behind the Stage 1 checkbox — distinct remittances per "
-        "**coverage** month. NewLane, OnePlace and FP Leasing send one a month (shown "
-        "received/1) and gate **Complete**. GreatAmerica's cadence is irregular, so its "
-        "**count** is shown for you to cross-check against GA's deposit report — it does "
-        "not gate Complete. \"-\" means that partner hadn't started reporting yet."
+        "month. NewLane is filed by the month its remittance arrives and is counted "
+        "(coverage + 1); the other partners by their received month. NewLane, OnePlace and "
+        "FP Leasing send one a month (shown got/1) and gate **Complete**. GreatAmerica's "
+        "cadence is irregular, so its **count** is shown for you to cross-check against GA's "
+        "deposit report — it does not gate Complete. \"—\" means that partner hadn't started "
+        "reporting yet."
     )
     _crows = []
     for (_y, _m) in _months:
