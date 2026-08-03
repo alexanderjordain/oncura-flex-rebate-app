@@ -247,6 +247,14 @@
       "uploaded_at": "2026-07-15T16:04:08",
       "row_count": 3,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-07-13"
+    },
+    {
+      "sha256": "f6e16a1cab2fe881e518ab4ac3d2482614148ddd5b109976f92aa1be593761ca",
+      "filename": "Pass Thru Report June 2026 - Oncura.xlsx",
+      "company": "FPLeasing",
+      "uploaded_at": "2026-08-03T17:25:20",
+      "row_count": 3,
+      "note": "Stage 1 / FPLeasing / pay_date=2026-07-09"
     }
   ],
   "payments": [
@@ -8281,6 +8289,36 @@
       "payment_date": "2026-07-13",
       "amount": 920.8,
       "recorded_at": "2026-07-15T16:04:08"
+    },
+    {
+      "fingerprint": "f7c16bb646649f3ee9cb965fc5ae552b888cbb3a7c7834e86a75e96c20501ab3",
+      "company": "FPLeasing",
+      "kind": "scan",
+      "contract": "42901",
+      "qb_customer": "TVC - Ark of Socorro Veterinary Clinic",
+      "payment_date": "2026-07-09",
+      "amount": 811.25,
+      "recorded_at": "2026-08-03T17:25:20"
+    },
+    {
+      "fingerprint": "6ee7cf26a4c0504aa0cec3eb81416355b460acbd17842a159eb74c9ef9ba8c2a",
+      "company": "FPLeasing",
+      "kind": "scan",
+      "contract": "43234",
+      "qb_customer": "Ark Animal Hospital - CA",
+      "payment_date": "2026-07-09",
+      "amount": 611.25,
+      "recorded_at": "2026-08-03T17:25:20"
+    },
+    {
+      "fingerprint": "cfacb2263e1d2856591cb94184491dfb02004bd8218c3a50eab349d1ced0e8e4",
+      "company": "FPLeasing",
+      "kind": "scan",
+      "contract": "43612",
+      "qb_customer": "Minnesota Veterinary Hospital",
+      "payment_date": "2026-07-09",
+      "amount": 811.25,
+      "recorded_at": "2026-08-03T17:25:20"
     }
   ]
 }
