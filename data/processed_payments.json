@@ -255,6 +255,14 @@
       "uploaded_at": "2026-08-03T17:25:20",
       "row_count": 3,
       "note": "Stage 1 / FPLeasing / pay_date=2026-07-09"
+    },
+    {
+      "sha256": "d9102a5d0f6b2d4a7edc4678cce831758ed5859a2fb2e18b2875a564d40cd75c",
+      "filename": "Remittance Detail Downloadable (33).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-08-03T17:55:20",
+      "row_count": 4,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-07-20"
     }
   ],
   "payments": [
@@ -8319,6 +8327,46 @@
       "payment_date": "2026-07-09",
       "amount": 811.25,
       "recorded_at": "2026-08-03T17:25:20"
+    },
+    {
+      "fingerprint": "8341ee748b19281f6d8ac19a2534b97d34e2de82b1af8b30f4655c544902bf2f",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42478901",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-07-20",
+      "amount": 939.08,
+      "recorded_at": "2026-08-03T17:55:20"
+    },
+    {
+      "fingerprint": "fc82597646e758ea3ce0edbf4832adf41ee990a131e75720f36c71d571dc06dd",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42478923",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-07-20",
+      "amount": 912.68,
+      "recorded_at": "2026-08-03T17:55:20"
+    },
+    {
+      "fingerprint": "a3b921dc1e586bf7270b3d651451e32f14ed1096a0a5498691415bdcf441bb09",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42479078",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-07-20",
+      "amount": 921.84,
+      "recorded_at": "2026-08-03T17:55:20"
+    },
+    {
+      "fingerprint": "ce002ba1da107162fc34cf942e80a0604ee5698800cea7c3feb64d89dee5b94c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42479078",
+      "qb_customer": "River Trail Animal Hospital - Memorial",
+      "payment_date": "2026-07-20",
+      "amount": 921.83,
+      "recorded_at": "2026-08-03T17:55:20"
     }
   ]
 }
