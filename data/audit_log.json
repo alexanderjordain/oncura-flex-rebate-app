@@ -1766,6 +1766,43 @@
       ],
       "note": "3 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "60651ea95d72b49934ffd549008a2ce1ed82dc246f00ac803abfcb326a16bf83"
+    },
+    {
+      "id": "9ba67742-8e24-424e-84a3-c809472d84c7",
+      "timestamp": "2026-08-03T17:25:21",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 7,
+      "params": {
+        "company": "FPLeasing",
+        "payment_date": "2026-07-09",
+        "applies_to": "",
+        "invoice_date": "2026-07-09",
+        "start_invoice_no": 46988,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Pass Thru Report June 2026 - Oncura.xlsx",
+        "sha256": "f6e16a1cab2fe881e518ab4ac3d2482614148ddd5b109976f92aa1be593761ca",
+        "size_bytes": 14063
+      },
+      "outputs": [
+        {
+          "name": "scan_invoices",
+          "sha256": "e56d036d531ab37c4b909f1eef92597233fb45c19355df1b6e9118767c9846d9",
+          "row_count": 3,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "818562ccb89accb9c72f8ab6d7adf154cef2ed58cfc08e0b1925f62f34d2eaf5",
+          "row_count": 3,
+          "total": 2233.75
+        }
+      ],
+      "note": "3 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "8e207cce7cecbd2bcc3f8b812af527f2be5566085d7f1ccf479b4a896f0ba205"
     }
   ]
 }
