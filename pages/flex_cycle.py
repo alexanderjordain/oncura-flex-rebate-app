@@ -1685,7 +1685,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         )
     direct_count = sum(1 for r in annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
     partner_count = sum(1 for r in annotated if r["route"] == "partner" and r["net_overage"] > 0)
-    flagged = [r for r in annotated if r.get("escalation_flag")]
 
     # Dynamic step list — only include steps that have something to show.
     # Overage is split into two separate steps so OnePlace partner submission
@@ -2343,13 +2342,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                         )
                 with st.expander(f":gray[All overages · {len(adf)} clinic(s) · preview]"):
                     st.dataframe(adf, use_container_width=True, height=240)
-                if flagged:
-                    names = ", ".join(r["clinic_name"] for r in flagged)
-                    st.warning(
-                        f":material/priority_high: Escalation clinic(s): **{names}** — "
-                        f"communication may need to come from Marty / Accounting Manager (SOP-12).",
-                        icon=":material/priority_high:",
-                    )
 
             def _direct_block():
                 st.caption(
