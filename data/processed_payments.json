@@ -263,6 +263,14 @@
       "uploaded_at": "2026-08-03T17:55:20",
       "row_count": 4,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-07-20"
+    },
+    {
+      "sha256": "a4976936c7a47d65902347c0e83772c7cdddadcd977ca7e627717e05ae3b8118",
+      "filename": "Remittance Detail Downloadable (34).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-08-03T17:59:27",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-07-27"
     }
   ],
   "payments": [
@@ -8367,6 +8375,36 @@
       "payment_date": "2026-07-20",
       "amount": 921.83,
       "recorded_at": "2026-08-03T17:55:20"
+    },
+    {
+      "fingerprint": "aba04c6f10870924f2bce4187e46f22b2b7b0ec522b42f3c35057a0b321b45ee",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42478933",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "2026-07-27",
+      "amount": 935.08,
+      "recorded_at": "2026-08-03T17:59:27"
+    },
+    {
+      "fingerprint": "71ed12d0db0cdefb965bf1e44b77f6696cbc73adf3bc0cf7ebb9f5d0e0b01536",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42479195",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-07-27",
+      "amount": 870.14,
+      "recorded_at": "2026-08-03T17:59:27"
+    },
+    {
+      "fingerprint": "90ee01c271095b5f57bd76dd5c04c8d71bcb1a0d9add61c9ad9a5fbd6c0c7c7a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42479257",
+      "qb_customer": "Ridgeview Animal Clinic",
+      "payment_date": "2026-07-27",
+      "amount": 920.8,
+      "recorded_at": "2026-08-03T17:59:27"
     }
   ]
 }
