@@ -4,7 +4,7 @@ Runs MONTHLY: each clinic is on one of three staggered quarter calendars; only c
 quarter ENDS in the target month are processed that month.
 
   Total OPD activity (Subtotal + Admin Fee) over the quarter, vs the clinic's quarterly threshold:
-    unused  = max(threshold - activity, 0)   -> recaptured via INVOICE, item 'Unused-Flex-Credits'
+    unused  = max(threshold - activity, 0)   -> recaptured via INVOICE, item 'Flex-credits-offset'
     overage = max(activity - threshold, 0)   -> billed separately by Tanya (SOP-5)
 
 Calendar spreads (from FlexMaster):
@@ -24,7 +24,13 @@ try:
 except ImportError:
     _HAVE_FUZZ = False
 
-UNUSED_ITEM = "Unused-Flex-Credits"
+# MUST be a QBO Product/Service that exists AND whose income account is 4320 Flex
+# Discount (4001 Service Revenue : 4300 Imaging Services : 4320 Flex Discount). The
+# older value "Unused-Flex-Credits" was NOT a real QBO item, so SaasAnt fell back to
+# the generic "Sales" item, which posts to the PARENT 4300 — that put the Jun/Jul
+# 2026 unused invoices one account line up and inflated the 4320 "FLEX adjustment".
+# "Flex-credits-offset" is the confirmed 4320-mapped offset item. Keep it exact.
+UNUSED_ITEM = "Flex-credits-offset"
 TERMS = "Flex"
 # Tightened from 88 -> 92 after Encanto/Chenango false positive (89%): two real,
 # distinct flex clinics whose names happen to be phonetically close.
@@ -547,7 +553,8 @@ def group_calendar_mismatches(flex_clinics) -> list[dict]:
 
 
 def build_unused_invoice_import(recapture_rows, year, month, start_ref, sales_class):
-    """Invoice import for clinics with unused > 0. Item 'Unused-Flex-Credits', date = quarter end."""
+    """Invoice import for clinics with unused > 0. Item 'Flex-credits-offset' (posts to
+    4320 Flex Discount), date = quarter end."""
     import pandas as pd
 
     eligible = [r for r in recapture_rows if (r.get("unused") or 0) > 0]
