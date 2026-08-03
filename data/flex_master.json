@@ -439,7 +439,7 @@
       "ema_end": "2029-07-22",
       "support_ema_end": "2025-03-22",
       "hardware_ema_end": "2029-07-22",
-      "active": true,
+      "active": false,
       "notes": "Standalone clinic (NOT pr-vets) — quarter ends in April (May-June-July cadence: Jan/Apr/Jul/Oct). Removed from the Gardenville group 2026-06-26 per Alexander Jordain; an earlier same-day group assignment + March-April-May calendar were incorrect.",
       "group_id": null,
       "parent_clinic_id": null
@@ -634,25 +634,20 @@
       "parent_clinic_id": null
     },
     {
+      "clinic_id": "HIAWAS031",
       "clinic_name": "Hiawassee Animal Hospital",
       "qb_name": "Hiawassee Animal Hospital",
-      "clinic_id": null,
       "finance_company": "OnePlace",
-      "monthly_credit": 989.31,
-      "monthly_finance_payment": 910.69,
+      "calendar_spread": null,
       "monthly_threshold": 1900.0,
       "quarterly_threshold": 5700.0,
-      "calendar_spread": null,
-      "contract_greatamerica": null,
+      "monthly_credit": 989.31,
+      "monthly_finance_payment": 910.69,
       "contract_oneplace": "OPC40010163858",
+      "contract_greatamerica": null,
       "contract_newlane": null,
-      "ema_end": null,
-      "support_ema_end": null,
-      "hardware_ema_end": null,
       "active": false,
-      "notes": "",
-      "group_id": null,
-      "parent_clinic_id": null
+      "notes": ""
     },
     {
       "clinic_name": "Hospital Veterinario Condado",
@@ -1279,7 +1274,7 @@
       "ema_end": "2029-04-01",
       "support_ema_end": "2024-12-01",
       "hardware_ema_end": "2029-04-01",
-      "active": true,
+      "active": false,
       "notes": "",
       "group_id": null,
       "parent_clinic_id": null
