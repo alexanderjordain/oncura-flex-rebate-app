@@ -51,6 +51,7 @@ pages = {
         st.Page("pages/flex_cycle.py", title="Payment Cycle"),
         st.Page("pages/overage_tracker.py", title="Overage Tracker"),
         st.Page("pages/flex_master.py", title="Clinic Roster"),
+        st.Page("pages/all_clinics.py", title="All Clinics"),
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
@@ -74,6 +75,7 @@ with st.sidebar:
         st.page_link("pages/flex_cycle.py", label="Payment Cycle")
         st.page_link("pages/overage_tracker.py", label="Overage Tracker")
         st.page_link("pages/flex_master.py", label="Clinic Roster")
+        st.page_link("pages/all_clinics.py", label="All Clinics")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
         st.page_link("pages/ema_renewals.py", label="EMA Renewals")

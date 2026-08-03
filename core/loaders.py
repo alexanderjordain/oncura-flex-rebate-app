@@ -59,6 +59,15 @@ def contract_qb_map():
 
 
 @st.cache_data(show_spinner=False)
+def processed_payments():
+    """The Stage 1 dedup ledger (file hashes + per-payment fingerprints). Read-only
+    here; used by the All Clinics roster to enrich scan clinics with finance company,
+    contracts, and payment totals."""
+    data, _ = _load("processed_payments.json", {"files": [], "payments": []})
+    return data
+
+
+@st.cache_data(show_spinner=False)
 def fuzzy_decisions():
     """Operator decisions on rebate-cycle fuzzy clinic matches — persists
     across cycles so 'confirm' / 'reject' on a given (OPD name, master
@@ -78,4 +87,5 @@ def clear_caches():
     name_map.clear()
     service_prices.clear()
     contract_qb_map.clear()
+    processed_payments.clear()
     fuzzy_decisions.clear()
