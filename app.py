@@ -8,7 +8,7 @@ Deploy:       Streamlit Cloud, app file = app.py. Set APP_PASSWORD (+ GITHUB_TOK
 """
 import streamlit as st
 
-from core import auth, ui, graph_email, ema_graph_delegated
+from core import auth, ui, graph_email
 
 st.set_page_config(page_title="Pass-Through & Rebate Programs Ledger", page_icon="*", layout="wide")
 
@@ -17,15 +17,10 @@ auth.require_login()
 ui.inject()
 
 # OAuth callback handler — Microsoft Graph redirects here with ?code=... after sign-in.
-# Two delegated flows share this redirect (the assistance-email button and the EMA
-# renewal sender, which use different app registrations), so route by `state`.
+# Used by the delegated Outlook-draft flow (the assistance / WOL email buttons).
 _qp = st.query_params
 if _qp.get("code"):
-    _state = _qp.get("state", "")
-    if _state == ema_graph_delegated.STATE and ema_graph_delegated.is_configured():
-        _ok, _info = ema_graph_delegated.handle_callback(_qp["code"])
-        _label = "EMA sending"
-    elif graph_email.is_configured():
+    if graph_email.is_configured():
         _ok, _info = graph_email.handle_callback(_qp["code"])
         _label = "Outlook"
     else:
@@ -55,7 +50,6 @@ pages = {
         st.Page("pages/flex_tutorial.py", title="FLEX Tutorial"),
     ],
     "Admin": [
-        st.Page("pages/ema_renewals.py", title="EMA Renewals"),
         st.Page("pages/settings.py", title="Settings"),
         st.Page("pages/audit_log.py", title="Audit & Tracking"),
     ],
@@ -78,7 +72,6 @@ with st.sidebar:
         st.page_link("pages/all_clinics.py", label="All Clinic Roster")
         st.page_link("pages/flex_tutorial.py", label="FLEX Tutorial")
     with st.expander("Admin", expanded=False):
-        st.page_link("pages/ema_renewals.py", label="EMA Renewals")
         st.page_link("pages/settings.py", label="Settings")
         st.page_link("pages/audit_log.py", label="Audit & Tracking")
     st.markdown('</div>', unsafe_allow_html=True)
