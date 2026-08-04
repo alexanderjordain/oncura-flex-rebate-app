@@ -90,7 +90,7 @@ if editable:
                      "points at this. Leave blank when adding a new clinic and a value will be "
                      "assigned on save.",
             ),
-            "clinic_name": st.column_config.TextColumn(required=True),
+            "clinic_name": st.column_config.TextColumn(required=True, pinned=True),
             "qb_name": st.column_config.TextColumn(
                 "QB Customer name",
                 help="Must match the QuickBooks Display Name exactly — drives the Customer "
@@ -171,5 +171,8 @@ if editable:
         else:
             st.warning(info)
 else:
-    st.dataframe(df_full[EDIT_COLS], use_container_width=True, hide_index=True)
+    st.dataframe(
+        df_full[EDIT_COLS], use_container_width=True, hide_index=True,
+        column_config={"clinic_name": st.column_config.TextColumn("clinic_name", pinned=True)},
+    )
     auth.require("admin")
