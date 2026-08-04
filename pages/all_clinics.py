@@ -82,28 +82,53 @@ if _editable:
             st.info("No QBO name changes to save.")
         else:
             _nm = loaders.name_map()
-            _updated, _n_clinics, _n_legals, _skipped = clinic_roster.apply_qb_edits(_nm, _changes)
+            # 1) Repoint any legal-name mappings (scan clinics matched via name_map).
+            _updated_nm, _n_clinics, _n_legals, _skipped = clinic_roster.apply_qb_edits(_nm, _changes)
+            # 2) The rest have no legal mapping. Split them: payment-only orphans get
+            #    their ledger payments reassigned; FLEX clinics are edited on the FLEX
+            #    Clinic Roster (their QBO name lives in flex_master, not here).
+            _flex_names = {" ".join(str(c.get("qb_name") or c.get("clinic_name") or "").lower().split())
+                           for c in loaders.flex_master().get("clinics", [])}
+            _orphan_changes = [(o, n) for o, n in _skipped
+                               if " ".join(str(o).lower().split()) not in _flex_names]
+            _flex_changes = [(o, n) for o, n in _skipped
+                             if " ".join(str(o).lower().split()) in _flex_names]
+            _pp = loaders.processed_payments()
+            _updated_pp, _n_pay, _reassigned = clinic_roster.reassign_payments(_pp, _orphan_changes)
+
+            _did = False
             if _n_clinics:
                 _ok, _info = store.save_json(
-                    "name_map.json", _updated,
+                    "name_map.json", _updated_nm,
                     f"All Clinic Roster: repoint {_n_clinics} QBO name(s) ({_n_legals} mapping(s))")
                 loaders.clear_caches()
                 (st.success if _ok else st.warning)(
-                    f"Updated {_n_clinics} clinic(s), {_n_legals} legal-name mapping(s). {_info}")
-            if _skipped:
+                    f"Repointed {_n_clinics} clinic mapping(s), {_n_legals} legal name(s). {_info}")
+                _did = True
+            if _n_pay:
+                _ok2, _info2 = store.save_json(
+                    "processed_payments.json", _updated_pp,
+                    f"All Clinic Roster: reassign {_n_pay} orphan payment(s) to corrected customer")
+                loaders.clear_caches()
+                (st.success if _ok2 else st.warning)(
+                    f"Reassigned {_n_pay} orphan payment(s) across {len(_reassigned)} clinic(s) "
+                    f"({', '.join(_reassigned)}). Note: still reclass these in QuickBooks so QBO "
+                    f"matches. {_info2}")
+                _did = True
+            if _flex_changes:
                 st.warning(
-                    "These have no legal-name mapping to repoint, so they were not changed: "
-                    + ", ".join(f"{o} → {n}" for o, n in _skipped)
-                    + ". FLEX clinics: change the QBO name on the FLEX Clinic Roster. "
-                    "Payment-only orphans: reclass the payments in QuickBooks.",
+                    "These are FLEX clinics — change the QBO name on the FLEX Clinic Roster, not "
+                    "here (it lives in flex_master): "
+                    + ", ".join(f"{o} → {n}" for o, n in _flex_changes),
                     icon=":material/info:")
-            if _n_clinics:
+            if _did:
                 st.rerun()
 else:
     st.dataframe(df, hide_index=True, use_container_width=True, column_config=_colcfg)
 
 st.caption("Sources: FLEX roster (FLEX Clinic Roster page), Stage 1 name matches (name_map), and the "
-           "processed-payments ledger. Editing a clinic's QBO name here repoints its legal-name "
-           "mappings (name_map) so future remittances resolve correctly; it does not rename the "
-           "customer in QuickBooks or move already-posted payments. FLEX financial terms are edited "
-           "on the FLEX Clinic Roster; scan clinics are excluded from the FLEX credit/recapture math.")
+           "processed-payments ledger. Editing a clinic's QBO name repoints its legal-name mappings "
+           "(name_map) so future remittances resolve correctly; for a payment-only orphan (no mapping, "
+           "flagged 'needs review') it instead reassigns that clinic's ledger payments to the corrected "
+           "customer. Either way it does NOT rename the customer or move postings in QuickBooks — "
+           "reclass those there so QBO matches. FLEX names are edited on the FLEX Clinic Roster.")

@@ -124,6 +124,31 @@ def apply_qb_edits(name_map: dict, changes):
     return {**(name_map or {}), "map": mp}, changed, repointed, skipped
 
 
+def reassign_payments(processed_payments: dict, changes):
+    """Resolve payment-only orphans: for each (old_qb, new_qb) in `changes`, reassign
+    every ledger payment whose qb_customer == old_qb to new_qb, tagging the original as
+    `renamed_from` for the audit trail. Used when a roster row has no legal mapping to
+    repoint (a phantom created by an earlier bad mapping) — the fix is to move the
+    payments to the correct customer. Fingerprints are NOT touched (they exclude
+    qb_customer, so dedup is unaffected). Returns (updated_processed_payments,
+    payments_reassigned, [old names actually reassigned]). Pure; caller persists + must
+    still reclass the matching invoices in QuickBooks."""
+    pp = dict(processed_payments or {})
+    pays = [dict(p) for p in pp.get("payments", [])]
+    by_old = {(o or "").strip(): (n or "").strip() for o, n in changes if (n or "").strip()}
+    reassigned = set()
+    n = 0
+    for p in pays:
+        old = (p.get("qb_customer") or "").strip()
+        if old in by_old and by_old[old] != old:
+            p["renamed_from"] = p.get("renamed_from") or old
+            p["qb_customer"] = by_old[old]
+            reassigned.add(old)
+            n += 1
+    pp["payments"] = pays
+    return pp, n, sorted(reassigned)
+
+
 def summarize(rows: list[dict]) -> dict:
     return {
         "total": len(rows),

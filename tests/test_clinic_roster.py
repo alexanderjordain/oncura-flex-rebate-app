@@ -78,6 +78,28 @@ def test_apply_qb_edits_repoints_all_legals():
     assert updated["version"] == 1                                          # metadata preserved
 
 
+def test_reassign_payments_resolves_orphan():
+    pp = {"payments": [
+        {"fingerprint": "x1", "company": "FPLeasing", "kind": "scan", "contract": "43234",
+         "qb_customer": "Ark Animal Hospital - CA", "amount": 611.25},
+        {"fingerprint": "x2", "company": "OnePlace", "kind": "scan", "contract": "018333",
+         "qb_customer": "Ark Animal Hospital - CA", "amount": 355.00},
+        {"fingerprint": "x3", "company": "GreatAmerica", "kind": "flex", "contract": "z",
+         "qb_customer": "Some Other Clinic", "amount": 900.00},
+    ]}
+    updated, n, names = clinic_roster.reassign_payments(
+        pp, [("Ark Animal Hospital - CA", "Ark Veterinary Care")])
+    assert n == 2 and names == ["Ark Animal Hospital - CA"]
+    moved = [p for p in updated["payments"] if p["qb_customer"] == "Ark Veterinary Care"]
+    assert len(moved) == 2
+    assert all(p["renamed_from"] == "Ark Animal Hospital - CA" for p in moved)
+    # fingerprints untouched (dedup unaffected); unrelated clinic left alone
+    assert {p["fingerprint"] for p in moved} == {"x1", "x2"}
+    assert any(p["qb_customer"] == "Some Other Clinic" for p in updated["payments"])
+    # original not mutated
+    assert pp["payments"][0]["qb_customer"] == "Ark Animal Hospital - CA"
+
+
 def test_apply_qb_edits_skips_unmapped_and_noops():
     nm = {"map": {"A Legal, LLC": "A Clinic"}}
     updated, changed, repointed, skipped = clinic_roster.apply_qb_edits(nm, [
