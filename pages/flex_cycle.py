@@ -4,8 +4,9 @@ sidebar under the "Pass-Through Payments" section.
 
 Stage 1: Finance Company Payment Import (remittance -> SaasAnt flex/scan files)
 Stage 2: Monthly Credit Memos (credit-memo SaasAnt file)
-Stage 3: Unused / Overage (quarter-end recapture + overage; runs every month
+Stage 3: Unused Recapture (quarter-end unused-credit recapture; runs every month
          for whichever clinic group's staggered quarter is closing)
+Stage 4: Overages & Closeout (bill or hand off overages, QBO tie-up, group spread)
 """
 import datetime as dt
 from contextlib import contextmanager
@@ -34,6 +35,190 @@ def safe_stage(label: str):
         st.caption("The other stages are still usable.")
         errors.render_details(_err)
 
+
+def render_overage_billing(recap_rows, rec_year, rec_month, cfg_all):
+    """Stage 4 overage workspace. For the quarter's over-threshold clinics: apply any
+    manual credits (Oncura Bucks / overpayments), then either BILL them directly (Oncura
+    bills; recorded in the Overage Tracker for payment / lockout follow-up) or SEND them
+    to accounting / the finance partner (external — not tracked here). Reuses the same
+    worksheet builders, dedup, audit-manifest and overage-ledger recording Stage 3 used
+    before overage moved to Stage 4.
+
+    `recap_rows` is the per-clinic recap (SS['closeout_recap'], stashed by Stage 3, or the
+    ledger reconstruction); the overage rows are derived from it. Billing stays manual: the
+    operator reviews credits and routes, and nothing posts to QBO automatically.
+    """
+    SS = st.session_state
+    overs = flex_unused.overage_rows(recap_rows or [])
+    if not overs:
+        st.success("No overages for this quarter — nothing to bill or hand off.",
+                   icon=":material/check_circle:")
+        return
+
+    st.caption(
+        "Over-threshold clinics for this quarter. Enter any manual credit (Oncura Bucks / "
+        "overpayment) to net down the amount, then bill directly or hand off to accounting. "
+        "OnePlace handles overages submitted before the cutoff; Great America, New Lane and "
+        "self-funded are direct-bill; a missed cutoff is direct.")
+
+    # ── Manual credits (Oncura Bucks / overpayments) — netted before billing ──
+    offsets = dict(SS.setdefault("overage_credit_offsets", {}))
+    with st.expander("Manual credits — Oncura Bucks / overpayments (optional)", expanded=False):
+        st.caption(
+            "Enter an unapplied credit for an over-threshold clinic; it's applied to the overage "
+            "and only the remainder is billed. Overpayments aren't refunded (SOP-12) — offset them here.")
+        offset_seed = pd.DataFrame([
+            {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
+             "Gross overage": round(float(o["overage"]), 2),
+             "Manual credit": float(offsets.get(o.get("qb_name") or o.get("clinic_name"), 0) or 0)}
+            for o in overs])
+        _edited = st.data_editor(
+            offset_seed, hide_index=True, use_container_width=True,
+            disabled=["Clinic (QB)", "Gross overage"],
+            column_config={"Manual credit": st.column_config.NumberColumn(
+                "Manual credit", min_value=0.0, step=0.01, format="$%.2f",
+                help="Unapplied credit / overpayment in QBO. Applied to the overage; only the "
+                     "remainder is billed.")},
+            key="ov_offsets_editor")
+        _bad = []
+        def _parse(raw, clinic):
+            try:
+                return float(raw or 0)
+            except (TypeError, ValueError):
+                _bad.append(clinic)
+                return 0.0
+        offsets = {r["Clinic (QB)"]: _parse(r["Manual credit"], r["Clinic (QB)"])
+                   for _, r in _edited.iterrows()}
+        SS["overage_credit_offsets"] = offsets
+        if _bad:
+            st.caption(f":gray[Non-numeric credit for {', '.join(_bad)} — treated as $0.00.]")
+
+    today_d = dt.date.today()
+    annotated = flex_overage.annotate_overages(overs, rec_year, rec_month, today_d, cfg_all, offsets)
+    cutoff = flex_overage.cutoff_date(
+        rec_year, rec_month,
+        int((cfg_all.get("flex", {}).get("overage", {}) or {}).get("finance_partner_cutoff_day", 5)))
+    direct = [r for r in annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0]
+    partner = [r for r in annotated if r["route"] == "partner" and r["net_overage"] > 0]
+    direct_total = sum(float(r["net_overage"]) for r in direct)
+    partner_total = sum(float(r["net_overage"]) for r in partner)
+
+    with st.expander(f":gray[All overages · {len(annotated)} clinic(s) · preview]"):
+        st.dataframe(
+            pd.DataFrame(annotated)[["clinic_name", "finance_company", "overage",
+                                     "credit_applied", "net_overage", "route"]],
+            use_container_width=True, height=240)
+
+    quarter_start_month = ((rec_month - 1) // 3) * 3 + 1
+    quarter_label = f"Q{(quarter_start_month - 1) // 3 + 1} {rec_year}"
+
+    # ── Bill manually (Oncura) — direct-bill worksheet, tracked ──
+    st.divider()
+    st.subheader(f"Bill manually — {len(direct)} clinic(s) · ${direct_total:,.2f}")
+    st.caption(
+        "Oncura bills these directly. Tanya creates a QBO invoice per clinic, sends an "
+        "Authorize.net link / PDF, and voids each invoice immediately after sending per SOP-6. "
+        "The xlsx is her working reference — NOT a SaasAnt import. Recording them here starts the "
+        "Overage Tracker watching for payment / lockout.")
+    didf = flex_overage.build_direct_billing_worksheet(annotated, rec_year, rec_month, cfg_all)
+    if not didf.empty:
+        fname = f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
+        st.download_button(
+            f"Download direct-bill worksheet ({len(didf)} clinic(s))",
+            data=saasant.to_xlsx_bytes(didf, "OverageBilling"), file_name=fname,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="ov_direct_dl")
+        direct_payments_for_ledger = [{
+            "kind": "direct_overage", "contract": row["QB Customer"],
+            "qb_customer": row["QB Customer"],
+            "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
+            "amount": float(row.get("Net Amount to Bill") or 0),
+        } for _, row in didf.iterrows()]
+        already = ledger.check_payments_seen([
+            ledger.fingerprint("INTERNAL", "direct_overage", r["contract"], r["payment_date"], r["amount"])
+            for r in direct_payments_for_ledger])
+        if already:
+            st.warning(f"**{len(already)} direct-bill invoice(s) already billed for this period.** "
+                       "Re-billing double-charges these clinics — review before you bill again.")
+        st.divider()
+        st.caption(":gray[Initial below **after** you've billed these. Logs to the audit manifest, "
+                   "dedup ledger, and Overage Tracker.]")
+        ui.persistence_warning()
+        _di = ui.initials_input("ov_direct_audit_initials")
+        if ui.record_button(f"Record {len(didf)} direct-bill invoice(s) as billed",
+                            key="ov_mark_direct", disabled=not _di):
+            ledger.record_batch(
+                file_content=None, filename=fname, company="INTERNAL",
+                payments=direct_payments_for_ledger,
+                note=f"Stage 4 direct-bill / {dt.date(2000, rec_month, 1):%B} {rec_year}")
+            audit.record_cycle(
+                cycle_type="stage3_overage", approver=_di or auth.current_role(),
+                year=rec_year, month=rec_month,
+                params={"route": "direct_bill", "clinic_count": len(direct)},
+                outputs=[{"name": "overage_direct_invoices", "sha256": audit.output_hash_df(didf),
+                          "row_count": len(didf), "total": round(float(direct_total), 2)}],
+                note=f"Direct-bill overages billed for {dt.date(2000, rec_month, 1):%B %Y}")
+            overage_ledger.record_batch(
+                direct, billing_month=f"{rec_year:04d}-{rec_month:02d}",
+                quarter_covered=quarter_label, date_billed=today_d.isoformat(),
+                actor=_di or auth.current_role())
+            st.success(f"Recorded {len(didf)} direct-bill invoice(s) in the audit manifest + dedup "
+                       "ledger. The Overage Tracker will now watch these for payment.")
+    else:
+        st.info("No clinics to bill directly this quarter.")
+
+    # ── Send to accounting / finance partner (OnePlace) — external, not tracked here ──
+    st.divider()
+    st.subheader(f"Send to accounting / partner — {len(partner)} clinic(s) · ${partner_total:,.2f}")
+    st.caption(
+        f"OnePlace bills these on Oncura's behalf — send the file before the cutoff "
+        f"(**{cutoff:%B %d, %Y}**). Handled externally, so these are not tracked in the Overage "
+        "Tracker.")
+    pdf = flex_overage.build_partner_submission(annotated, rec_year, rec_month)
+    if not pdf.empty:
+        fname_p = f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
+        st.download_button(
+            f"Download OnePlace submission ({len(pdf)} clinic(s))",
+            data=saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission"), file_name=fname_p,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="ov_partner_dl")
+        partner_payments_for_ledger = [{
+            "kind": "partner_overage", "contract": str(row["QB Customer"]),
+            "qb_customer": str(row["QB Customer"]),
+            "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
+            "amount": float(row["Net Overage to Submit"]),
+        } for _, row in pdf.iterrows()]
+        already_p = ledger.check_payments_seen([
+            ledger.fingerprint("INTERNAL", "partner_overage", r["contract"], r["payment_date"], r["amount"])
+            for r in partner_payments_for_ledger])
+        if already_p:
+            st.warning(f"**{len(already_p)} partner submission(s) already sent for this period.** "
+                       "Re-sending forwards these to OnePlace twice — review before you send again.")
+        st.divider()
+        st.caption(":gray[Initial below **after** you've sent this to OnePlace. Logs to the audit "
+                   "manifest + dedup ledger.]")
+        ui.persistence_warning()
+        _pi = ui.initials_input("ov_partner_audit_initials")
+        if ui.record_button(f"Record {len(pdf)} partner-submission row(s) as sent to OnePlace",
+                            key="ov_mark_partner", disabled=not _pi):
+            ledger.record_batch(
+                file_content=None, filename=fname_p, company="INTERNAL",
+                payments=partner_payments_for_ledger,
+                note=f"Stage 4 partner submission / {dt.date(2000, rec_month, 1):%B} {rec_year}")
+            audit.record_cycle(
+                cycle_type="stage3_overage", approver=_pi or auth.current_role(),
+                year=rec_year, month=rec_month,
+                params={"route": "partner_submission", "partner": "OnePlace",
+                        "cutoff": cutoff.isoformat(), "clinic_count": len(partner)},
+                outputs=[{"name": "oneplace_overage_submission", "sha256": audit.output_hash_df(pdf),
+                          "row_count": len(pdf), "total": round(float(partner_total), 2)}],
+                note=f"OnePlace partner submission sent for {dt.date(2000, rec_month, 1):%B %Y}")
+            st.success(f"Recorded OnePlace submission ({len(pdf)} clinics) in the audit manifest + "
+                       "dedup ledger.")
+    else:
+        st.info("No overages to hand off to a finance partner this quarter.")
+
+
 ui.header("Payment Cycle",
           "Handles FLEX and scan-package (pass-through) payments together. "
           "Generates SaasAnt files for QBO import — humans approve every QBO posting.",
@@ -46,8 +231,8 @@ tab_overview, tab_remit, tab_credits, tab_recap, tab_closeout, tab_review = st.t
     "Overview",
     "1. Finance Payment Imports",
     "2. Monthly Credit Memos",
-    "3. Unused / Overage",
-    "4. Closeout",
+    "3. Unused Recapture",
+    "4. Overages & Closeout",
     "5. Review & Verify",
 ])
 
@@ -107,7 +292,7 @@ with tab_overview, safe_stage("Overview"):
     with c3:
         st.markdown(
             """<div class="pc-stage-card s3">
-            <p class="pc-title"><span class="pc-stage-num">3</span> Unused / Overage</p>
+            <p class="pc-title"><span class="pc-stage-num">3</span> Unused Recapture</p>
             <p class="pc-cadence">Monthly · one clinic group</p>
             <p>Three staggered quarter cycles run in parallel. Each month, one group closes — the wizard auto-filters.</p>
             </div>""",
@@ -163,11 +348,17 @@ with tab_overview, safe_stage("Overview"):
 3. Download the SaasAnt file.
 4. Late remittance? Re-run safely — ledger dedup prevents double-issuing.
 
-**Stage 3 — Unused / Overage** *(run every month for the closing group)*
+**Stage 3 — Unused Recapture** *(run every month for the closing group)*
 1. Pick the year and the month you just closed; the wizard auto-filters to the
    group whose quarter is ending.
-2. Review recapture totals (internal entries; not mailed) and the overage list.
-3. For each overage: submit to finance partner or direct-bill per SOP-6.
+2. Review recapture totals and record the internal Unused-Flex-Credits invoices
+   (not mailed).
+
+**Stage 4 — Overages & Closeout** *(same closing group)*
+1. Continue from Stage 3 (or load the month). For each overage: apply any manual
+   credit, then bill directly (Oncura, tracked) or hand off to accounting / the
+   finance partner per SOP-6 / SOP-12.
+2. Tie up QBO and settle the group / corporate billing.
             """
         )
 
@@ -1566,7 +1757,7 @@ with tab_credits, safe_stage("Stage 2 — Monthly Credit Memos"):
 # ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Unused Recapture + Overage  (step-by-step wizard)
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
+with tab_recap, safe_stage("Stage 3 — Unused Recapture"):
     ui.banner("To be completed during month close process")
     import pandas as pd
 
@@ -1661,9 +1852,11 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
     if pipe:
         recap_included = [r for r in pipe["recap"] if not r.get("excluded_no_payments")]
         recap_excluded = [r for r in pipe["recap"] if r.get("excluded_no_payments")]
-        # Feed Stage 4 (Closeout): the full per-clinic recap rows (the wizard builds
-        # its worklist from these) + the group credit-spread moves.
+        # Feed Stage 4 (Overages & Closeout): the full per-clinic recap rows (the wizard
+        # builds its worklist + the overage billing from these), the closing month, and
+        # the group credit-spread moves.
         SS["closeout_recap"] = recap_included
+        SS["closeout_month"] = (rec_year, rec_month)
         SS["closeout_group_spread"] = [
             {"amount": m["amount"], "from": m["from_clinic"], "to": m["to_clinic"]}
             for m in flex_overage.group_overage_spread(recap_included)
@@ -1677,28 +1870,14 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
         udf, next_ref = flex_unused.build_unused_invoice_import(
             recap_included, rec_year, rec_month, recap_start, sales_class,
         )
-    overs = flex_unused.overage_rows(recap_included) if pipe else []
-    annotated = []
-    if overs:
-        annotated = flex_overage.annotate_overages(
-            overs, rec_year, rec_month, today_d, cfg_all, SS.recap_credit_offsets,
-        )
-    direct_count = sum(1 for r in annotated if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-    partner_count = sum(1 for r in annotated if r["route"] == "partner" and r["net_overage"] > 0)
-
-    # Dynamic step list — only include steps that have something to show.
-    # Overage is split into two separate steps so OnePlace partner submission
-    # gets its own full-width page; previously it lived in a tab alongside
-    # direct-bill and was easy to miss.
+    # Dynamic step list. Overage moved to Stage 4 (bill / hand off there); Stage 3 is
+    # unused recapture only. The pipeline still computes overage and stashes
+    # closeout_recap above, so Stage 4 bills from it.
     STEPS = [("setup", "Cycle setup"), ("upload", "Fetch OPD activity")]
     if pipe and not rdf.empty:
         STEPS.append(("review", "Review activity"))
         if not udf.empty:
             STEPS.append(("recapture", "Unused recapture"))
-        if direct_count:
-            STEPS.append(("direct_bill", "Direct-bill overages"))
-        if partner_count:
-            STEPS.append(("partner_submission", "OnePlace partner submission"))
     total = len(STEPS)
     SS.recap_step = max(0, min(SS.recap_step, total - 1))
     step_key, step_label = STEPS[SS.recap_step]
@@ -2273,320 +2452,6 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
                     _zsubj, _zbody, key_prefix="recap_zeroing_email",
                 )
 
-        elif step_key in ("direct_bill", "partner_submission"):
-            # Shared totals + dataframe used by both overage steps.
-            direct_total = sum(float(r["net_overage"]) for r in annotated
-                               if r["route"] in ("direct", "missed_cutoff") and r["net_overage"] > 0)
-            partner_total = sum(float(r["net_overage"]) for r in annotated
-                                if r["route"] == "partner" and r["net_overage"] > 0)
-            adf = pd.DataFrame(annotated)[[
-                "clinic_name", "finance_company", "overage",
-                "credit_applied", "net_overage", "route", "escalation_flag",
-            ]]
-
-            def _shared_overage_context(*, offsets_key: str):
-                """Render the bits common to both overage steps: routing-rules
-                caption, optional credit-offsets editor, all-overages preview,
-                and escalation warning."""
-                st.caption(
-                    "OnePlace handles overages submitted before the cutoff. Great America + "
-                    "New Lane have opted out (direct-bill). Self-Funded: direct. Missed cutoff: direct."
-                )
-                with st.expander(":gray[Pre-existing credit offsets (optional)]"):
-                    st.caption(
-                        "If an over-threshold clinic has an unapplied credit in QBO, enter it here — "
-                        "the app applies it to the overage and only bills the remainder."
-                    )
-                    offset_seed = pd.DataFrame([
-                        {"Clinic (QB)": (o.get("qb_name") or o.get("clinic_name")),
-                         "Gross overage": round(float(o["overage"]), 2),
-                         "Pre-existing credit": float(
-                             SS.recap_credit_offsets.get(o.get("qb_name") or o.get("clinic_name"), 0) or 0
-                         )}
-                        for o in overs
-                    ])
-                    edited = st.data_editor(
-                        offset_seed, hide_index=True, use_container_width=True,
-                        disabled=["Clinic (QB)", "Gross overage"],
-                        column_config={
-                            "Pre-existing credit": st.column_config.NumberColumn(
-                                "Pre-existing credit",
-                                min_value=0.0,
-                                step=0.01,
-                                format="$%.2f",
-                                help="Unapplied credit balance in QBO. Applied to overage; "
-                                     "only the remainder is billed.",
-                            ),
-                        },
-                        key=offsets_key,
-                    )
-                    # Defensive parse: a NumberColumn keeps values numeric, but
-                    # if Streamlit ever returns a string (legacy clients, paste
-                    # edge cases), fall back to 0.0 + caption rather than
-                    # raising a ValueError into safe_stage.
-                    _bad_rows: list[str] = []
-                    def _parse_offset(raw, clinic):
-                        try:
-                            return float(raw or 0)
-                        except (TypeError, ValueError):
-                            _bad_rows.append(clinic)
-                            return 0.0
-                    SS.recap_credit_offsets = {
-                        r["Clinic (QB)"]: _parse_offset(r["Pre-existing credit"], r["Clinic (QB)"])
-                        for _, r in edited.iterrows()
-                    }
-                    if _bad_rows:
-                        st.caption(
-                            f":gray[Non-numeric credit value for {', '.join(_bad_rows)} "
-                            "— treated as $0.00 offset.]"
-                        )
-                with st.expander(f":gray[All overages · {len(adf)} clinic(s) · preview]"):
-                    st.dataframe(adf, use_container_width=True, height=240)
-
-            def _direct_block():
-                st.caption(
-                    f"These overages go to **accounting@oncurapartners.com** for **manual** "
-                    f"billing in QBO. Tanya creates a QBO invoice per clinic, sends an "
-                    f"Authorize.net link / PDF, and voids each invoice immediately after "
-                    f"sending per **SOP-6**. The attached xlsx is her working reference — "
-                    f"NOT a SaasAnt import."
-                )
-                bc1, bc2 = st.columns(2)
-                bc1.metric("Clinics to bill", direct_count)
-                bc2.metric("Total", f"${direct_total:,.2f}")
-                # Human-readable billing worksheet (clinic / threshold / activity /
-                # credit / net). This replaces the SaasAnt-shaped invoice import
-                # because Tanya bills these manually today; the SaasAnt builder
-                # remains in flex_overage.py for future use.
-                didf = flex_overage.build_direct_billing_worksheet(
-                    annotated, rec_year, rec_month, cfg_all,
-                )
-                xlsx_bytes = saasant.to_xlsx_bytes(didf, "OverageBilling")
-                fname = f"OverageDirect_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
-
-                # No email hand-off — download the worksheet; the billing steps
-                # (authorize.net / corporate statement + OPD Past Due) are walked
-                # through in Stage 4 -> Overages.
-                if not didf.empty:
-                    st.download_button(
-                        f"Download direct-bill worksheet ({len(didf)} clinic(s))",
-                        data=xlsx_bytes, file_name=fname,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key="recap_direct_dl",
-                    )
-                    st.caption(
-                        ":gray[Bill these per **Stage 4 -> Overages** — authorize.net for "
-                        "non-corporates, statement/wire for corporates — and flip each "
-                        "clinic's OPD invoice to Past Due.]"
-                    )
-                else:
-                    st.info("No direct-bill overages this cycle.")
-
-                # Dedup against ledger — flag rows already emitted in prior runs.
-                direct_payments_for_ledger = []
-                already_direct: list[str] = []
-                if not didf.empty:
-                    direct_payments_for_ledger = [
-                        {
-                            "kind": "direct_overage",
-                            "contract": row["QB Customer"],
-                            "qb_customer": row["QB Customer"],
-                            "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
-                            "amount": float(row.get("Net Amount to Bill") or 0),
-                        }
-                        for _, row in didf.iterrows()
-                    ]
-                    direct_fps = [
-                        ledger.fingerprint("INTERNAL", "direct_overage", r["contract"],
-                                           r["payment_date"], r["amount"])
-                        for r in direct_payments_for_ledger
-                    ]
-                    already_direct = ledger.check_payments_seen(direct_fps)
-                    if already_direct:
-                        st.warning(
-                            f"**{len(already_direct)} direct-bill invoice(s) already billed for "
-                            f"this period.** Re-billing double-charges these clinics — "
-                            f"review the file before you bill again."
-                        )
-
-                if not didf.empty:
-                    st.divider()
-                    st.caption(
-                        ":gray[Initial below **after** you've billed these (per Stage 4). This "
-                        "logs it to the audit manifest + dedup ledger.]"
-                    )
-                    ui.persistence_warning()
-                    direct_initials = ui.initials_input("stage3_direct_audit_initials")
-                else:
-                    direct_initials = ""
-                if not didf.empty and ui.record_button(
-                    f"Record {len(didf)} direct-bill invoice(s) as billed",
-                    key="w_recap_mark_direct",
-                    disabled=not direct_initials,
-                ):
-                    ok_l, added_l, _ = ledger.record_batch(
-                        file_content=None,
-                        filename=fname,
-                        company="INTERNAL",
-                        payments=direct_payments_for_ledger,
-                        note=f"Stage 3 direct-bill / {dt.date(2000, rec_month, 1):%B} {rec_year}",
-                    )
-                    audit.record_cycle(
-                        cycle_type="stage3_overage",
-                        approver=direct_initials or auth.current_role(),
-                        year=rec_year, month=rec_month,
-                        params={
-                            "route": "direct_bill",
-                            "clinic_count": direct_count,
-                        },
-                        outputs=[{
-                            "name": "overage_direct_invoices",
-                            "sha256": audit.output_hash_df(didf),
-                            "row_count": len(didf),
-                            "total": round(float(direct_total), 2),
-                        }],
-                        note=f"Direct-bill overages billed for {dt.date(2000, rec_month, 1):%B %Y}",
-                    )
-                    # Record into the overage ledger so the Overage Tracker page
-                    # can watch these bills for payment / lockout aging.
-                    direct_annotated = [r for r in annotated
-                                        if r["route"] in ("direct", "missed_cutoff")
-                                        and float(r.get("net_overage", 0)) > 0]
-                    quarter_start_month = ((rec_month - 1) // 3) * 3 + 1
-                    quarter_label = f"Q{(quarter_start_month - 1) // 3 + 1} {rec_year}"
-                    overage_ledger.record_batch(
-                        direct_annotated,
-                        billing_month=f"{rec_year:04d}-{rec_month:02d}",
-                        quarter_covered=quarter_label,
-                        date_billed=dt.date.today().isoformat(),
-                        actor=direct_initials or auth.current_role(),
-                    )
-                    st.success(
-                        f"Recorded {len(didf)} direct-bill invoice(s) in audit manifest "
-                        f"and {added_l} fingerprint(s) in the dedup ledger. "
-                        f"Overage Tracker will now watch these for payment."
-                    )
-
-            def _partner_block():
-                st.caption(
-                    f"OnePlace bills these clinics on Oncura's behalf — send them the file before "
-                    f"the cutoff. Cutoff for this cycle: **{cutoff:%B %d, %Y}**."
-                )
-                pc1, pc2, pc3 = st.columns(3)
-                pc1.metric("Clinics", partner_count)
-                pc2.metric("Total", f"${partner_total:,.2f}")
-                pc3.metric("Submit by", f"{cutoff:%b %d, %Y}")
-                pdf = flex_overage.build_partner_submission(annotated, rec_year, rec_month)
-                xlsx_bytes_partner = saasant.to_xlsx_bytes(pdf, "OnePlaceSubmission")
-                fname_partner = f"OnePlaceOverage_{dt.date(2000, rec_month, 1):%b}_{rec_year}.xlsx"
-
-                # No email hand-off — download the submission file and send it to
-                # OnePlace before the cutoff (walked through in Stage 4 -> Overages).
-                if not pdf.empty:
-                    st.download_button(
-                        f"Download OnePlace submission ({partner_count} clinic(s))",
-                        data=xlsx_bytes_partner, file_name=fname_partner,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key="recap_partner_dl",
-                    )
-                    st.caption(
-                        f":gray[Send this to OnePlace before **{cutoff:%b %d, %Y}** "
-                        "(see Stage 4 -> Overages).]"
-                    )
-                else:
-                    st.info("No partner-submission overages this cycle.")
-
-                # Dedup against ledger. build_partner_submission() owns the
-                # column schema — hardcode the column names instead of probing.
-                # Earlier code did `pdf.columns[0]` as a fallback, which silently
-                # resolved to "Finance Partner" (= "OnePlace" for every row),
-                # collapsing every clinic onto a single qb_customer value and
-                # creating fingerprint collisions whenever two clinics in the
-                # batch happened to share the same net overage.
-                partner_payments_for_ledger = []
-                already_partner: list[str] = []
-                if not pdf.empty:
-                    partner_payments_for_ledger = [
-                        {
-                            "kind": "partner_overage",
-                            "contract": str(row["QB Customer"]),
-                            "qb_customer": str(row["QB Customer"]),
-                            "payment_date": f"{rec_year:04d}-{rec_month:02d}-01",
-                            "amount": float(row["Net Overage to Submit"]),
-                        }
-                        for _, row in pdf.iterrows()
-                    ]
-                    partner_fps = [
-                        ledger.fingerprint("INTERNAL", "partner_overage", r["contract"],
-                                           r["payment_date"], r["amount"])
-                        for r in partner_payments_for_ledger
-                    ]
-                    already_partner = ledger.check_payments_seen(partner_fps)
-                    if already_partner:
-                        st.warning(
-                            f"**{len(already_partner)} partner submission(s) already sent for "
-                            f"this period.** Re-sending forwards these to OnePlace twice — "
-                            f"review before you send again."
-                        )
-
-                if not pdf.empty:
-                    st.divider()
-                    st.caption(
-                        ":gray[Initial below **after** you've sent this to OnePlace (per Stage 4). "
-                        "This logs it to the audit manifest + dedup ledger.]"
-                    )
-                    ui.persistence_warning()
-                    partner_initials = ui.initials_input("stage3_partner_audit_initials")
-                else:
-                    partner_initials = ""
-                if not pdf.empty and ui.record_button(
-                    f"Record {len(pdf)} partner-submission row(s) as sent to OnePlace",
-                    key="w_recap_mark_partner",
-                    disabled=not partner_initials,
-                ):
-                    ok_l, added_l, _ = ledger.record_batch(
-                        file_content=None,
-                        filename=fname_partner,
-                        company="INTERNAL",
-                        payments=partner_payments_for_ledger,
-                        note=f"Stage 3 partner submission / {dt.date(2000, rec_month, 1):%B} {rec_year}",
-                    )
-                    audit.record_cycle(
-                        cycle_type="stage3_overage",
-                        approver=partner_initials or auth.current_role(),
-                        year=rec_year, month=rec_month,
-                        params={
-                            "route": "partner_submission",
-                            "partner": "OnePlace",
-                            "cutoff": cutoff.isoformat(),
-                            "clinic_count": partner_count,
-                        },
-                        outputs=[{
-                            "name": "oneplace_overage_submission",
-                            "sha256": audit.output_hash_df(pdf),
-                            "row_count": len(pdf),
-                            "total": round(float(partner_total), 2),
-                        }],
-                        note=f"OnePlace partner submission sent for {dt.date(2000, rec_month, 1):%B %Y}",
-                    )
-                    st.success(
-                        f"Recorded OnePlace submission ({len(pdf)} clinics) in audit manifest "
-                        f"and {added_l} fingerprint(s) in the dedup ledger."
-                    )
-
-            # ── Step dispatch ──────────────────────────────────────────────────
-            # Each overage route lives on its own wizard step so it gets the
-            # full page (and the OnePlace partner submission isn't half-hidden
-            # behind a tab next to direct-bill).
-            if step_key == "direct_bill":
-                st.markdown(f"### Direct-bill overages — {direct_count} clinic(s)")
-                _shared_overage_context(offsets_key="w_recap_offsets_editor_direct")
-                _direct_block()
-            elif step_key == "partner_submission":
-                st.markdown(f"### OnePlace partner submission — {partner_count} clinic(s)")
-                _shared_overage_context(offsets_key="w_recap_offsets_editor_partner")
-                _partner_block()
-
     # ── Navigation ────────────────────────────────────────────────────────────
     can_back = SS.recap_step > 0
     can_next = SS.recap_step < total - 1
@@ -2687,19 +2552,19 @@ with tab_recap, safe_stage("Stage 3 — Unused / Overage"):
 # Stage 3 produces the unused/overage numbers; Stage 4 tells the operator exactly
 # what to do with them (tie-up, past-due overages, group credit-spread, exceptions).
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab_closeout, safe_stage("Stage 4 — Closeout"):
+with tab_closeout, safe_stage("Stage 4 — Overages & Closeout"):
     ui.banner("To be completed during month close process")
-    st.subheader("Stage 4 — Closeout")
+    st.subheader("Stage 4 — Overages & Closeout")
     st.caption(
-        "Walks you through the manual QBO closeout for the clinics Stage 3 just closed. "
-        "OPD marks FLEX invoices paid automatically — you only tie up QBO, flip the overage "
-        "clinics to Past Due, and settle the group / corporate billing."
+        "Handles this quarter's overages — bill them directly (Oncura) or hand them off to "
+        "accounting / the finance partner — then the manual QBO closeout (tie-up and group / "
+        "corporate billing). Overages live here now, not in Stage 3."
     )
 
-    # Wizard, mirroring the setup-first pattern of Stages 2 and 3: month selection
-    # is step 1; advancing loads that month's recorded Stage 3 output (unused /
-    # overage) straight from the ledger and fills the closeout. No OPD pull.
-    CLOSEOUT_STEPS = [("setup", "Select month")] + list(flex_closeout.STEPS)
+    # Wizard, mirroring the setup-first pattern of Stages 2 and 3: month selection is step 1;
+    # advancing loads that month's recap (from Stage 3 in-session, or reconstructed from the
+    # ledger). The "Closing clinics" step was removed; overages are the focus here.
+    CLOSEOUT_STEPS = [("setup", "Select month")] + [s for s in flex_closeout.STEPS if s[0] != "clinics"]
     SS.setdefault("closeout_step", 0)
     SS["closeout_step"] = max(0, min(SS["closeout_step"], len(CLOSEOUT_STEPS) - 1))
     _skey, _slabel = CLOSEOUT_STEPS[SS["closeout_step"]]
@@ -2772,9 +2637,14 @@ with tab_closeout, safe_stage("Stage 4 — Closeout"):
             if _lm:
                 st.caption(f"Closeout for **{dt.date(_lm[0], _lm[1], 1):%B %Y}** · "
                            f"{len(_recap)} clinic(s), from the ledger.")
-            _worklist = flex_closeout.build_worklist(
-                flex_clinics, _recap, SS.get("closeout_group_spread"))
-            flex_closeout.render_step(_skey, _worklist)
+            if _skey == "overages":
+                # The overage bill / hand-off workspace (moved here from Stage 3).
+                _oy, _om = _lm or (int(SS.get("recap_year")), int(SS.get("recap_month")))
+                render_overage_billing(_recap, _oy, _om, loaders.config())
+            else:
+                _worklist = flex_closeout.build_worklist(
+                    flex_clinics, _recap, SS.get("closeout_group_spread"))
+                flex_closeout.render_step(_skey, _worklist)
 
     st.divider()
     _cb, _csp, _cn = st.columns([1, 4, 1])
