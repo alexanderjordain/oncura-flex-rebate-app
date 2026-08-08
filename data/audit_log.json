@@ -1925,6 +1925,49 @@
       ],
       "note": "7 new recapture invoice(s); 0 already in ledger",
       "entry_hash": "441f29ec8432d88cd533aa6f344dacae8a0cea9cc003e63a4a80b628687748df"
+    },
+    {
+      "id": "0c8d5cce-8665-48ce-8fdd-cb94bbdcfa4a",
+      "timestamp": "2026-08-08T16:30:41",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 8,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-08-04",
+        "applies_to": "",
+        "invoice_date": "2026-08-04",
+        "start_invoice_no": 53240,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Copy of Pass Thru Billing_July 2026 (1).xlsx",
+        "sha256": "bef40f0e00170fd36e43ef8c9485ae6c611d5d4d92874d550d6a18f8689a2ba2",
+        "size_bytes": 31828
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "8d7d7d2e0ab965c747703e50fe98a234a9f014ad6b3274b413094d6901f9d658",
+          "row_count": 30,
+          "total": 27379.99
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "fc49a524930ac73e67f72e109efb64674020a0e0cd9e39fe1e3f8c9f4a473005",
+          "row_count": 21,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "fa03b7f6721a854e93a922f53bcc8799a691ed915cde9a5dc723b0b45710dc25",
+          "row_count": 21,
+          "total": 7175.0
+        }
+      ],
+      "note": "51 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "a608f2a65b0e72f05711ef25dab83755ab9cfa74d2808c71446b1ea7b80adbc4"
     }
   ]
 }
