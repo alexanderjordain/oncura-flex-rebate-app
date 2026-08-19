@@ -279,6 +279,14 @@
       "uploaded_at": "2026-08-08T16:30:40",
       "row_count": 51,
       "note": "Stage 1 / OnePlace / pay_date=2026-08-04"
+    },
+    {
+      "sha256": "84444375239dab46aaf25c0796a59da53d5f0343a294f5c38f27bc05e40470b6",
+      "filename": "Remittance Detail Downloadable (1).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-08-19T21:36:49",
+      "row_count": 6,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-08-17"
     }
   ],
   "payments": [
@@ -9653,6 +9661,66 @@
       "payment_date": "2026-08-04",
       "amount": 295.0,
       "recorded_at": "2026-08-08T16:30:40"
+    },
+    {
+      "fingerprint": "be88d2c572d1a523f673afd80ddb37c17f1d9ea35ec83f2e2447b5c11936dc3a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42237149",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-08-17",
+      "amount": 921.84,
+      "recorded_at": "2026-08-19T21:36:49"
+    },
+    {
+      "fingerprint": "5f44ecebcad77965b4a68187a1d0c3be37031ecee7e4ac268426a723d18a707a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42479265",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-08-17",
+      "amount": 921.84,
+      "recorded_at": "2026-08-19T21:36:49"
+    },
+    {
+      "fingerprint": "22522c860472372ab0895f19c2d697c5395141596bdeec229e6c072b03e8bb88",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729270",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-08-17",
+      "amount": 939.08,
+      "recorded_at": "2026-08-19T21:36:49"
+    },
+    {
+      "fingerprint": "850af05b53815cf1aae1959a003a78ced3b9097009f08e93fbb7aee25b115906",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729290",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-08-17",
+      "amount": 912.68,
+      "recorded_at": "2026-08-19T21:36:49"
+    },
+    {
+      "fingerprint": "8b70c0a6fd2a6fc353237f9c71ae3783349f9c622348dbf2b4a34b15ffe3e77c",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729691",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-08-17",
+      "amount": 896.98,
+      "recorded_at": "2026-08-19T21:36:49"
+    },
+    {
+      "fingerprint": "cec724a999f0e1510298d3a2f7c2ce97e01cf3578d4b4b57abd730d8614db733",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729738",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "2026-08-17",
+      "amount": 921.84,
+      "recorded_at": "2026-08-19T21:36:49"
     }
   ]
 }
