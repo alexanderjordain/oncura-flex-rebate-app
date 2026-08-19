@@ -287,6 +287,14 @@
       "uploaded_at": "2026-08-19T21:36:49",
       "row_count": 6,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-08-17"
+    },
+    {
+      "sha256": "c47cdd74b8673131ef06d4da1dbe0932410b9fabfb008309f8628842cd99d703",
+      "filename": "Remittance Detail Downloadable (2).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-08-19T21:44:49",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-08-10"
     }
   ],
   "payments": [
@@ -9721,6 +9729,36 @@
       "payment_date": "2026-08-17",
       "amount": 921.84,
       "recorded_at": "2026-08-19T21:36:49"
+    },
+    {
+      "fingerprint": "b17e57ef821dba4a859af2365e8276c9da07ee9fc89c831d1419508ab71bcea7",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42474608",
+      "qb_customer": "Clark Veterinary Hospital",
+      "payment_date": "2026-08-10",
+      "amount": 921.84,
+      "recorded_at": "2026-08-19T21:44:49"
+    },
+    {
+      "fingerprint": "23cb47a8a440ba08a293133fcac949993395ad8afa3f38a450313ec92260d2a0",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42476665",
+      "qb_customer": "Galloway Village Veterinary",
+      "payment_date": "2026-08-10",
+      "amount": 896.98,
+      "recorded_at": "2026-08-19T21:44:49"
+    },
+    {
+      "fingerprint": "b10ce6de38a788c0552ca38c35a4217ed549c5991828bd523037c5b90bf41785",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42478910",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-08-10",
+      "amount": 935.08,
+      "recorded_at": "2026-08-19T21:44:49"
     }
   ]
 }
