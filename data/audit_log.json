@@ -2055,6 +2055,49 @@
       ],
       "note": "39 new credit memo(s) recorded; 0 were already in ledger",
       "entry_hash": "46d34c3efff953da8c9dddddf0797f42d3a33c6bff18e8e9c169c9dd39a8275e"
+    },
+    {
+      "id": "de22a961-e075-405e-90df-64a9443b0fb9",
+      "timestamp": "2026-09-03T15:29:04",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 8,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-08-04",
+        "applies_to": "2026-08",
+        "invoice_date": "2026-08-04",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Oncura Consumable_2026-08-03_080006 Remittance (002).xlsx",
+        "sha256": "bcf6583e4eee262a4301d875eacc4707ebc4ea6910f6b18826355a14d76039a6",
+        "size_bytes": 11511
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "40be5e933d2c18d31820e30d2f9111980c088796656757c943e20733b069064b",
+          "row_count": 1,
+          "total": 799.05
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "07a9828e2bce9d0db34d3e09c4bea4c8393db193375427a5cc82114162e89bdd",
+          "row_count": 22,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "4df39c1436f0a60ac50840812cabf3d86a8ba835cd732722431c47ce7886cc7c",
+          "row_count": 22,
+          "total": 15545.0
+        }
+      ],
+      "note": "23 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "ce050f412d7a09d7e5e80bbab28f762458f39540dbdc5d33a3f26fa42f53df30"
     }
   ]
 }
