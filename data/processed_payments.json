@@ -11284,6 +11284,16 @@
       "payment_date": "08/31/2026",
       "amount": 4073.0,
       "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "b057e54f5e85328cde18d4c7ef426c1ef9dab5c3ed2e40cb4e2a7b0b9c0300e5",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "83d660634f88e0c8625046835595824cc44fc50b6dd39e6bed83f0ca6548b968",
+      "qb_customer": "Pine Tree Veterinary Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 700.95,
+      "recorded_at": "2026-09-03T19:07:42"
     }
   ]
 }
