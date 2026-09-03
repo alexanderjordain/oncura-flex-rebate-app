@@ -11104,6 +11104,186 @@
       "payment_date": "08/31/2026",
       "amount": 964.92,
       "recorded_at": "2026-09-03T16:04:04"
+    },
+    {
+      "fingerprint": "327d0683678bb71e61ca55305d0054fa01a09edbe95a4ea94034c0e8c5f161c5",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Clinica Veterinaria Acuario",
+      "qb_customer": "Clinica Veterinaria Acuario",
+      "payment_date": "08/31/2026",
+      "amount": 4222.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "e619847d3e4dae0863014ab95f0437bae3b16b7c6c63efa558d5c6c772ad4964",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Delmar Animal Hospital",
+      "qb_customer": "Delmar Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 1250.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "5f5ed6e7d102c004b97d1ef234ef1f0576200967c834fd3725b2a4176f0defc0",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Desert Ark Veterinary Hospital AAHA - Avondale",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
+      "payment_date": "08/31/2026",
+      "amount": 4053.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "26caf9e0dc1fb55f503795441ef21880b7dc4f4fccd41b790d267ca49d6a04f3",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Encanto Animal Hospital",
+      "qb_customer": "Encanto Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 5700.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "dd9db13e4bbfd88ffb45ec19330f7052d4cb575e3358949abff8c8c995599d56",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Miller Mobile Veterinary Services & Animal Hospital",
+      "qb_customer": "Miller Mobile Veterinary Services & Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 918.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "f401e76bc59dcbd78773723c03d64a10ff0cc032eeaf3f9e91216fb641246b75",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "On Point Animal Hospital",
+      "qb_customer": "On Point Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 1518.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "ba12749082a05a1bc4dc04cc47b8b2445daa6fe1fd6478f5d045ca390c741563",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Reata Veterinary Hospital",
+      "qb_customer": "Reata Veterinary Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 3903.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "ec9aa5a96edf008decfcc01885e6de2359d29b9ebaa79f2e6e0202cb9a731f62",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Ridgeview Animal Clinic",
+      "qb_customer": "Ridgeview Animal Clinic",
+      "payment_date": "08/31/2026",
+      "amount": 3753.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "89d6bc4c230dda8ea255bc4e8b08eb6ec83bdb9b785b8f447f66530233ee2181",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Riverdale Integrative Veterinary Care",
+      "qb_customer": "Riverdale Integrative Veterinary Care",
+      "payment_date": "08/31/2026",
+      "amount": 2148.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "21d356c52044c0f96607e87a30cf264974fa42494669e1bca2506eac66f3e4a5",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Roseville Animal Hospital",
+      "qb_customer": "Roseville Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 5700.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "ab007edf20e5025db68b9bbf0ff693c38289748f63337d556b6c89c40245e21a",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "St. Michael Veterinary Clinic",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "08/31/2026",
+      "amount": 1058.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "c5da065b3da88b3e1c2460db61860b5a9456dcbe6b4fb2b163ce631d801795e0",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "State Line Animal Hospital",
+      "qb_customer": "State Line Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 3947.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "22dfac6e4847a55bec35558615ce91af001ef860ea8ebf62794f35488c704619",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "TLC Pet Hospital NM",
+      "qb_customer": "TLC Pet Hospital NM",
+      "payment_date": "08/31/2026",
+      "amount": 1248.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "c7b85721a7d6b434a9aed43036b275ae203b0cc23f59f29fff1b38944e1322da",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Trinity Pet Hospital",
+      "qb_customer": "Trinity Pet Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 2788.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "75c3dedb17740a12919453266d02e12ea89fd313fa6dfedcd97a7b5f6b9d8286",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "TVC - Kindness Small Animal Hospital - TX",
+      "qb_customer": "TVC - Kindness Small Animal Hospital - TX",
+      "payment_date": "08/31/2026",
+      "amount": 5175.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "4348edb95f6c469dc2fe07df8d5fb1f7762cc746bb193cec2e2c495d997ec639",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "TVC-Driftwood Animal Hospital",
+      "qb_customer": "TVC-Driftwood Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 223.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "7420d9a07c5472e13a67fa1863cd573f7f0738da8d5502a8934ffc7b7666f4ae",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "Waldorf Emergency Care",
+      "qb_customer": "Waldorf Emergency Care",
+      "payment_date": "08/31/2026",
+      "amount": 5700.0,
+      "recorded_at": "2026-09-03T16:20:06"
+    },
+    {
+      "fingerprint": "d7a6376e5bc6b6c9f1fe31554932a2cce1aef417db91f27240630d7b2ea9ca46",
+      "company": "INTERNAL",
+      "kind": "unused_invoice",
+      "contract": "West Charleston Animal Hospital",
+      "qb_customer": "West Charleston Animal Hospital",
+      "payment_date": "08/31/2026",
+      "amount": 4073.0,
+      "recorded_at": "2026-09-03T16:20:06"
     }
   ]
 }
