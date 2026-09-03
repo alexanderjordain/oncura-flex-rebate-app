@@ -232,8 +232,9 @@ else:
     # auto-targeted: its count is shown for the operator to cross-check against
     # GA's own deposit report, but it does NOT gate the check. A partner is only
     # counted from the first coverage month it ever reported (months before show
-    # "-"). Count DISTINCT remittance dates (a re-upload keeps the same date and
-    # dedups, so counting dates avoids double-counting).
+    # "-"). Count DISTINCT uploaded files by source_file.sha256, so two different
+    # deposits keyed to the same date still count separately (a re-upload of the
+    # same file keeps its hash and dedups).
     _s1_companies = [("NewLane", "NewLane"), ("OnePlace", "OnePlace"),
                      ("GreatAmerica", "GreatAmerica"), ("FPLeasing", "FP Leasing")]
     _S1_GATING = {"NewLane", "OnePlace", "FPLeasing"}   # one a month; gate Complete
@@ -259,7 +260,14 @@ else:
             _tu = ledger.trueup_ym_for_coverage(_cov)
             if _tu:
                 _key = _tu
-        _s1_received[_key][_co].add(str(_pr.get("payment_date") or "")[:10])
+        # Count DISTINCT uploaded remittance files by source_file.sha256, not by
+        # date: two different deposits keyed to the same date (operator error, or a
+        # genuine same-day pair) are separate files and count separately, while a
+        # true re-upload of the same file keeps its hash and dedups. Legacy entries
+        # with no source_file fall back to the date.
+        _sf = _e.get("source_file") or {}
+        _rid = _sf.get("sha256") or ("date:" + str(_pr.get("payment_date") or "")[:10])
+        _s1_received[_key][_co].add(_rid)
 
     # Earliest coverage month each partner has reported = when it joined.
     _active_from: dict = {}
