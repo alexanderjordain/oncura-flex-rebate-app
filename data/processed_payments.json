@@ -319,6 +319,14 @@
       "uploaded_at": "2026-09-03T15:38:35",
       "row_count": 30,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-08-04"
+    },
+    {
+      "sha256": "a68bef58b283eb6d7383b4a6578016867f37bd77817890da92962e8d05ba12d1",
+      "filename": "Remittance Detail Downloadable (4).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-09-03T15:39:00",
+      "row_count": 2,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-08-04"
     }
   ],
   "payments": [
@@ -10756,6 +10764,26 @@
       "payment_date": "2026-08-04",
       "amount": 920.8,
       "recorded_at": "2026-09-03T15:38:35"
+    },
+    {
+      "fingerprint": "370fa397ea498764a5bd115da98561c773453765f39bc8b71584ed7287f26f18",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729662",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-08-04",
+      "amount": 870.14,
+      "recorded_at": "2026-09-03T15:39:00"
+    },
+    {
+      "fingerprint": "cd717d76f1f56615a7ba0f03e955616483c4175b00723e4c10e49c35828ad740",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729739",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "2026-08-04",
+      "amount": 920.8,
+      "recorded_at": "2026-09-03T15:39:00"
     }
   ]
 }
