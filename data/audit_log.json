@@ -2282,6 +2282,49 @@
       ],
       "note": "0 new recapture invoice(s); 18 already in ledger",
       "entry_hash": "81ef3b6ab7f2bf89b3ec15d5fcebe7846e30382129cea1dd5bbc219f10bbaf3f"
+    },
+    {
+      "id": "cf192694-42a0-429c-8c7a-ee6e89305f17",
+      "timestamp": "2026-09-04T18:22:28",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 9,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-09-01",
+        "applies_to": "",
+        "invoice_date": "2026-09-01",
+        "start_invoice_no": 53342,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Copy of August 2026 PTB.xlsx",
+        "sha256": "3d35c30aeaf2bd3f05cb6737f4a44d3e110955558042b66d2f690fd9152a37c0",
+        "size_bytes": 32441
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "98056aae826e9690b3f19dba61413090432e8c17f5e66c9e64a4ee963e8020d4",
+          "row_count": 30,
+          "total": 27379.99
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "2137065e0ee1595e5c5f92083490f24868bef3a12320bd79e6042b78116abeca",
+          "row_count": 21,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "4b6915e1b8ae01bd4fed72c6a6a09ccdba1f4a8a7314c61704e979dae64eca1a",
+          "row_count": 21,
+          "total": 7175.0
+        }
+      ],
+      "note": "51 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "734b62c4c291d79d163e60420b38a59601c25673bbff002c01f9f51dc949b1cf"
     }
   ]
 }
