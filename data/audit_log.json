@@ -2247,6 +2247,41 @@
       ],
       "note": "1 new credit memo(s) recorded; 0 were already in ledger",
       "entry_hash": "83258bf26036350ef8e057d2baf3e927764addbd5fc702f2dcbbfc24fddf085e"
+    },
+    {
+      "id": "ae83d51b-8e9f-4bf9-9e71-ec6a67f88f57",
+      "timestamp": "2026-09-04T00:29:26",
+      "cycle_type": "stage3_recapture",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 8,
+      "params": {
+        "sales_class": "03-Telemedicine",
+        "start_ref": 50000,
+        "next_ref": 50018,
+        "quarter_window": "2026-06-01..2026-08-31",
+        "source": "opd_live",
+        "opd_invoice_count": 1920,
+        "opd_components_mismatch": 56,
+        "opd_orphan_count": 0,
+        "opd_orphan_total": 0.0
+      },
+      "source_file": {
+        "name": "opd_odata_live",
+        "sha256": "f76483df874f793abd60e1c454bc622d7bc367de4bd6b728d399df5cb3a0be67",
+        "size_bytes": 1920,
+        "fetched_at": "2026-09-04T00:29:01+00:00"
+      },
+      "outputs": [
+        {
+          "name": "unused_recapture_invoices",
+          "sha256": "906497c95fefc805538f9f4c28275be13fe7a19ffa8dcc83b4b358051e1a8155",
+          "row_count": 18,
+          "total": 57377.0
+        }
+      ],
+      "note": "0 new recapture invoice(s); 18 already in ledger",
+      "entry_hash": "81ef3b6ab7f2bf89b3ec15d5fcebe7846e30382129cea1dd5bbc219f10bbaf3f"
     }
   ]
 }
