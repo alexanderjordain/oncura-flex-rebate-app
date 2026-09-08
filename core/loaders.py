@@ -68,6 +68,16 @@ def processed_payments():
 
 
 @st.cache_data(show_spinner=False)
+def clinic_overrides():
+    """Admin correction layer for the All Clinic Roster: per-clinic overrides of
+    Finance Co / Contracts / Type / Active, keyed by normalized QBO name. Used mainly
+    for scan/other clinics whose fields are otherwise inferred from the ledger.
+    Shape: {"version": 1, "overrides": {"<norm_qb>": {finance_co, contracts, type, active}}}"""
+    data, _ = _load("clinic_overrides.json", {"version": 1, "overrides": {}})
+    return data
+
+
+@st.cache_data(show_spinner=False)
 def fuzzy_decisions():
     """Operator decisions on rebate-cycle fuzzy clinic matches — persists
     across cycles so 'confirm' / 'reject' on a given (OPD name, master
@@ -88,4 +98,5 @@ def clear_caches():
     service_prices.clear()
     contract_qb_map.clear()
     processed_payments.clear()
+    clinic_overrides.clear()
     fuzzy_decisions.clear()

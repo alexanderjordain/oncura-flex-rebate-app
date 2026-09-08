@@ -24,9 +24,20 @@ def _norm(s):
     return " ".join(str(s or "").strip().lower().split())
 
 
-def build(flex_master: dict, name_map: dict, processed_payments: dict) -> list[dict]:
+def _split_legals(s):
+    """Parse a '; '-joined legal-names cell into a set of cleaned names."""
+    return {part.strip() for part in str(s or "").split(";") if part.strip()}
+
+
+def build(flex_master: dict, name_map: dict, processed_payments: dict,
+          overrides: dict | None = None) -> list[dict]:
     """Return the unified roster as a list of display-ready row dicts, sorted by
-    clinic name. Pure function (no I/O) so it is unit-testable."""
+    clinic name. Pure function (no I/O) so it is unit-testable.
+
+    `overrides` (data/clinic_overrides.json shape `{"overrides": {norm_qb: {...}}}`)
+    is an admin correction layer applied on top of the derived values — used for
+    scan/other clinics whose Finance Co / Contracts / Type / Active are otherwise
+    inferred from the ledger and have nowhere else to live."""
     flex = {}          # norm(qb_name) -> flex_master record
     for c in (flex_master or {}).get("clinics", []):
         qb = (c.get("qb_name") or c.get("clinic_name") or "").strip()
@@ -82,7 +93,7 @@ def build(flex_master: dict, name_map: dict, processed_payments: dict) -> list[d
         has_payments = pinfo.get("count", 0) > 0
         # orphan/stale: paid, but not a FLEX clinic and no current legal mapping
         review = has_payments and not is_flex and not legals
-        rows.append({
+        row = {
             "Clinic (QBO)": display,
             "Type": "FLEX" if is_flex else "Scan / other",
             "Finance Co": ", ".join(sorted(companies)),
@@ -93,7 +104,15 @@ def build(flex_master: dict, name_map: dict, processed_payments: dict) -> list[d
             "Last Payment": pinfo.get("last", ""),
             "Active": ("" if not is_flex else ("yes" if frec.get("active", True) else "no")),
             "Review": "yes" if review else "",
-        })
+        }
+        # Admin correction layer (clinic_overrides.json): override wins on display.
+        ov = ((overrides or {}).get("overrides", {}) or {}).get(k)
+        if ov:
+            for src, col in (("finance_co", "Finance Co"), ("contracts", "Contracts"),
+                             ("type", "Type"), ("active", "Active")):
+                if ov.get(src) is not None:
+                    row[col] = ov[src]
+        rows.append(row)
     rows.sort(key=lambda r: r["Clinic (QBO)"].lower())
     return rows
 
@@ -147,6 +166,72 @@ def reassign_payments(processed_payments: dict, changes):
             n += 1
     pp["payments"] = pays
     return pp, n, sorted(reassigned)
+
+
+def apply_roster_edits(orig_rows, edited_rows, name_map, flex_master, overrides):
+    """Apply per-row edits to the non-QBO-name, non-ledger fields. Rows are matched by
+    position (orig_rows[i] <-> edited_rows[i]). Routing:
+      - Legal name(s)          -> name_map (add/remove legal->QBO keys for the row's QBO)
+      - Finance Co, Active     -> flex_master for FLEX clinics; clinic_overrides for others
+      - Contracts, Type        -> clinic_overrides (all clinics; display/correction layer)
+    Keyed on each row's ORIGINAL QBO name, so this must run BEFORE any QBO-name repoint
+    (apply_qb_edits), which then moves the touched legals old_qb -> new_qb. Returns
+    (name_map, flex_master, overrides, summary). Pure; caller persists. Ledger metrics
+    (Payments / Total Paid / Last Payment / Review) are never editable."""
+    mp = dict((name_map or {}).get("map", {}) or {})
+    fm_rest = {k: v for k, v in (flex_master or {}).items() if k != "clinics"}
+    fm_clinics = [dict(c) for c in (flex_master or {}).get("clinics", [])]
+    ov = {kk: dict(vv) for kk, vv in ((overrides or {}).get("overrides", {}) or {}).items()}
+
+    fm_index = {}
+    for i, c in enumerate(fm_clinics):
+        qb = (c.get("qb_name") or c.get("clinic_name") or "").strip()
+        if qb:
+            fm_index[_norm(qb)] = i
+
+    summ = {"legal_added": 0, "legal_removed": 0, "flex_fields": 0, "override_fields": 0}
+    for o, e in zip(orig_rows, edited_rows):
+        qb = (o.get("Clinic (QBO)") or "").strip()
+        nk = _norm(qb)
+        is_flex = (o.get("Type") == "FLEX")
+
+        # Legal name(s) -> name_map (only touch legals that currently resolve to THIS qb)
+        old_legals, new_legals = _split_legals(o.get("Legal name(s)")), _split_legals(e.get("Legal name(s)"))
+        if old_legals != new_legals:
+            for lost in (old_legals - new_legals):
+                for legal in [x for x in list(mp) if _norm(x) == _norm(lost) and _norm(mp[x]) == nk]:
+                    del mp[legal]; summ["legal_removed"] += 1
+            for got in (new_legals - old_legals):
+                mp[got.strip()] = qb; summ["legal_added"] += 1
+
+        def _set_override(field, value):
+            ov.setdefault(nk, {})[field] = value; summ["override_fields"] += 1
+
+        # Finance Co
+        if (e.get("Finance Co") or "") != (o.get("Finance Co") or ""):
+            val = (e.get("Finance Co") or "").strip()
+            if is_flex and nk in fm_index:
+                fm_clinics[fm_index[nk]]["finance_company"] = val; summ["flex_fields"] += 1
+            else:
+                _set_override("finance_co", val)
+        # Active (yes/no)
+        if (e.get("Active") or "") != (o.get("Active") or ""):
+            raw = str(e.get("Active") or "").strip()
+            if is_flex and nk in fm_index:
+                fm_clinics[fm_index[nk]]["active"] = (raw.lower() == "yes"); summ["flex_fields"] += 1
+            else:
+                _set_override("active", raw)
+        # Contracts (all clinics -> overrides; flex_master keeps its own per-partner fields)
+        if (e.get("Contracts") or "") != (o.get("Contracts") or ""):
+            _set_override("contracts", (e.get("Contracts") or "").strip())
+        # Type (display/correction only; does NOT add a clinic to FLEX program math)
+        if (e.get("Type") or "") != (o.get("Type") or ""):
+            _set_override("type", (e.get("Type") or "").strip())
+
+    return ({**(name_map or {}), "map": mp},
+            {**fm_rest, "clinics": fm_clinics},
+            {**(overrides or {}), "overrides": ov},
+            summ)
 
 
 def summarize(rows: list[dict]) -> dict:
