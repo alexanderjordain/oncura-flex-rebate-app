@@ -77,7 +77,16 @@ DEAL_PROPS = [
     "expiration_date",                     # date — training expiration
     "abdominal_trainings",                 # enum - abdominal training ALLOTMENT sold (2 = standard)
     "cardiac_trainings",                   # enum - cardiac training allotment sold (not a to-do count)
+    "migrated_00nus000001e6htmak",         # string - "Training Remaining from Order Abdominal"
+    "migrated_00nus000001e6jvma0",         # string - "Training Remaining from Order Cardiac"
 ]
+# The two "Training Remaining from Order" fields ARE the trainer-maintained to-do
+# count (decremented as sessions are completed): >0 still owed, 0 done, blank = not
+# yet filled in. This is the PRIMARY completion signal; OPD certs are the fallback
+# used only when a trainer has left the remaining field blank. Property IDs verified
+# against portal 8772207 on 2026-09-09.
+REMAINING_ABD = "migrated_00nus000001e6htmak"
+REMAINING_CARD = "migrated_00nus000001e6jvma0"
 CO_PROPS = [
     "name",
     "test_training_sonographer",           # enum(OWNER reference) — the trainer
@@ -124,6 +133,17 @@ def _num(v):
         return int(float(str(v).split(";")[0].strip()))
     except (TypeError, ValueError):
         return 0
+
+
+def _num_opt(v):
+    """Like _num but returns None when the field is blank/absent, so a trainer's
+    explicit 0 ('training complete') is distinguishable from a field never filled in."""
+    if v is None or str(v).strip() in ("", "(No value)"):
+        return None
+    try:
+        return int(float(str(v).split(";")[0].strip()))
+    except (TypeError, ValueError):
+        return None
 
 
 # ---------- OPD clinic matching ----------
@@ -203,10 +223,32 @@ def _match_opd_id(name, by_code, by_name):
     return [], False
 
 
-def _needs_training(allot_a, allot_c, cert_a, cert_c):
-    """(needs_abdominal, needs_cardiac): a modality is still owed when it was sold
-    (allotment > 0) and OPD holds no post-install certification for it."""
-    return (allot_a > 0 and cert_a == 0, allot_c > 0 and cert_c == 0)
+def _need_one(allot, cert, remaining):
+    """Is a single modality still owed (should we reach out to schedule training)?
+
+    Never-sold (allot <= 0) is never chased. A modality is DONE, and drops off, as
+    soon as EITHER signal says so: OPD holds a post-install certification (cert > 0,
+    hard evidence the clinic was trained), or the trainer zeroed the 'Training
+    Remaining from Order' count. It stays on the list only when BOTH say untrained:
+    no certification AND a remaining count that is either blank or greater than zero.
+    A certified clinic is off the list even if a package session is still undelivered
+    (this report is 'Installed, No Training', not 'package not fully consumed')."""
+    if allot <= 0:
+        return False
+    if cert > 0:
+        return False
+    if remaining == 0:
+        return False
+    return True
+
+
+def _needs_training(allot_a, allot_c, cert_a, cert_c, rem_a=None, rem_c=None):
+    """(needs_abdominal, needs_cardiac).
+
+    A modality is cleared by EITHER an OPD certification (cert_* > 0) OR the trainer
+    marking its remaining count to 0; it is chased only when both say untrained. See
+    _need_one for the per-modality rule."""
+    return (_need_one(allot_a, cert_a, rem_a), _need_one(allot_c, cert_c, rem_c))
 
 
 def _count_certs(cert_list, install_date, grace_days=CERT_GRACE_DAYS):
@@ -417,9 +459,10 @@ def build_email() -> dict:
 
     # ---- Candidate pool: installed + funded + at least one training modality sold ----
     # abdominal_trainings / cardiac_trainings is the training ALLOTMENT on the deal
-    # (2/2 is the standard package), NOT a scheduled or remaining counter. A deal that
-    # sold no training (0/0) is not a trainer task and is dropped here. Whether a sold
-    # modality is DONE is decided below against OPD, the only reliable completion record.
+    # (2/2 is the standard package), NOT a to-do count. A deal that sold no training
+    # (0/0) is not a trainer task and is dropped here. Whether a sold modality is DONE
+    # is decided below: primarily by the trainer's 'Training Remaining from Order' count,
+    # with OPD certifications as the fallback where that count is blank.
     candidates = []
     for did in deal_ids:
         dp = deal_by_id.get(did, {})
@@ -441,13 +484,20 @@ def build_email() -> dict:
         allot_c = _num(dp.get("cardiac_trainings"))
         if allot_a == 0 and allot_c == 0:
             continue
+        # Trainer-maintained remaining counts (None when the field is blank). Kept as
+        # per-deal lists so a company with several funded deals sums correctly below.
+        _ra = _num_opt(dp.get(REMAINING_ABD))
+        _rc = _num_opt(dp.get(REMAINING_CARD))
         candidates.append({"deal_id": did, "company_id": co_id, "company": co,
                            "deal": dp, "install_dt": install_dt,
-                           "allot_a": allot_a, "allot_c": allot_c})
+                           "allot_a": allot_a, "allot_c": allot_c,
+                           "_rem_a_vals": [_ra] if _ra is not None else [],
+                           "_rem_c_vals": [_rc] if _rc is not None else []})
 
     # Collapse to one row per company: a company can carry several funded deals (an
     # original install plus an upgrade). Merge the allotment as the max sold per
-    # modality and keep the most-recently-funded deal's fields for display.
+    # modality, sum the remaining counts across the company's deals, and keep the
+    # most-recently-funded deal's fields for display.
     by_company: dict = {}
     for c in candidates:
         prev = by_company.get(c["company_id"])
@@ -456,11 +506,18 @@ def build_email() -> dict:
             continue
         prev["allot_a"] = max(prev["allot_a"], c["allot_a"])
         prev["allot_c"] = max(prev["allot_c"], c["allot_c"])
+        prev["_rem_a_vals"] += c["_rem_a_vals"]
+        prev["_rem_c_vals"] += c["_rem_c_vals"]
         if (c["deal"].get("funding_received_date_stamp") or "") > \
            (prev["deal"].get("funding_received_date_stamp") or ""):
             prev["deal"] = c["deal"]
             prev["deal_id"] = c["deal_id"]
     candidates = list(by_company.values())
+    # Resolve each company's remaining to a single number per modality: the sum of the
+    # deals that carry a value, or None when every one of them was left blank.
+    for c in candidates:
+        c["rem_a"] = sum(c["_rem_a_vals"]) if c["_rem_a_vals"] else None
+        c["rem_c"] = sum(c["_rem_c_vals"]) if c["_rem_c_vals"] else None
 
     # ---- OPD certification cross-check (source of truth for "already trained") ----
     # Match each clinic to OPD by its embedded business-key code (e.g. "- SVS38583"),
@@ -505,14 +562,23 @@ def build_email() -> dict:
         opd_error = f"{type(e).__name__}: {e}"
 
     # ---- Membership: keep clinics still owed a modality they were sold ----
-    # needs_<m> = sold that modality AND OPD shows no post-install certification for it.
+    # needs_<m> = sold that modality AND neither signal says trained: OPD holds no
+    # post-install certification for it AND the trainer has not zeroed its remaining
+    # count. Either an OPD cert or a trainer-set 0 clears the modality.
     members = []
     for c in candidates:
         certs = cert_after.get(c["deal_id"], {"abdominal": 0, "cardiac": 0})
         c["certs"] = certs
         c["needs_a"], c["needs_c"] = _needs_training(
-            c["allot_a"], c["allot_c"], certs["abdominal"], certs["cardiac"])
+            c["allot_a"], c["allot_c"], certs["abdominal"], certs["cardiac"],
+            rem_a=c["rem_a"], rem_c=c["rem_c"])
         c["verified"] = verified.get(c["deal_id"], False)
+        # Basis note: for a still-needed modality, did the trainer confirm a count
+        # (>0) or leave it blank so only OPD's no-cert kept it on the list?
+        _need_blank = ((c["needs_a"] and c["rem_a"] is None)
+                       or (c["needs_c"] and c["rem_c"] is None))
+        c["basis"] = ("No cert; trainer count blank" if _need_blank
+                      else "No cert; trainer count > 0")
         if c["needs_a"] or c["needs_c"]:
             members.append(c)
     candidates = members
@@ -621,6 +687,9 @@ def build_email() -> dict:
             "Days Since Install": (today - c["install_dt"]).days,
             "Abd Allotted": c["allot_a"],
             "Card Allotted": c["allot_c"],
+            "Abd Remaining (HubSpot)": "" if c["rem_a"] is None else c["rem_a"],
+            "Card Remaining (HubSpot)": "" if c["rem_c"] is None else c["rem_c"],
+            "Completion Basis": c["basis"],
             "OPD Certs Abd": c["certs"]["abdominal"],
             "OPD Certs Card": c["certs"]["cardiac"],
             "HubSpot": f"https://app.hubspot.com/contacts/{HUBSPOT_PORTAL_ID}/company/{co_id}",

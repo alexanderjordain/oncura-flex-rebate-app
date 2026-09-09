@@ -115,3 +115,35 @@ def test_needs_training_rule():
     # only abdominal sold -> never chased for cardiac it never bought
     assert wol._needs_training(4, 0, 0, 0) == (True, False)
     assert wol._needs_training(4, 0, 1, 0) == (False, False)
+
+
+def test_needs_training_either_signal_clears_modality():
+    # A modality drops off the list as soon as EITHER signal says trained.
+    # OPD cert present clears it even though the trainer's count still shows sessions.
+    assert wol._needs_training(2, 2, 1, 1, rem_a=2, rem_c=2) == (False, False)
+    # Trainer-set 0 clears it even though OPD holds no cert (cert lag / demo-only OPD).
+    assert wol._needs_training(2, 2, 0, 0, rem_a=0, rem_c=0) == (False, False)
+    # Stays only when BOTH say untrained: no cert AND a remaining count > 0.
+    assert wol._needs_training(2, 2, 0, 0, rem_a=2, rem_c=2) == (True, True)
+    # Partial: abdominal certified -> off; cardiac has no cert and count > 0 -> on.
+    assert wol._needs_training(2, 2, 1, 0, rem_a=2, rem_c=1) == (False, True)
+
+
+def test_needs_training_blank_remaining_falls_to_opd():
+    # Blank remaining -> the modality rests entirely on OPD.
+    # No cert + blank -> still owed.
+    assert wol._needs_training(2, 2, 0, 0, rem_a=None, rem_c=None) == (True, True)
+    # Cert present + blank -> trained, drops off.
+    assert wol._needs_training(2, 2, 1, 1, rem_a=None, rem_c=None) == (False, False)
+    # Never-sold is never chased even if remaining is blank and no cert.
+    assert wol._needs_training(0, 2, 0, 0, rem_a=None, rem_c=2) == (False, True)
+
+
+def test_num_opt_distinguishes_zero_from_blank():
+    assert wol._num_opt("0") == 0
+    assert wol._num_opt("2") == 2
+    assert wol._num_opt("2.0") == 2
+    assert wol._num_opt("") is None
+    assert wol._num_opt(None) is None
+    assert wol._num_opt("(No value)") is None
+    assert wol._num_opt("not a number") is None
