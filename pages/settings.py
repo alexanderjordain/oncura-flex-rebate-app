@@ -378,10 +378,13 @@ with st.expander(":material/outgoing_mail: Misc. Reports", expanded=False):
     st.divider()
     st.caption(
         "WOL, installed clinics that still need training: sold a modality (abdominal "
-        "and/or cardiac) with no finalized OPD certification for it yet. Pulls live from "
-        "HubSpot (deals + companies + calls), cross-checks OPD certs, groups by training "
-        "sonographer, and opens a ready-to-send draft with the spreadsheet attached, the "
-        "same card the assistance email uses. Read-only; nothing sends automatically."
+        "and/or cardiac) that neither signal shows as done. A modality is cleared when "
+        "EITHER OPD holds a finalized certification for it OR the trainer has zeroed its "
+        "'Training Remaining from Order' field in HubSpot; a clinic stays only when both "
+        "say untrained. Pulls live from HubSpot (deals + companies + calls), cross-checks "
+        "OPD certs, groups by training sonographer, and opens a ready-to-send draft with "
+        "the spreadsheet attached, the same card the assistance email uses. Read-only; "
+        "nothing sends automatically."
     )
     if st.button("Build WOL training email", key="wol_email_build"):
         try:
