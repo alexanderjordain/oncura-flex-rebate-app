@@ -248,6 +248,43 @@ def _exp_status(exp_raw, today):
     return exp_raw, "future"
 
 
+def _mon_yr(d):
+    return f"{d.strftime('%b')} {d.year}"           # "Dec 2024"
+
+
+def _mon_day(d, yr=False):
+    return f"{d.strftime('%b')} {d.day}" + (f", {d.year}" if yr else "")   # "Sep 4" / "Oct 31, 2026"
+
+
+def _status_label(exp_raw, fund_raw, today):
+    """Plain-language urgency for a non-technical reader: (text, urgency). Expiration
+    drives it when present; otherwise fall back to how long since training was funded."""
+    if exp_raw:
+        try:
+            d = _dt.date.fromisoformat(exp_raw[:10])
+            if d < today:
+                return f"Expired {_mon_yr(d)}", "expired"
+            if (d - today).days <= EXPIRY_SOON_DAYS:
+                return f"Expiring soon ({_mon_day(d)})", "soon"
+            return f"Due by {_mon_day(d, yr=True)}", "future"
+        except ValueError:
+            pass
+    try:
+        f = _dt.date.fromisoformat(fund_raw[:10]) if fund_raw else None
+    except (ValueError, TypeError):
+        f = None
+    return (f"Waiting since {_mon_yr(f)}", "wait") if f else ("", "none")
+
+
+def _last_contact_label(last_call_iso):
+    if not last_call_iso:
+        return "Not yet"
+    try:
+        return _mon_day(_dt.date.fromisoformat(str(last_call_iso)[:10]))
+    except ValueError:
+        return str(last_call_iso)
+
+
 def _safe_sheet_name(name, used):
     """Excel-safe, unique worksheet name (<=31 chars, forbidden chars replaced)."""
     base = (re.sub(r"[\[\]:*?/\\]", "-", name or "").strip() or "Unassigned")[:31]
@@ -626,108 +663,94 @@ def build_email() -> dict:
                 sub.to_excel(w, sheet_name=_safe_sheet_name(trainer, _used), index=False)
     xlsx_bytes = xlsx_bio.getvalue()
 
-    subject = (
-        f"WOL - Installed clinics still needing training "
-        f"({len(rows)} open) - {today.isoformat()}"
-    )
+    n_trainers = sum(1 for _t, _n in trainer_counts.items() if _n > 0)
+    _needs_label = {"Abdominal + Cardiac": "Abdominal & Cardiac"}
 
-    # Plain body.
+    subject = f"Training to schedule - {len(rows)} clinics still need their session ({today.isoformat()})"
+
+    # Plain body — friendly and jargon-free (the numbers detail lives in the spreadsheet).
     plain = [
         "Training Team,", "",
-        f"This week {len(rows)} installed clinics still need training. Each was sold a "
-        f"modality (abdominal and/or cardiac) and OPD has no finalized certification for it "
-        f"yet. Every clinic was cross-checked against OPD; already-certified clinics were "
-        f"removed, and a clinic drops off automatically once OPD shows the finalized cert. If "
-        f"one looks already trained, OPD has no finalized cert on file for it - flag it and "
-        f"we'll check.", "",
-        "Grouped by training sonographer, most time-sensitive first (soonest or already-"
-        "expired training window, then longest waiting since the training was funded). Please "
-        "call your clinics and schedule the outstanding session(s), prioritizing anything "
-        "marked EXPIRED or (soon).", "",
+        f"Below are the {len(rows)} installed clinics that still need their training "
+        f"scheduled (across {n_trainers} trainers). Each one paid for training (abdominal, "
+        f"cardiac, or both) that we don't yet have on record as completed. Please call your "
+        f"clinics and get the session booked, starting with anything marked Expired or "
+        f"Expiring soon.", "",
+        "If a clinic tells you they've already been trained, just reply and flag it and "
+        "we'll double-check.", "",
     ]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
-        plain.append(f"--- {trainer} ({len(sub)}) ---")
+        plain.append(f"=== {trainer} - {len(sub)} clinic{'' if len(sub) == 1 else 's'} ===")
         if not sub:
-            plain.append("  (no clinics this week)")
-            plain.append("")
+            plain += ["  (none this week)", ""]
             continue
         for r in sub:
-            phone = f"  ph {r['Phone']}" if r["Phone"] else "  (no phone on file)"
-            exp_lbl, _urg = _exp_status(r["Expiration Date"], today)
-            exp_bit = f"  |  {exp_lbl}" if exp_lbl else ""
-            wait_bit = f"  |  waiting {r['Days Waiting']}d" if r["Days Waiting"] != "" else ""
-            call_bit = (f"  |  last call {r['Days Since Last Call']}d ago"
-                        if r["Days Since Last Call"] != "" else "  |  no calls in 90d")
-            flag = "  [UNVERIFIED - confirm in OPD]" if r["OPD Match"] != "Verified" else ""
+            status, _u = _status_label(r["Expiration Date"], r["Training Sold"], today)
+            needs = _needs_label.get(r["Needs Training"], r["Needs Training"])
+            loc = f"{r['City']}, {r['State']}".strip(", ")
+            flag = "  [confirm in OPD]" if r["OPD Match"] != "Verified" else ""
+            plain.append(f"  - {r['Clinic']} ({loc}){flag}")
             plain.append(
-                f"  {r['Clinic']} ({r['City']}, {r['State']}) - needs {r['Needs Training']}"
-                f"{phone}{exp_bit}{wait_bit}{call_bit}{flag}"
+                f"      Needs {needs}  |  {status or 'Waiting'}  |  "
+                f"Call {r['Phone'] or 'no phone on file'}  |  "
+                f"Last contacted {_last_contact_label(r['Last Call'])}"
             )
         plain.append("")
-    plain += ["Full detail in the attached spreadsheet, one tab per trainer "
-              "(install date, training-email history, and the OPD cert counts)."]
+    plain += ["Full detail (install dates, certification counts, and call history) is in the "
+              "attached spreadsheet, one tab per trainer."]
     plain_body = "\n".join(plain)
 
-    # HTML body.
+    # HTML body — the primary view for trainers. A clean call sheet: who to call, what
+    # they need, how urgent (plain words), and when they were last contacted.
     html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;color:#1f2733">',
             "<p>Training Team,</p>",
-            f"<p>This week <b>{len(rows)}</b> installed clinics still need training. Each was "
-            f"sold a modality (abdominal and/or cardiac) and OPD has no finalized certification "
-            f"for it yet. Every clinic was cross-checked against OPD; already-certified clinics "
-            f"were removed, and a clinic drops off automatically once OPD shows the finalized "
-            f"cert. If one looks already trained, OPD has no finalized cert on file for it, so "
-            f"flag it and we'll check.</p>",
-            "<p>Grouped by training sonographer, most time-sensitive first. Please call your "
-            "clinics and schedule the outstanding session(s), prioritizing anything marked "
-            "<b>EXPIRED</b> or <b>(soon)</b>. Clinic names link to HubSpot.</p>"]
+            f"<p>Below are the <b>{len(rows)}</b> installed clinics that still need their "
+            f"training scheduled (across {n_trainers} trainers). Each one paid for training "
+            f"(abdominal, cardiac, or both) that we don't yet have on record as completed. "
+            f"Please call your clinics and get the session booked, starting with anything marked "
+            f'<b style="color:#b3261e">Expired</b> or <b style="color:#b26a00">Expiring soon</b>.</p>',
+            "<p>If a clinic tells you they've already been trained, just reply and flag it and "
+            "we'll double-check. Clinic names link to HubSpot.</p>"]
     for trainer in sorted(trainer_counts.keys(),
                           key=lambda t: (t == "Unassigned", t)):
         sub = [r for r in rows if r["Training Sonographer"] == trainer]
-        html.append(f'<h3 style="margin-bottom:4px;">{_htmlmod.escape(trainer)} '
-                    f'<span style="color:#666;font-weight:normal;">({len(sub)})</span></h3>')
+        html.append(f'<h3 style="margin:18px 0 4px 0;">{_htmlmod.escape(trainer)} '
+                    f'<span style="color:#666;font-weight:normal;">- {len(sub)} '
+                    f'clinic{"" if len(sub) == 1 else "s"} to call</span></h3>')
         if not sub:
-            html.append('<p style="color:#666;margin:0 0 12px 0;">No clinics this week.</p>')
+            html.append('<p style="color:#666;margin:0 0 12px 0;">None this week.</p>')
             continue
-        html.append('<table cellspacing="0" cellpadding="4" '
+        html.append('<table cellspacing="0" cellpadding="7" '
                     'style="border-collapse:collapse;border:1px solid #d9dde3;'
-                    'font-family:Calibri,Arial,sans-serif;font-size:12px;">')
+                    'font-family:Calibri,Arial,sans-serif;font-size:13px;">')
         html.append(
-            '<tr style="background:#5f93a3;color:#0e2a33;">'
-            "<th align='left'>Clinic</th><th align='left'>Needs</th>"
-            "<th align='left'>Phone</th><th align='left'>Location</th>"
-            "<th align='left'>Expiration</th><th align='left'>Waiting (days)</th>"
-            "<th align='left'>Last Call</th><th align='left'>Calls 90d</th></tr>"
+            '<tr style="background:#5f93a3;color:#0e2a33;text-align:left;">'
+            "<th>Clinic</th><th>Needs</th><th>Status</th>"
+            "<th>Phone</th><th>Location</th><th>Last contacted</th></tr>"
         )
         for r in sub:
-            name = _htmlmod.escape(r["Clinic"])
             clinic_cell = (f'<a href="{r["HubSpot"]}" style="color:#0b6bcb;'
-                           f'text-decoration:none">{name}</a>')
+                           f'text-decoration:none">{_htmlmod.escape(r["Clinic"])}</a>')
             if r["OPD Match"] != "Verified":
-                clinic_cell += '<span style="color:#b26a00"> (unverified - confirm in OPD)</span>'
-            exp_lbl, urg = _exp_status(r["Expiration Date"], today)
-            exp_color = {"expired": "#b3261e", "soon": "#b26a00"}.get(urg)
-            exp_cell = (f'<span style="color:{exp_color};font-weight:700">{_htmlmod.escape(exp_lbl)}</span>'
-                        if exp_color else _htmlmod.escape(exp_lbl))
-            phone_esc = _htmlmod.escape(r["Phone"])
-            loc_esc = _htmlmod.escape(f'{r["City"]}, {r["State"]}')
-            calls90 = r[f"Calls in Last {CALL_WINDOW_DAYS}d"]
+                clinic_cell += '<span style="color:#b26a00"> (confirm in OPD)</span>'
+            status, urg = _status_label(r["Expiration Date"], r["Training Sold"], today)
+            scolor = {"expired": "#b3261e", "soon": "#b26a00"}.get(urg)
+            status_cell = (f'<b style="color:{scolor}">{_htmlmod.escape(status)}</b>'
+                           if scolor else _htmlmod.escape(status or "Waiting"))
+            needs = _htmlmod.escape(_needs_label.get(r["Needs Training"], r["Needs Training"]))
+            phone = _htmlmod.escape(r["Phone"] or "-")
+            loc = _htmlmod.escape(f'{r["City"]}, {r["State"]}'.strip(", "))
+            last = _htmlmod.escape(_last_contact_label(r["Last Call"]))
             html.append(
                 '<tr style="border-top:1px solid #d9dde3;">'
-                f'<td>{clinic_cell}</td>'
-                f'<td>{r["Needs Training"]}</td>'
-                f'<td>{phone_esc}</td>'
-                f'<td>{loc_esc}</td>'
-                f'<td>{exp_cell}</td>'
-                f'<td>{r["Days Waiting"]}</td>'
-                f'<td>{r["Last Call"]}</td>'
-                f'<td>{calls90}</td>'
-                "</tr>"
+                f'<td>{clinic_cell}</td><td>{needs}</td><td>{status_cell}</td>'
+                f'<td>{phone}</td><td>{loc}</td><td>{last}</td></tr>'
             )
         html.append("</table>")
-    html += ["<p>Full detail in the attached spreadsheet, one tab per trainer "
-             "(install date, training-email history, OPD cert counts, and a HubSpot link).</p>",
+    html += ["<p style='margin-top:14px'>Full detail (install dates, certification counts, and "
+             "call history) is in the attached spreadsheet, one tab per trainer.</p>",
              "</body></html>"]
     html_body = "\n".join(html)
 
