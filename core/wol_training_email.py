@@ -1031,7 +1031,9 @@ def build_bucketed_outreach(today=None) -> dict:
         if fund_raw > e["fund"]:
             e["fund"], e["deal_id"] = fund_raw, did
 
-    # Membership: any remaining modality > 0. Bucket by days since install.
+    # Membership: any remaining modality > 0. Bucket by days since install. (No OPD
+    # cross-check here by design — the recurring send stays fast and HubSpot-only; the
+    # OPD confirmation of blank-remaining fields is a separate one-off hygiene report.)
     members = [e for e in by_company.values() if (e["rem_a"] + e["rem_c"] + e["rem_g"]) > 0]
     for e in members:
         e["days_since_install"] = (today - e["install_dt"]).days
