@@ -856,3 +856,389 @@ def build_email() -> dict:
         "trainer_count": sum(1 for t, n in trainer_counts.items() if n > 0),
         "opd_error": opd_error,
     }
+
+
+# ============================================================================
+# Bucketed training outreach (install-date model)
+# ----------------------------------------------------------------------------
+# A different approach from build_email() above: no OPD cross-check. A clinic is
+# owed training when any of the three trainer-maintained "Training Remaining from
+# Order" fields is > 0 (Abdominal / Cardiac / Global FAST). Each such clinic is
+# then bucketed by days since install:
+#   - within 90 days of install -> ACTIVE: the assigned sonographer's window to
+#     schedule (email to the training team).
+#   - past 90 days              -> EXPIRED: Steph's to resell at a discount
+#     (separate email to Steph).
+# The 90-day line is measured from us_install_date__c to today.
+# ============================================================================
+REMAINING_GFAST = "training_remaining_from_order_global_fast"
+POST_INSTALL_WINDOW_DAYS = 90
+STEPH_RECIPIENT = "Stephanie Mendoza <smendoza@oncurapartners.com>"
+# Both training outreach emails (active + resale) are Cc'd to the training manager
+# and Alexander for oversight.
+OUTREACH_CC = [
+    "Melissa Colpitts <mcolpitts@oncurapartners.com>",
+    "Alexander Jordain <ajordain@oncurapartners.com>",
+]
+
+
+def _owed_modality(allot, rem):
+    """(owed_count, needs_hubspot_update) for one modality.
+
+    rem is the 'Training Remaining from Order' value (None when the field is blank).
+    - rem filled: owed = rem (0 = done); no data-quality flag.
+    - rem blank but the modality WAS sold (allotment > 0): treat the full allotment
+      as still owed and flag it, since the trainer has not recorded a remaining count.
+    - nothing sold and rem blank: not owed."""
+    if rem is not None:
+        return (rem if rem > 0 else 0, False)
+    if allot > 0:
+        return (allot, True)
+    return (0, False)
+
+
+def _outreach_needs(a, c, g, nua=False, nuc=False, nug=False):
+    """Human 'Needs' string from remaining counts, e.g. 'Cardiac (2), Global FAST (1)'.
+    A modality inferred from a blank remaining field is tagged '(Needs HubSpot Update)'."""
+    def _lab(name, n, nu):
+        return f"{name} ({n}{', Needs HubSpot Update' if nu else ''})"
+    parts = []
+    if a > 0:
+        parts.append(_lab("Abdominal", a, nua))
+    if c > 0:
+        parts.append(_lab("Cardiac", c, nuc))
+    if g > 0:
+        parts.append(_lab("Global FAST", g, nug))
+    return ", ".join(parts)
+
+
+def _pack_email(subject, to, cc, plain_body, html_body, xlsx_bytes, xlsx_filename, today):
+    """Assemble one email payload (+ .eml) matching build_email()'s contract."""
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    if _FROM:
+        msg["From"] = _FROM
+    msg["To"] = ", ".join(to) if isinstance(to, (list, tuple)) else str(to)
+    if cc:
+        msg["Cc"] = ", ".join(cc) if isinstance(cc, (list, tuple)) else str(cc)
+    msg.set_content(plain_body)
+    msg.add_alternative(html_body, subtype="html")
+    if xlsx_bytes:
+        msg.add_attachment(
+            xlsx_bytes, maintype="application",
+            subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=xlsx_filename)
+    return {
+        "subject": subject, "to": list(to) if isinstance(to, (list, tuple)) else [to],
+        "cc": list(cc) if isinstance(cc, (list, tuple)) else ([cc] if cc else []),
+        "plain": plain_body, "html": html_body,
+        "xlsx_bytes": xlsx_bytes, "xlsx_filename": xlsx_filename,
+        "eml_bytes": bytes(msg),
+        "eml_filename": xlsx_filename.replace(".xlsx", ".eml"),
+    }
+
+
+def build_bucketed_outreach(today=None) -> dict:
+    """Build the two-bucket training outreach. Returns {'active': payload, 'expired':
+    payload, 'active_count', 'expired_count'} where each payload has subject/to/cc/
+    plain/html/xlsx/eml, matching build_email()'s field contract."""
+    if not TOKEN:
+        raise RuntimeError("HUBSPOT_TOKEN is not set in Streamlit secrets or env.")
+    s = requests.Session()
+    s.headers.update(H)
+    today = today or _dt.datetime.now().date()
+
+    props = ["dealname", "funding_received_date_stamp", "migrated_00nus000001e6ghma0",
+             "abdominal_trainings", "cardiac_trainings", "global_fast_training",
+             REMAINING_ABD, REMAINING_CARD, REMAINING_GFAST]
+    deals, after = [], None
+    while True:
+        body = {"filterGroups": [{"filters": [{"propertyName": "funding_received_date_stamp",
+                                               "operator": "HAS_PROPERTY"}]}],
+                "properties": props,
+                "sorts": [{"propertyName": "funding_received_date_stamp", "direction": "DESCENDING"}],
+                "limit": 200}
+        if after:
+            body["after"] = after
+        r = s.post("https://api.hubapi.com/crm/v3/objects/deals/search", json=body, timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        deals.extend(data.get("results", []))
+        after = data.get("paging", {}).get("next", {}).get("after")
+        if not after:
+            break
+        time.sleep(0.05)
+
+    deal_ids = [d["id"] for d in deals]
+    deal_by_id = {d["id"]: d.get("properties", {}) for d in deals}
+
+    # Deal -> primary company (prefer the HubSpot-primary label, else first).
+    deal_to_co = {}
+    for batch in _chunks(deal_ids, 100):
+        r = s.post("https://api.hubapi.com/crm/v4/associations/deals/companies/batch/read",
+                   json={"inputs": [{"id": d} for d in batch]}, timeout=30)
+        r.raise_for_status()
+        for row in r.json().get("results", []):
+            tos = row.get("to", [])
+            primary = next((t for t in tos
+                            if any("primary" in str(at.get("label", "")).lower()
+                                   for at in t.get("associationTypes", []))), None)
+            chosen = primary or (tos[0] if tos else None)
+            if chosen:
+                deal_to_co[row["from"]["id"]] = str(chosen["toObjectId"])
+        time.sleep(0.05)
+
+    companies = {}
+    for batch in _chunks(list(set(deal_to_co.values())), 100):
+        r = s.post("https://api.hubapi.com/crm/v3/objects/companies/batch/read",
+                   json={"properties": CO_PROPS, "inputs": [{"id": c} for c in batch]}, timeout=30)
+        r.raise_for_status()
+        for row in r.json().get("results", []):
+            companies[row["id"]] = row.get("properties", {})
+        time.sleep(0.05)
+
+    # ---- Aggregate to one record per company: sum remaining across its deals. ----
+    by_company: dict = {}
+    for did in deal_ids:
+        dp = deal_by_id.get(did, {})
+        co_id = deal_to_co.get(did)
+        if not co_id:
+            continue
+        co = companies.get(co_id, {})
+        install_str = co.get("us_install_date__c")
+        if not install_str:
+            continue
+        try:
+            install_dt = _dt.date.fromisoformat(install_str[:10])
+        except (ValueError, TypeError):
+            continue
+        if _norm(co.get("name")).startswith(EXCLUDE_PREFIX):
+            continue
+        oa, nua = _owed_modality(_num(dp.get("abdominal_trainings")), _num_opt(dp.get(REMAINING_ABD)))
+        oc, nuc = _owed_modality(_num(dp.get("cardiac_trainings")), _num_opt(dp.get(REMAINING_CARD)))
+        og, nug = _owed_modality(_num(dp.get("global_fast_training")), _num_opt(dp.get(REMAINING_GFAST)))
+        fund_raw = (dp.get("funding_received_date_stamp") or "")[:10]
+        e = by_company.setdefault(co_id, {
+            "co": co, "co_id": co_id, "install_dt": install_dt,
+            "rem_a": 0, "rem_c": 0, "rem_g": 0,
+            "nu_a": False, "nu_c": False, "nu_g": False, "deal_id": did, "fund": fund_raw})
+        e["rem_a"] += oa
+        e["rem_c"] += oc
+        e["rem_g"] += og
+        e["nu_a"] = e["nu_a"] or nua
+        e["nu_c"] = e["nu_c"] or nuc
+        e["nu_g"] = e["nu_g"] or nug
+        if fund_raw > e["fund"]:
+            e["fund"], e["deal_id"] = fund_raw, did
+
+    # Membership: any remaining modality > 0. Bucket by days since install.
+    members = [e for e in by_company.values() if (e["rem_a"] + e["rem_c"] + e["rem_g"]) > 0]
+    for e in members:
+        e["days_since_install"] = (today - e["install_dt"]).days
+        e["active"] = e["days_since_install"] <= POST_INSTALL_WINDOW_DAYS
+        e["days_left"] = POST_INSTALL_WINDOW_DAYS - e["days_since_install"]
+
+    # Resolve sonographer owner IDs to names.
+    owner_ids = {e["co"].get("test_training_sonographer") for e in members
+                 if e["co"].get("test_training_sonographer")}
+    owner_names = {}
+    for oid in owner_ids:
+        if not oid:
+            continue
+        rr = s.get(f"https://api.hubapi.com/crm/v3/owners/{oid}", timeout=15)
+        if rr.status_code == 200:
+            p = rr.json()
+            owner_names[str(oid)] = (f"{p.get('firstName','')} {p.get('lastName','')}".strip()
+                                     or p.get("email", ""))
+        time.sleep(0.03)
+
+    # Last-contact enrichment (calls in the last 90 days), members only.
+    company_calls = {}
+    window_ms = int((_dt.datetime.now() - _dt.timedelta(days=CALL_WINDOW_DAYS)).timestamp() * 1000)
+    for e in members:
+        co_id = e["co_id"]
+        if co_id in company_calls:
+            continue
+        cd = []
+        try:
+            r = s.get(f"https://api.hubapi.com/crm/v4/objects/companies/{co_id}/associations/calls",
+                      params={"limit": 500}, timeout=30)
+            r.raise_for_status()
+            call_ids = [str(x["toObjectId"]) for x in r.json().get("results", [])]
+            for batch in _chunks(call_ids, 100):
+                rr = s.post("https://api.hubapi.com/crm/v3/objects/calls/batch/read",
+                            json={"properties": ["hs_timestamp"], "inputs": [{"id": ci} for ci in batch]},
+                            timeout=30)
+                rr.raise_for_status()
+                for row in rr.json().get("results", []):
+                    ts_raw = row.get("properties", {}).get("hs_timestamp")
+                    if not ts_raw:
+                        continue
+                    try:
+                        ts = _dt.datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+                    except (ValueError, AttributeError):
+                        continue
+                    if ts.timestamp() * 1000 >= window_ms:
+                        cd.append(ts)
+        except Exception:  # noqa: BLE001 - call activity is optional
+            cd = []
+        company_calls[co_id] = cd
+        time.sleep(0.03)
+
+    def _row(e):
+        co = e["co"]
+        tid = co.get("test_training_sonographer")
+        trainer = owner_names.get(str(tid) if tid else "", "") or "Unassigned"
+        last_call = max(company_calls.get(e["co_id"], []), default=None)
+        installed = e["days_since_install"] >= 0
+        return {
+            "Clinic": _display_name(co.get("name")),
+            "Sonographer": trainer,
+            "Needs": _outreach_needs(e["rem_a"], e["rem_c"], e["rem_g"],
+                                     e["nu_a"], e["nu_c"], e["nu_g"]),
+            "Abd Remaining": e["rem_a"], "Card Remaining": e["rem_c"], "GFAST Remaining": e["rem_g"],
+            "Phone": co.get("phone") or "",
+            "City": (co.get("city") or "").title(), "State": co.get("state") or "",
+            "Install Date": e["install_dt"].isoformat(),
+            "Installed": "Yes" if installed else "Not Installed",
+            "Days Since Install": e["days_since_install"],
+            "Days Left in Window": e["days_left"] if e["active"] else "",
+            "Days Past Window": "" if e["active"] else -e["days_left"],
+            "Last Contacted": last_call.strftime("%Y-%m-%d") if last_call else "",
+            "HubSpot": f"https://app.hubspot.com/contacts/{HUBSPOT_PORTAL_ID}/company/{e['co_id']}",
+        }
+
+    active_rows = [_row(e) for e in members if e["active"]]
+    expired_rows = [_row(e) for e in members if not e["active"]]
+    active_rows.sort(key=lambda r: (r["Sonographer"] == "Unassigned", r["Sonographer"],
+                                    r["Days Left in Window"]))
+    expired_rows.sort(key=lambda r: r["Days Since Install"])  # freshest expirations first
+
+    active = _build_active_email(active_rows, today)
+    expired = _build_expired_email(expired_rows, today)
+    return {"active": active, "expired": expired,
+            "active_count": len(active_rows), "expired_count": len(expired_rows)}
+
+
+def _build_active_email(rows, today):
+    """Active bucket -> training team, grouped by sonographer, with a days-left countdown."""
+    by_trainer = Counter(r["Sonographer"] for r in rows)
+    subject = (f"Training to schedule - {len(rows)} clinic"
+               f"{'' if len(rows) == 1 else 's'} in the 90-day window ({today.isoformat()})")
+
+    plain = ["Training Team,", "",
+             f"These {len(rows)} clinics are still inside their 90-day post-install training "
+             "window. Schedule the Training before the window closes. Once a clinic passes 90 "
+             "days from install it moves to Stephanie for discounted resale. Days left is the "
+             "countdown to that cutoff.", ""]
+    for trainer in sorted(by_trainer, key=lambda t: (t == "Unassigned", t)):
+        sub = [r for r in rows if r["Sonographer"] == trainer]
+        plain.append(f"=== {trainer} - {len(sub)} clinic{'' if len(sub) == 1 else 's'} ===")
+        for r in sub:
+            loc = f"{r['City']}, {r['State']}".strip(", ")
+            window = ("Not Installed" if r["Installed"] == "Not Installed"
+                      else f"{r['Days Left in Window']} days left")
+            plain.append(f"  - {r['Clinic']} ({loc})")
+            plain.append(f"      Needs {r['Needs']}  |  {window}  |  "
+                         f"Call {r['Phone'] or 'no phone on file'}  |  "
+                         f"Last contacted {_last_contact_label(r['Last Contacted'])}")
+        plain.append("")
+    plain_body = "\n".join(plain)
+
+    html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;color:#1f2733">',
+            "<p>Training Team,</p>",
+            f"<p>These <b>{len(rows)}</b> clinics are still inside their 90-day post-install "
+            "training window. Schedule the Training before the window closes. Once a clinic "
+            "passes 90 days from install it moves to Stephanie for discounted resale. "
+            "<b>Days left</b> is the countdown to that cutoff.</p>"]
+    for trainer in sorted(by_trainer, key=lambda t: (t == "Unassigned", t)):
+        sub = [r for r in rows if r["Sonographer"] == trainer]
+        html.append(f'<h3 style="margin:18px 0 4px 0;">{_htmlmod.escape(trainer)} '
+                    f'<span style="color:#666;font-weight:normal;">- {len(sub)} '
+                    f'clinic{"" if len(sub) == 1 else "s"}</span></h3>')
+        html.append('<table cellspacing="0" cellpadding="7" style="border-collapse:collapse;'
+                    'border:1px solid #d9dde3;font-family:Calibri,Arial,sans-serif;font-size:13px;">')
+        html.append('<tr style="background:#5f93a3;color:#0e2a33;text-align:left;">'
+                    "<th>Clinic</th><th>Needs</th><th>Days left</th><th>Phone</th>"
+                    "<th>Location</th><th>Last contacted</th></tr>")
+        for r in sub:
+            clinic = (f'<a href="{r["HubSpot"]}" style="color:#0b6bcb;text-decoration:none">'
+                      f'{_htmlmod.escape(r["Clinic"])}</a>')
+            if r["Installed"] == "Not Installed":
+                dcell = '<span style="color:#666">Not Installed</span>'
+            else:
+                dl = r["Days Left in Window"]
+                dcolor = "#b3261e" if dl <= 14 else ("#b26a00" if dl <= 30 else None)
+                dcell = (f'<b style="color:{dcolor}">{dl} days</b>' if dcolor else f"{dl} days")
+            loc = _htmlmod.escape(f'{r["City"]}, {r["State"]}'.strip(", "))
+            html.append('<tr style="border-top:1px solid #d9dde3;">'
+                        f'<td>{clinic}</td><td>{_htmlmod.escape(r["Needs"])}</td><td>{dcell}</td>'
+                        f'<td>{_htmlmod.escape(r["Phone"] or "-")}</td><td>{loc}</td>'
+                        f'<td>{_htmlmod.escape(_last_contact_label(r["Last Contacted"]))}</td></tr>')
+        html.append("</table>")
+    html += ["<p style='margin-top:14px'>Full detail is in the attached spreadsheet.</p>",
+             "</body></html>"]
+    html_body = "\n".join(html)
+
+    xlsx_bytes = _outreach_xlsx(rows, "Active (in window)")
+    return _pack_email(subject, list(_TO), list(OUTREACH_CC), plain_body, html_body,
+                       xlsx_bytes, f"Training_Active_{today.isoformat()}.xlsx", today)
+
+
+def _build_expired_email(rows, today):
+    """Expired bucket -> Steph, flat list, freshest expirations first, resale framing."""
+    subject = (f"Resale opportunities - {len(rows)} clinic"
+               f"{'' if len(rows) == 1 else 's'} past the training window ({today.isoformat()})")
+
+    plain = ["Steph,", "",
+             f"These {len(rows)} clinics passed their 90-day post-install training window with "
+             "training still unused, so they are yours to resell at a discount. Freshest "
+             "expirations are listed first. 'Days past window' is how long ago the 90 days "
+             "lapsed.", ""]
+    for r in rows:
+        loc = f"{r['City']}, {r['State']}".strip(", ")
+        plain.append(f"  - {r['Clinic']} ({loc})")
+        plain.append(f"      Available: {r['Needs']}  |  {r['Days Past Window']} days past window  |  "
+                     f"Installed {r['Install Date']}  |  Trainer {r['Sonographer']}  |  "
+                     f"Call {r['Phone'] or 'no phone on file'}")
+    plain.append("")
+    plain_body = "\n".join(plain)
+
+    html = ['<html><body style="font-family:Calibri,Arial,sans-serif;font-size:13px;color:#1f2733">',
+            "<p>Steph,</p>",
+            f"<p>These <b>{len(rows)}</b> clinics passed their 90-day post-install training window "
+            "with training still unused, so they are yours to resell at a discount. Freshest "
+            "expirations are first; <b>Days past window</b> is how long ago the 90 days lapsed.</p>",
+            '<table cellspacing="0" cellpadding="7" style="border-collapse:collapse;'
+            'border:1px solid #d9dde3;font-family:Calibri,Arial,sans-serif;font-size:13px;">',
+            '<tr style="background:#5f93a3;color:#0e2a33;text-align:left;">'
+            "<th>Clinic</th><th>Available</th><th>Days past window</th><th>Installed</th>"
+            "<th>Trainer</th><th>Phone</th><th>Location</th></tr>"]
+    for r in rows:
+        clinic = (f'<a href="{r["HubSpot"]}" style="color:#0b6bcb;text-decoration:none">'
+                  f'{_htmlmod.escape(r["Clinic"])}</a>')
+        loc = _htmlmod.escape(f'{r["City"]}, {r["State"]}'.strip(", "))
+        html.append('<tr style="border-top:1px solid #d9dde3;">'
+                    f'<td>{clinic}</td><td>{_htmlmod.escape(r["Needs"])}</td>'
+                    f'<td>{r["Days Past Window"]}</td><td>{_htmlmod.escape(r["Install Date"])}</td>'
+                    f'<td>{_htmlmod.escape(r["Sonographer"])}</td>'
+                    f'<td>{_htmlmod.escape(r["Phone"] or "-")}</td><td>{loc}</td></tr>')
+    html += ["</table>", "<p style='margin-top:14px'>Full detail is in the attached spreadsheet.</p>",
+             "</body></html>"]
+    html_body = "\n".join(html)
+
+    xlsx_bytes = _outreach_xlsx(rows, "Expired (resale)")
+    return _pack_email(subject, [STEPH_RECIPIENT], list(OUTREACH_CC), plain_body, html_body,
+                       xlsx_bytes, f"Training_Resale_{today.isoformat()}.xlsx", today)
+
+
+def _outreach_xlsx(rows, sheet_name):
+    cols = ["Clinic", "Sonographer", "Needs", "Abd Remaining", "Card Remaining",
+            "GFAST Remaining", "Install Date", "Installed", "Days Since Install",
+            "Days Left in Window", "Days Past Window", "Phone", "City", "State",
+            "Last Contacted", "HubSpot"]
+    df = pd.DataFrame(rows, columns=cols) if rows else pd.DataFrame(columns=cols)
+    bio = io.BytesIO()
+    with pd.ExcelWriter(bio, engine="openpyxl") as w:
+        df.to_excel(w, sheet_name=sheet_name[:31], index=False)
+    return bio.getvalue()
