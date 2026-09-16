@@ -367,6 +367,14 @@
       "uploaded_at": "2026-09-16T18:13:00",
       "row_count": 4,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-09-09"
+    },
+    {
+      "sha256": "831f26656441bc35f7a603993a5de8169e87b01984ce93b61ce52e1a262d5b53",
+      "filename": "Remittance Detail Downloadable (7).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-09-16T18:16:31",
+      "row_count": 6,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-09-16"
     }
   ],
   "payments": [
@@ -12447,6 +12455,66 @@
       "payment_date": "2026-09-09",
       "amount": 935.08,
       "recorded_at": "2026-09-16T18:13:00"
+    },
+    {
+      "fingerprint": "1176af4a82cd21cb54c5e8fae6878612949e3de260a0e7c4ea6a72b3d43d306a",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2013338-000",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-09-16",
+      "amount": 896.98,
+      "recorded_at": "2026-09-16T18:16:31"
+    },
+    {
+      "fingerprint": "14b3b30d288dc7cb5eee1ce85e9cef98adf288ae747e1761e8628119c36d5212",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "022-2012503-000",
+      "qb_customer": "St. Michael Veterinary Clinic",
+      "payment_date": "2026-09-16",
+      "amount": 870.14,
+      "recorded_at": "2026-09-16T18:16:31"
+    },
+    {
+      "fingerprint": "734b1603e79d70c5e65cf9ffa9c62ffece3307440a15ac93f67651b29a30798b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42723775",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "2026-09-16",
+      "amount": 921.84,
+      "recorded_at": "2026-09-16T18:16:31"
+    },
+    {
+      "fingerprint": "7be8358989bbbb860b06ab6a3872759b25a5e5415b30059719d28df43288f6be",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729724",
+      "qb_customer": "Ridgeview Animal Clinic",
+      "payment_date": "2026-09-16",
+      "amount": 920.8,
+      "recorded_at": "2026-09-16T18:16:31"
+    },
+    {
+      "fingerprint": "0b62d7d5baf626880273c83cd4fd5a86569da71ae6ad2bfa9256c7c65a16e5fd",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42995970",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-09-16",
+      "amount": 939.08,
+      "recorded_at": "2026-09-16T18:16:31"
+    },
+    {
+      "fingerprint": "27c527e8b60cf1f05b710e194c385134993e9946128ad17e6073a27565acd915",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42995989",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-09-16",
+      "amount": 912.68,
+      "recorded_at": "2026-09-16T18:16:31"
     }
   ]
 }
