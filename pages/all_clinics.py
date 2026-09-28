@@ -101,15 +101,23 @@ if _editable:
         #    FLEX QBO names still live in flex_master (edited on the FLEX Clinic Roster).
         _new_qb = list(_edited["Clinic (QBO)"])
         _changes = [(o, n) for o, n in zip(_orig_qb, _new_qb) if str(n).strip() != str(o).strip()]
-        _updated_nm, _n_clinics, _n_legals, _skipped = clinic_roster.apply_qb_edits(_nm, _changes)
         _flex_names = {" ".join(str(c.get("qb_name") or c.get("clinic_name") or "").lower().split())
                        for c in _fm.get("clinics", [])}
-        _orphan_changes = [(o, n) for o, n in _skipped
-                           if " ".join(str(o).lower().split()) not in _flex_names]
-        _flex_changes = [(o, n) for o, n in _skipped
-                         if " ".join(str(o).lower().split()) in _flex_names]
+
+        def _is_flex_name(o):
+            return " ".join(str(o).lower().split()) in _flex_names
+
+        # FLEX QBO names live in flex_master — rename them on the FLEX Clinic Roster, not here.
+        _flex_changes = [(o, n) for o, n in _changes if _is_flex_name(o)]
+        # Every NON-FLEX rename: repoint its name_map legals AND move its ledger payments to
+        # the new customer, so the rename fully takes. Previously payments were only moved for
+        # orphans (no legal mapping); a scan clinic that HAS a legal (e.g. Converse) had its
+        # name_map repointed but its payments stranded under the old name, which reappeared as
+        # a "Needs review" row and made the rename look like it wouldn't save.
+        _nonflex_changes = [(o, n) for o, n in _changes if not _is_flex_name(o)]
+        _updated_nm, _n_clinics, _n_legals, _skipped = clinic_roster.apply_qb_edits(_nm, _nonflex_changes)
         _updated_pp, _n_pay, _reassigned = clinic_roster.reassign_payments(
-            loaders.processed_payments(), _orphan_changes)
+            loaders.processed_payments(), _nonflex_changes)
 
         _did = False
         _msgs = []
@@ -135,9 +143,9 @@ if _editable:
         if _n_pay:
             _ok, _info = store.save_json(
                 "processed_payments.json", _updated_pp,
-                f"All Clinic Roster: reassign {_n_pay} orphan payment(s) to corrected customer")
+                f"All Clinic Roster: reassign {_n_pay} payment(s) to renamed customer")
             _did = True
-            _msgs.append((_ok, f"reassigned {_n_pay} orphan payment(s) across {len(_reassigned)} clinic(s) "
+            _msgs.append((_ok, f"reassigned {_n_pay} payment(s) across {len(_reassigned)} clinic(s) "
                                f"({', '.join(_reassigned)}). Still reclass these in QuickBooks. {_info}"))
         if _flex_changes:
             st.warning("FLEX clinic QBO names live in flex_master — change them on the FLEX Clinic "
