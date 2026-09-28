@@ -6929,11 +6929,12 @@
       "company": "NewLane",
       "kind": "scan",
       "contract": "APP0000132022",
-      "qb_customer": "Converse Veterinary Services, LLC dba Advanced Veterinary Care of Greenwood Village",
+      "qb_customer": "Advanced Veterinary Care of Greenwood Village",
       "payment_date": "2026-07-07",
       "applies_to": "2026-06",
       "amount": 1600.0,
-      "recorded_at": "2026-07-12T21:03:58"
+      "recorded_at": "2026-07-12T21:03:58",
+      "renamed_from": "Converse Veterinary Services, LLC dba Advanced Veterinary Care of Greenwood Village"
     },
     {
       "fingerprint": "3cdc1f59b97261ed8cd67a81067e3407733b9240fd38fa00fe71c66afba85c93",
@@ -10334,11 +10335,12 @@
       "company": "NewLane",
       "kind": "scan",
       "contract": "APP0000132022",
-      "qb_customer": "Converse Veterinary Services, LLC dba Advanced Veterinary Care of Greenwood Village",
+      "qb_customer": "Advanced Veterinary Care of Greenwood Village",
       "payment_date": "2026-08-04",
       "applies_to": "2026-07",
       "amount": 1600.0,
-      "recorded_at": "2026-09-03T15:29:02"
+      "recorded_at": "2026-09-03T15:29:02",
+      "renamed_from": "Converse Veterinary Services, LLC dba Advanced Veterinary Care of Greenwood Village"
     },
     {
       "fingerprint": "db17b176cc250a6c5688ca70465338127637e35af9e77dbbfa437a81e55b82c8",
@@ -12237,11 +12239,12 @@
       "company": "NewLane",
       "kind": "scan",
       "contract": "APP0000132022",
-      "qb_customer": "Converse Veterinary Services, LLC dba Advanced Veterinary Care of Greenwood Village",
+      "qb_customer": "Advanced Veterinary Care of Greenwood Village",
       "payment_date": "2026-09-10",
       "applies_to": "2026-09",
       "amount": 1600.0,
-      "recorded_at": "2026-09-16T18:00:56"
+      "recorded_at": "2026-09-16T18:00:56",
+      "renamed_from": "Converse Veterinary Services, LLC dba Advanced Veterinary Care of Greenwood Village"
     },
     {
       "fingerprint": "6c360093c8c72b000cb5ce756954a216c630fb3fd2c255f572d01c08c6c9d794",
