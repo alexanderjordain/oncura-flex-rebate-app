@@ -335,14 +335,13 @@ _PTO_TX = "#9a6b00"    # PTO note text
 
 
 def _legend_html(scheds: dict) -> str:
-    """Small reference table: who is FT/PT, which days, shift, and their daily goal.
+    """Small reference table: who is FT/PT, which days they work, and their shift.
     Confirmed schedules are marked; the rest are inferred from recent activity."""
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
             + _cell("Status", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Shift", _HEAD_BG, _HEAD_TX, "center", True)
-            + _cell("Daily goal", _HEAD_BG, _HEAD_TX, "center", True)
             + "</tr>")
     body = ""
     for s in SONOGRAPHERS:
@@ -353,16 +352,15 @@ def _legend_html(scheds: dict) -> str:
                  + _cell(sc["type"])
                  + _cell(_html.escape(sc["days_label"]))
                  + _cell(_html.escape(sc["shift"]))
-                 + _cell(sc["daily_goal"])
                  + "</tr>")
-    note = ('<tr><td colspan="5" style="color:#6b7480;padding:5px 11px;'
+    note = ('<tr><td colspan="4" style="color:#6b7480;padding:5px 11px;'
             f'{_FONT};font-size:10px">* schedule inferred from recent submitted activity; '
             'all others confirmed. Weekly goal is '
             f'{WEEKLY_GOAL}/week for full-time.</td></tr>')
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
-        f'{_bar("Sonographer Schedules", 15, 5)}'
+        f'{_bar("Sonographer Schedules", 15, 4)}'
         f'{head}{body}{note}</table>'
     )
 
