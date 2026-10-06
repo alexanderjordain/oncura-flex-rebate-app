@@ -33,14 +33,14 @@ SONOGRAPHERS = [
 ]
 _SSET = {s.lower(): s for s in SONOGRAPHERS}
 
-# Recipients (as "Name <email>"). Note: Elyce Thomas is a report column but not
-# on the distribution list — mirrors the current process.
+# Recipients (as "Name <email>").
 TO_RECIPIENTS = [
     ("Melissa Colpitts", "mcolpitts@oncurapartners.com"),
     ("Sandra Paris", "sparis@oncurapartners.com"),
     ("Becky Tiner", "btiner@oncurapartners.com"),
     ("Chelsea Parsons", "cparsons@oncurapartners.com"),
     ("Denice Rodriguez", "DeniceRodriguez@oncurapartners.com"),
+    ("Elyce Thomas", "ethomas@oncurapartners.com"),
     ("Francisco Zuniga", "francisco@oncurapartners.com"),
     ("Katie Heuer", "kheuer@oncurapartners.com"),
     ("Lanis Davis", "ldavis@oncurapartners.com"),
