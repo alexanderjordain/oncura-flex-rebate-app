@@ -2615,6 +2615,49 @@
       ],
       "note": "0 new payment(s) recorded; 23 already in ledger",
       "entry_hash": "1a19bd3ac67916344976629f14a741565a4c235f85f3c23bb1aabcf588b098db"
+    },
+    {
+      "id": "686ede78-b9f0-4512-8542-371d8bc653a8",
+      "timestamp": "2026-10-06T17:41:08",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 9,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-09-03",
+        "applies_to": "2026-09",
+        "invoice_date": "2026-09-03",
+        "start_invoice_no": 50000,
+        "skipped_already_seen": 23
+      },
+      "source_file": {
+        "name": "Copy of Copy of Consumable_2026-09-03_080000.xlsx",
+        "sha256": "3a75b862cf59f7c9c1c10ea7cc001b6259b52305354ff923241925c8e05bbd09",
+        "size_bytes": 11172
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "4f9e09bf25ef312aa5d5d140e7c0d4bcffda8485b63e54e605999cb59682e9ac",
+          "row_count": 1,
+          "total": 799.05
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "1e572f82ca2f7824175d2146f2ad1ff59b4aae930b0bfafb84597937f220f6b2",
+          "row_count": 22,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "8e6a94418d920eb911dc3d6d5d2a868fb59efcda0a8b9d0874ef28066c7707cb",
+          "row_count": 22,
+          "total": 15545.0
+        }
+      ],
+      "note": "0 new payment(s) recorded; 23 already in ledger",
+      "entry_hash": "8730b385488f9399502ec4528a0ca32bff125bad5cddb7b28cfd641b68ddb550"
     }
   ]
 }
