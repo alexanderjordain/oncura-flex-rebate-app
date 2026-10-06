@@ -375,6 +375,14 @@
       "uploaded_at": "2026-09-16T18:16:31",
       "row_count": 6,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-09-16"
+    },
+    {
+      "sha256": "eef2601044d615c49559334b9599556acd259a2170873abf6a7ec9dca5f44864",
+      "filename": "Remittance Detail Downloadable (2).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-10-06T17:22:15",
+      "row_count": 7,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-09-30"
     }
   ],
   "payments": [
@@ -12518,6 +12526,76 @@
       "payment_date": "2026-09-16",
       "amount": 912.68,
       "recorded_at": "2026-09-16T18:16:31"
+    },
+    {
+      "fingerprint": "c5d0055f10f7a69c6ab04774f24889c9f3f5f9af49bc02816d2346d5c7e3109d",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42729275",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-09-30",
+      "amount": 935.08,
+      "recorded_at": "2026-10-06T17:22:15"
+    },
+    {
+      "fingerprint": "a50d3d433dff5f81f4aa5961ab904d1939d4592bb1253f067634fa0a4fd40679",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42991475",
+      "qb_customer": "TVC - Foster Veterinary Clinic",
+      "payment_date": "2026-09-30",
+      "amount": 921.84,
+      "recorded_at": "2026-10-06T17:22:15"
+    },
+    {
+      "fingerprint": "94d513781877fa4d1a483092e8c693723762faee84446c5ceb9f1dfad172dea1",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42991940",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "2026-09-30",
+      "amount": 921.84,
+      "recorded_at": "2026-10-06T17:22:15"
+    },
+    {
+      "fingerprint": "816af8d55151d63a2e1234888a8d528bc755bc5527e43b362af2cf353f7d8d39",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42995993",
+      "qb_customer": "Goodfriends Veterinary Clinic",
+      "payment_date": "2026-09-30",
+      "amount": 935.08,
+      "recorded_at": "2026-10-06T17:22:15"
+    },
+    {
+      "fingerprint": "935210bead6e50b95ddbe50ee390f7351e52eb90e399583a3238b21e1f381a89",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42996138",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "payment_date": "2026-09-30",
+      "amount": 921.84,
+      "recorded_at": "2026-10-06T17:22:15"
+    },
+    {
+      "fingerprint": "33492b5cc93536deaa014e963e81ac938c84bf860854aea43bf66927177a7513",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42996138",
+      "qb_customer": "River Trail Animal Hospital - Memorial",
+      "payment_date": "2026-09-30",
+      "amount": 921.83,
+      "recorded_at": "2026-10-06T17:22:15"
+    },
+    {
+      "fingerprint": "15e7821834f765b8731368f774b0c2dcd8ccb53b81720ac367953a86080c873b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42996260",
+      "qb_customer": "Logan County Animal Clinic",
+      "payment_date": "2026-09-30",
+      "amount": 920.8,
+      "recorded_at": "2026-10-06T17:22:15"
     }
   ]
 }
