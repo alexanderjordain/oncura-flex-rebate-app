@@ -378,6 +378,27 @@
       "created_by": "AJ",
       "updated_at": "2026-10-07T02:01:27+00:00",
       "updated_by": "AJ"
+    },
+    "c8186deb-696d-4d7c-999c-47f00bfc7203": {
+      "id": "c8186deb-696d-4d7c-999c-47f00bfc7203",
+      "clinic": "CityVet Whiterock",
+      "qb_customer": "CityVet Whiterock",
+      "billing_month": "2026-09",
+      "quarter_covered": "Q3 2026",
+      "route": "direct",
+      "gross_overage": 918.7,
+      "credit_applied": 0.0,
+      "net_amount": 918.7,
+      "date_billed": "2026-10-07",
+      "invoice_no": "",
+      "paid_at": null,
+      "paid_amount": null,
+      "paid_note": "",
+      "notes": "",
+      "created_at": "2026-10-07T02:01:28+00:00",
+      "created_by": "AJ",
+      "updated_at": "2026-10-07T02:01:28+00:00",
+      "updated_by": "AJ"
     }
   }
 }
