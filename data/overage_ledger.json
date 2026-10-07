@@ -441,6 +441,27 @@
       "created_by": "AJ",
       "updated_at": "2026-10-07T02:01:31+00:00",
       "updated_by": "AJ"
+    },
+    "d486b5b2-94a3-431a-8cff-1aed3dec154d": {
+      "id": "d486b5b2-94a3-431a-8cff-1aed3dec154d",
+      "clinic": "River Trail Animal Hospital - Tulsa",
+      "qb_customer": "River Trail Animal Hospital - Tulsa",
+      "billing_month": "2026-09",
+      "quarter_covered": "Q3 2026",
+      "route": "direct",
+      "gross_overage": 10144.0,
+      "credit_applied": 0.0,
+      "net_amount": 10144.0,
+      "date_billed": "2026-10-07",
+      "invoice_no": "",
+      "paid_at": null,
+      "paid_amount": null,
+      "paid_note": "",
+      "notes": "",
+      "created_at": "2026-10-07T02:01:32+00:00",
+      "created_by": "AJ",
+      "updated_at": "2026-10-07T02:01:32+00:00",
+      "updated_by": "AJ"
     }
   }
 }
