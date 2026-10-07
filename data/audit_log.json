@@ -2718,6 +2718,29 @@
       ],
       "note": "10 new recapture invoice(s); 0 already in ledger",
       "entry_hash": "a843c56c63c9956813ef9f85d9f21e1aef02e1241e6653c90c8cd5c8569e0a72"
+    },
+    {
+      "id": "4d946f39-8148-4f4f-a8c0-7774a45341e9",
+      "timestamp": "2026-10-07T02:01:25",
+      "cycle_type": "stage3_overage",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 9,
+      "params": {
+        "route": "direct_bill",
+        "clinic_count": 8
+      },
+      "source_file": null,
+      "outputs": [
+        {
+          "name": "overage_direct_invoices",
+          "sha256": "907069941d9dbb8abab8a54380690f5604659c9ab5fbcf977037fa7bf30bbf2a",
+          "row_count": 8,
+          "total": 22503.7
+        }
+      ],
+      "note": "Direct-bill overages billed for September 2000",
+      "entry_hash": "082f4646cab58f0a91e7a105924709599533ba27ee975b7efd1874c29b9dc3b0"
     }
   ]
 }
