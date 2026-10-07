@@ -2367,7 +2367,7 @@
       "params": {
         "company": "NewLane",
         "payment_date": "2026-09-10",
-        "applies_to": "2026-09",
+        "applies_to": "2026-08",
         "invoice_date": "2026-09-10",
         "start_invoice_no": 53407,
         "skipped_already_seen": 0
@@ -2398,7 +2398,7 @@
         }
       ],
       "note": "23 new payment(s) recorded; 0 already in ledger",
-      "entry_hash": "a1fd796637cb6bb2e70a04d8cbf9f802e37821f78d0a8758e1a6940342d13bae"
+      "entry_hash": "e85a32e3c8ea545995db5de737b62113a0bc1a3f4c5ae4964254ddec7d5e505c"
     },
     {
       "id": "c572476a-060d-4673-a517-ca3d20b447a4",
@@ -2540,7 +2540,7 @@
       "params": {
         "company": "NewLane",
         "payment_date": "2026-09-03",
-        "applies_to": "2026-09",
+        "applies_to": "2026-08",
         "invoice_date": "2026-09-03",
         "start_invoice_no": 50000,
         "skipped_already_seen": 0
@@ -2571,7 +2571,7 @@
         }
       ],
       "note": "23 new payment(s) recorded; 0 already in ledger",
-      "entry_hash": "81207ef8c83955762968a087843ecf375abee67e9b177db3f0737660d6844fda"
+      "entry_hash": "57c189f30801c5adaaaad51cdbaf644fdc9e1ee435dcf7cd11499f2366752ae4"
     },
     {
       "id": "bc137f95-2073-4845-a7f3-7a98ac6346f5",
@@ -2583,7 +2583,7 @@
       "params": {
         "company": "NewLane",
         "payment_date": "2026-09-03",
-        "applies_to": "2026-09",
+        "applies_to": "2026-08",
         "invoice_date": "2026-09-03",
         "start_invoice_no": 50000,
         "skipped_already_seen": 23
@@ -2614,7 +2614,7 @@
         }
       ],
       "note": "0 new payment(s) recorded; 23 already in ledger",
-      "entry_hash": "1a19bd3ac67916344976629f14a741565a4c235f85f3c23bb1aabcf588b098db"
+      "entry_hash": "d1a77bd975c1395a26680c319dffc681872cb9095895b9184778c59f1e0dd557"
     },
     {
       "id": "686ede78-b9f0-4512-8542-371d8bc653a8",
@@ -2626,7 +2626,7 @@
       "params": {
         "company": "NewLane",
         "payment_date": "2026-09-03",
-        "applies_to": "2026-09",
+        "applies_to": "2026-08",
         "invoice_date": "2026-09-03",
         "start_invoice_no": 50000,
         "skipped_already_seen": 23
@@ -2657,7 +2657,7 @@
         }
       ],
       "note": "0 new payment(s) recorded; 23 already in ledger",
-      "entry_hash": "8730b385488f9399502ec4528a0ca32bff125bad5cddb7b28cfd641b68ddb550"
+      "entry_hash": "e951ce906f51958242fda208412a42356d7fc5e6e50426ba357c855043bdde77"
     }
   ]
 }
