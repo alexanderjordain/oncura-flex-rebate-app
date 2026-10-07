@@ -2579,8 +2579,8 @@ with tab_closeout, safe_stage("Stage 4 — Overages & Closeout"):
     st.divider()
 
     if _skey == "setup":
-        st.caption("Pick the quarter-end month you're closing. The next step loads what Stage 3 "
-                   "already recorded for that month, straight from the ledger — no OPD pull.")
+        st.caption("Pick the quarter-end month you're closing and open it. It loads what Stage 3 "
+                   "recorded for that month straight from the ledger — no OPD pull.")
         _cprev = dt.date.today().replace(day=1) - dt.timedelta(days=1)
         _lcy, _lcm, _lcsp = st.columns([1, 1, 2])
         _co_year = int(_lcy.number_input(
@@ -2589,43 +2589,42 @@ with tab_closeout, safe_stage("Stage 4 — Overages & Closeout"):
         _co_month = int(_lcm.selectbox(
             "Closeout month (quarter end)", list(range(1, 13)), index=_cprev.month - 1,
             format_func=lambda m: dt.date(2000, m, 1).strftime("%B"), key="closeout_month_w"))
+        _sel = (_co_year, _co_month)
+        _sel_txt = dt.date(_co_year, _co_month, 1).strftime("%B %Y")
 
-        # If a closeout is already loaded (Stage 3 just ran, or a prior load), let
-        # the operator continue straight into it without reloading.
+        # One button, always the month in the selector above — the selector is the single
+        # source of truth, so the month shown and the month opened can never disagree. On
+        # open: prefer the ledger (authoritative, reflects a re-run of Stage 3); fall back
+        # to an in-session recap only when the ledger holds nothing for that month yet
+        # (Stage 3 just ran and hasn't been posted); otherwise say there's nothing to load.
         _loaded = SS.get("closeout_recap")
-        if _loaded:
-            _lm = SS.get("closeout_month")
-            _lm_txt = f" for {dt.date(_lm[0], _lm[1], 1):%B %Y}" if _lm else ""
-            st.success(f"A closeout is already loaded ({len(_loaded)} clinic(s){_lm_txt}). "
-                       "Continue into it, or load a different month below.",
-                       icon=":material/task_alt:")
+        _loaded_matches = bool(_loaded) and SS.get("closeout_month") == _sel
+        if _loaded_matches:
+            st.success(f"{_sel_txt} closeout is ready in this session "
+                       f"({len(_loaded)} clinic(s)).", icon=":material/task_alt:")
 
         st.divider()
-        _contcol, _loadcol = st.columns(2)
-        if _loaded and _contcol.button("Continue ▶", key="closeout_continue",
-                                       type="primary", use_container_width=True):
-            SS["closeout_step"] = 1
-            st.rerun()
-        _load_lbl = "Load this month instead ▶" if _loaded else "Load this month ▶"
-        if _loadcol.button(_load_lbl, key="closeout_load_btn", type="primary",
-                           use_container_width=True):
+        if st.button(f"Open {_sel_txt} closeout ▶", key="closeout_open",
+                     type="primary", use_container_width=True):
             _pays_all, _ = ledger.load()
             _incl = flex_closeout.recap_from_ledger(
                 flex_clinics, _pays_all.get("payments", []), _co_year, _co_month)
-            if not _incl:
-                st.warning(
-                    f"No recorded Stage 3 output (unused / overage) found for "
-                    f"{dt.date(_co_year, _co_month, 1):%B %Y}. Run Stage 3 for that month, or "
-                    "check the month you closed.")
-            else:
+            if _incl:
                 SS["closeout_recap"] = _incl
-                SS["closeout_month"] = (_co_year, _co_month)
+                SS["closeout_month"] = _sel
                 SS["closeout_group_spread"] = [
                     {"amount": m["amount"], "from": m["from_clinic"], "to": m["to_clinic"]}
                     for m in flex_overage.group_overage_spread(_incl) if m.get("from_clinic")
                 ]
                 SS["closeout_step"] = 1
                 st.rerun()
+            elif _loaded_matches:
+                SS["closeout_step"] = 1          # unposted Stage 3 recap for this month
+                st.rerun()
+            else:
+                st.warning(
+                    f"No recorded Stage 3 output (unused / overage) found for {_sel_txt}. "
+                    "Run Stage 3 for that month first, then open it here.")
 
     else:
         _recap = SS.get("closeout_recap")
