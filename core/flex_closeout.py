@@ -446,36 +446,34 @@ def _render_clinics(worklist: dict) -> None:
 
 
 def _render_tieup(worklist: dict) -> None:
-    """QBO Receive-Payment tie-up, with a per-clinic checkbox tracker."""
-    clinics = worklist.get("clinics", [])
+    """QBO Receive-Payment tie-up for the UNUSED clinics only — overage clinics
+    are handled in the next step (Past Due + bill), so they're not listed here."""
+    clinics = [c for c in worklist.get("clinics", []) if c["outcome"] == "unused"]
 
     st.subheader("QBO tie-up")
     st.markdown(
         "In QBO, run a **Receive Payment** dated the **last day of the quarter "
-        "month** for each closing clinic. Apply this quarter's lines so the "
+        "month** for each unused clinic below. Apply this quarter's lines so the "
         "account nets to **$0**:\n\n"
         "- the finance-company payment(s)\n"
         "- the credit memo(s)\n"
-        "- the `Unused-Flex-Credits` invoice (unused clinics)\n\n"
+        "- the `Unused-Flex-Credits` invoice\n\n"
         "**Every applied line must say \"FLEX\"** — never \"merchant services\", "
-        "never blank. Overage clinics intentionally leave the overage overdue "
-        "(you bill it in the next step), so they will not net to $0 — that is "
-        "expected."
+        "never blank. Overage clinics aren't listed here — you bill those in the "
+        "next step."
     )
 
     if not clinics:
-        st.info(":material/inbox: No closing clinics to tie up this run.")
+        st.info(":material/inbox: No unused clinics to tie up this run.")
         return
 
     st.caption("Check each clinic off as you tie it up. Counts shown so you don't need a spreadsheet.")
     for c in clinics:
         label, _ = _OUTCOME_STYLE.get(c["outcome"], (c["outcome"], None))
         target = _money(_outcome_amount(c))
-        kind = "overage (leave overdue)" if c["outcome"] == "overage" else \
-               "unused invoice" if c["outcome"] == "unused" else "nets to $0"
         st.checkbox(
             f"{c['qb_name']} — {_payments_str(c['payments'])} pmts · "
-            f"credit-memo/{label.lower()} target {target} · {kind}",
+            f"credit-memo/{label.lower()} target {target} · unused invoice",
             key=f"closeout_tieup_{c['qb_name']}",
         )
 
