@@ -420,6 +420,27 @@
       "created_by": "AJ",
       "updated_at": "2026-10-07T02:01:30+00:00",
       "updated_by": "AJ"
+    },
+    "141d1868-676b-42c2-a979-3d9d9c925aa7": {
+      "id": "141d1868-676b-42c2-a979-3d9d9c925aa7",
+      "clinic": "Northwest Animal Hospital - Grapevine",
+      "qb_customer": "Northwest Animal Hospital - Grapevine",
+      "billing_month": "2026-09",
+      "quarter_covered": "Q3 2026",
+      "route": "direct",
+      "gross_overage": 27.0,
+      "credit_applied": 0.0,
+      "net_amount": 27.0,
+      "date_billed": "2026-10-07",
+      "invoice_no": "",
+      "paid_at": null,
+      "paid_amount": null,
+      "paid_note": "",
+      "notes": "",
+      "created_at": "2026-10-07T02:01:31+00:00",
+      "created_by": "AJ",
+      "updated_at": "2026-10-07T02:01:31+00:00",
+      "updated_by": "AJ"
     }
   }
 }
