@@ -357,6 +357,27 @@
       "created_by": "AJ",
       "updated_at": "2026-10-07T02:01:26+00:00",
       "updated_by": "AJ"
+    },
+    "7df95a5e-f958-4645-a751-a31bc563c84d": {
+      "id": "7df95a5e-f958-4645-a751-a31bc563c84d",
+      "clinic": "CityVet Preston Forest",
+      "qb_customer": "CityVet Preston Forest",
+      "billing_month": "2026-09",
+      "quarter_covered": "Q3 2026",
+      "route": "direct",
+      "gross_overage": 1978.5,
+      "credit_applied": 0.0,
+      "net_amount": 1978.5,
+      "date_billed": "2026-10-07",
+      "invoice_no": "",
+      "paid_at": null,
+      "paid_amount": null,
+      "paid_note": "",
+      "notes": "",
+      "created_at": "2026-10-07T02:01:27+00:00",
+      "created_by": "AJ",
+      "updated_at": "2026-10-07T02:01:27+00:00",
+      "updated_by": "AJ"
     }
   }
 }
