@@ -399,6 +399,27 @@
       "created_by": "AJ",
       "updated_at": "2026-10-07T02:01:28+00:00",
       "updated_by": "AJ"
+    },
+    "5e79c435-bb48-4423-bd7e-0b962f724805": {
+      "id": "5e79c435-bb48-4423-bd7e-0b962f724805",
+      "clinic": "Lake Road Animal Hospital",
+      "qb_customer": "Lake Road Animal Hospital",
+      "billing_month": "2026-09",
+      "quarter_covered": "Q3 2026",
+      "route": "direct",
+      "gross_overage": 732.0,
+      "credit_applied": 0.0,
+      "net_amount": 732.0,
+      "date_billed": "2026-10-07",
+      "invoice_no": "",
+      "paid_at": null,
+      "paid_amount": null,
+      "paid_note": "",
+      "notes": "",
+      "created_at": "2026-10-07T02:01:30+00:00",
+      "created_by": "AJ",
+      "updated_at": "2026-10-07T02:01:30+00:00",
+      "updated_by": "AJ"
     }
   }
 }
