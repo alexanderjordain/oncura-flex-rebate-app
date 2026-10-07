@@ -336,6 +336,27 @@
       "created_by": "Alexander Jordain (backfill)",
       "updated_at": "2026-07-14T21:17:43+00:00",
       "updated_by": "Alexander Jordain (backfill)"
+    },
+    "2cc7d9b5-3d18-46b6-8f91-183de6caa3c9": {
+      "id": "2cc7d9b5-3d18-46b6-8f91-183de6caa3c9",
+      "clinic": "Allen Veterinary Hospital",
+      "qb_customer": "Allen Veterinary Hospital",
+      "billing_month": "2026-09",
+      "quarter_covered": "Q3 2026",
+      "route": "direct",
+      "gross_overage": 3179.5,
+      "credit_applied": 0.0,
+      "net_amount": 3179.5,
+      "date_billed": "2026-10-07",
+      "invoice_no": "",
+      "paid_at": null,
+      "paid_amount": null,
+      "paid_note": "",
+      "notes": "",
+      "created_at": "2026-10-07T02:01:26+00:00",
+      "created_by": "AJ",
+      "updated_at": "2026-10-07T02:01:26+00:00",
+      "updated_by": "AJ"
     }
   }
 }
