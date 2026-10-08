@@ -233,13 +233,16 @@ def infer_schedules(sub: dict, n_weeks: int = SCHEDULE_WEEKS) -> dict:
         peak = max(avg) if avg else 0.0
         work = [i for i in range(7) if peak > 0 and avg[i] >= WORKDAY_FRAC * peak]
         span = statistics.median(spans) if spans else 8.0
-        wk_hours = span * len(work)
         ndays = len(work) or 1
+        # Inferred folks are assumed standard full-time (8-hr days); the raw submit-span
+        # is too noisy to show as an hours figure. Specific non-standard schedules go in
+        # CONFIRMED_SCHEDULES (Becky/Katie/Megan) and override this below.
+        wk_hours = len(work) * 8
         scheds[s] = {
             "type": "FT" if wk_hours >= FT_WEEKLY_HOURS else "PT",
             "days": work,
             "shift": f"{len(work)}x{round(span)}" if work else "-",
-            "weekly_hours": round(wk_hours),
+            "weekly_hours": wk_hours,
             "daily_goal": max(1, round(WEEKLY_GOAL / ndays)),
             "days_label": ("–".join(_DOW[i] for i in (work[0], work[-1]))
                            if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "-",
@@ -363,7 +366,7 @@ def _legend_html(scheds: dict) -> str:
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
             + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
-            + _cell("Shift", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Hours/week", _HEAD_BG, _HEAD_TX, "center", True)
             + "</tr>")
     body = ""
     for s in SONOGRAPHERS:
@@ -371,7 +374,7 @@ def _legend_html(scheds: dict) -> str:
         body += ("<tr>"
                  + _cell(_html.escape(s), None, _LBL_TX, "left", True)
                  + _cell(_html.escape(sc["days_label"]))
-                 + _cell(_html.escape(sc["shift"]))
+                 + _cell(sc["weekly_hours"])
                  + "</tr>")
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
