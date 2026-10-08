@@ -68,10 +68,32 @@ DAILY_DAYS = 15    # last N complete days
 SCHEDULE_WEEKS = 12
 WORKDAY_FRAC = 0.35
 FT_WEEKLY_HOURS = 35      # >= this (span x days) => full-time
-# Known/confirmed schedules override the inference (HR truth beats data).
+# Known/confirmed schedules override the inference (HR truth beats data). Luis works
+# a 4x10; Becky and Katie work ~6-hour days (both their submit-span and their PTO,
+# which is booked in 6-hour units, confirm it) — everyone else infers to 5x8.
 CONFIRMED_SCHEDULES = {
     "Luis Romero": {"type": "FT", "days": [0, 1, 2, 3], "shift": "4x10", "weekly_hours": 40},
+    "Becky Tiner": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Katie Heuer": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
 }
+
+# Company-observed holidays: the office is closed, so a zero-activity day here is NOT
+# PTO — without this, every holiday flags all 10 sonographers as "out" (Labor Day
+# 2026 did exactly that in testing). Update this list each year. No Juneteenth.
+HOLIDAYS = {
+    dt.date(2026, 1, 1),    # New Year's Day
+    dt.date(2026, 5, 25),   # Memorial Day
+    dt.date(2026, 7, 3),    # Independence Day (observed; 7/4 is a Saturday)
+    dt.date(2026, 9, 7),    # Labor Day
+    dt.date(2026, 11, 26),  # Thanksgiving
+    dt.date(2026, 11, 27),  # Day after Thanksgiving
+    dt.date(2026, 12, 25),  # Christmas Day
+    dt.date(2027, 1, 1),    # New Year's Day (covers year-end runs)
+}
+
+
+def _is_holiday(d: dt.date) -> bool:
+    return d in HOLIDAYS
 
 
 def recipients(kind: str = "to") -> list[str]:
@@ -245,7 +267,8 @@ def _consecutive(days: list[int]) -> bool:
 def week_pto(scheds: dict, sub: dict, week_monday: dt.date) -> dict:
     """For the given Mon-Sun week, each sonographer's scheduled work days that had
     ZERO submitted activity (likely PTO / out). Submitted-based, so it reflects when
-    people were actually away rather than the finalized-date lag.
+    people were actually away rather than the finalized-date lag. Company holidays are
+    skipped — the office is closed, so a zero there is not PTO.
     Returns {son: [dates]} only for those with at least one such day."""
     out: dict[str, list] = {}
     for s in SONOGRAPHERS:
@@ -253,6 +276,8 @@ def week_pto(scheds: dict, sub: dict, week_monday: dt.date) -> dict:
         off = []
         for i in scheds.get(s, {}).get("days", []):
             d = week_monday + dt.timedelta(days=i)
+            if _is_holiday(d):
+                continue
             rec = act.get(d.isoformat())
             if rec is None or rec[0] == 0:
                 off.append(d)
@@ -365,12 +390,13 @@ def _legend_html(scheds: dict) -> str:
     )
 
 
-def _notes_html(pto: dict, week_label: str) -> str:
+def _notes_html(pto: dict, week_label: str, holidays: list | None = None) -> str:
     """Submitted-activity callout for the reported week: who had a scheduled work day
-    with no activity (likely PTO / out). Empty -> a clean 'full attendance' line."""
+    with no activity (likely PTO / out). Empty -> a clean 'full attendance' line.
+    Any company holiday in the week is called out so a lighter week reads correctly."""
     if not pto:
-        inner = (f'Full attendance — every sonographer had activity on each of their '
-                 f'scheduled work days.')
+        inner = ('Full attendance — every sonographer had activity on each of their '
+                 'scheduled work days.')
     else:
         items = ""
         for s in SONOGRAPHERS:
@@ -379,8 +405,12 @@ def _notes_html(pto: dict, week_label: str) -> str:
             dys = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in pto[s])
             items += (f'<li style="margin:2px 0"><b>{_html.escape(s)}</b>: '
                       f'no activity {dys}</li>')
-        inner = (f'Scheduled work days with no submitted activity (likely PTO / out):'
+        inner = ('Scheduled work days with no submitted activity (likely PTO / out):'
                  f'<ul style="margin:6px 0 0;padding-left:20px">{items}</ul>')
+    if holidays:
+        hol = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in holidays)
+        inner += (f'<div style="margin-top:6px">Company holiday this week ({hol}); '
+                  'the office was closed, so that day is not counted as PTO.</div>')
     return (
         f'<div style="{_FONT};font-size:12px;color:{_PTO_TX};'
         f'background:#fff8e8;border:1px solid #f0e2bd;border-radius:4px;'
@@ -398,10 +428,11 @@ def _daily_table_html(subtitle: str, rows, scheds: dict) -> str:
               + "</tr>")
     body = ""
     for d, counts in rows:
+        holiday = _is_holiday(d)
         cells = ""
         for s in SONOGRAPHERS:
-            if d.weekday() not in scheds[s]["days"]:
-                cells += _cell("", _OFF_BG, _OFF_TX)            # scheduled off
+            if holiday or d.weekday() not in scheds[s]["days"]:
+                cells += _cell("", _OFF_BG, _OFF_TX)            # holiday or scheduled off
                 continue
             v = counts.get(s)
             goal = scheds[s]["daily_goal"]
@@ -409,9 +440,10 @@ def _daily_table_html(subtitle: str, rows, scheds: dict) -> str:
                 cells += _cell(v, _GOAL_BG, _GOAL_TX, "center", True)
             else:
                 cells += _cell(v or "")
-        body += "<tr>" + _cell(_mdY(d), None, _LBL_TX, "left", True) + cells + "</tr>"
+        label = _mdY(d) + (" (holiday)" if holiday else "")
+        body += "<tr>" + _cell(label, None, _LBL_TX, "left", True) + cells + "</tr>"
     legend = ('<tr><td colspan="%d" style="color:#6b7480;padding:5px 11px;%s;font-size:10px">'
-              'Shaded cells = scheduled day off. Highlight = met that person\'s daily goal.'
+              'Shaded cells = scheduled day off or company holiday. Highlight = met that person\'s daily goal.'
               '</td></tr>' % (ncol, _FONT))
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
@@ -449,13 +481,15 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     sub = build_submitted(sched_start.isoformat(), this_monday.isoformat())
     scheds = infer_schedules(sub)
     pto = week_pto(scheds, sub, last_week_monday)
+    wk_holidays = [last_week_monday + dt.timedelta(days=i) for i in range(7)
+                   if _is_holiday(last_week_monday + dt.timedelta(days=i))]
 
     html = (
         "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
         f"{_legend_html(scheds)}"
-        f"{_notes_html(pto, _mdY(last_week_monday))}"
+        f"{_notes_html(pto, _mdY(last_week_monday), wk_holidays)}"
         f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week, full-time)', wk_rows, goal=WEEKLY_GOAL)}<br>"
         f"{_daily_table_html('Daily (goal prorated to each schedule)', dy_rows, scheds)}"
         "</div>"
