@@ -73,8 +73,8 @@ FT_WEEKLY_HOURS = 35      # >= this (span x days) => full-time
 # hrs/week. Everyone else infers to 5x8. Days are Mon-Fri unless noted.
 CONFIRMED_SCHEDULES = {
     "Luis Romero": {"type": "FT", "days": [0, 1, 2, 3], "shift": "4x10", "weekly_hours": 40},
-    "Becky Tiner": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
-    "Katie Heuer": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Becky Tiner": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Katie Heuer": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
     "Megan DuCasse": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x4", "weekly_hours": 20},
 }
 
@@ -238,11 +238,11 @@ def infer_schedules(sub: dict, n_weeks: int = SCHEDULE_WEEKS) -> dict:
         scheds[s] = {
             "type": "FT" if wk_hours >= FT_WEEKLY_HOURS else "PT",
             "days": work,
-            "shift": f"{len(work)}x{round(span)}" if work else "—",
+            "shift": f"{len(work)}x{round(span)}" if work else "-",
             "weekly_hours": round(wk_hours),
             "daily_goal": max(1, round(WEEKLY_GOAL / ndays)),
             "days_label": ("–".join(_DOW[i] for i in (work[0], work[-1]))
-                           if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "—",
+                           if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "-",
             "confirmed": False,
         }
     for s, ov in CONFIRMED_SCHEDULES.items():
@@ -255,7 +255,7 @@ def infer_schedules(sub: dict, n_weeks: int = SCHEDULE_WEEKS) -> dict:
             "weekly_hours": ov["weekly_hours"],
             "daily_goal": max(1, round(WEEKLY_GOAL / ndays)),
             "days_label": ("–".join(_DOW[i] for i in (work[0], work[-1]))
-                           if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "—",
+                           if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "-",
             "confirmed": True,
         }
     return scheds
@@ -361,11 +361,10 @@ _PTO_TX = "#9a6b00"    # PTO note text
 
 
 def _legend_html(scheds: dict) -> str:
-    """Small reference table: who is FT/PT, which days they work, and their shift.
+    """Small reference table: which days each sonographer works and their shift.
     Confirmed schedules are marked; the rest are inferred from recent activity."""
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
-            + _cell("Status", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Shift", _HEAD_BG, _HEAD_TX, "center", True)
             + "</tr>")
@@ -375,38 +374,39 @@ def _legend_html(scheds: dict) -> str:
         name = _html.escape(s) + ("" if sc["confirmed"] else " *")
         body += ("<tr>"
                  + _cell(name, None, _LBL_TX, "left", True)
-                 + _cell(sc["type"])
                  + _cell(_html.escape(sc["days_label"]))
                  + _cell(_html.escape(sc["shift"]))
                  + "</tr>")
-    note = ('<tr><td colspan="4" style="color:#6b7480;padding:5px 11px;'
+    note = ('<tr><td colspan="3" style="color:#6b7480;padding:5px 11px;'
             f'{_FONT};font-size:10px">* schedule inferred from recent submitted activity; '
-            'all others confirmed. Weekly goal is '
-            f'{WEEKLY_GOAL}/week for full-time.</td></tr>')
+            f'all others confirmed. Weekly goal is {WEEKLY_GOAL}/week.</td></tr>')
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
-        f'{_bar("Sonographer Schedules", 15, 4)}'
+        f'{_bar("Sonographer Schedules", 15, 3)}'
         f'{head}{body}{note}</table>'
     )
 
 
-def _notes_html(pto: dict, week_label: str, holidays: list | None = None) -> str:
-    """Submitted-activity callout for the reported week: who had a scheduled work day
-    with no activity (likely PTO / out). Empty -> a clean 'full attendance' line.
+def _notes_html(adj: dict, week_label: str, holidays: list | None = None) -> str:
+    """Submitted-activity callout for the reported week: who took PTO (a scheduled work
+    day with no activity) and their goal adjusted for the days out. `adj` is
+    {son: {days:[dates], worked:int, sched:int, goal:int}}. Empty -> 'full attendance'.
     Any company holiday in the week is called out so a lighter week reads correctly."""
-    if not pto:
-        inner = ('Full attendance — every sonographer had activity on each of their '
+    if not adj:
+        inner = ('Full attendance. Every sonographer had activity on each of their '
                  'scheduled work days.')
     else:
         items = ""
         for s in SONOGRAPHERS:
-            if s not in pto:
+            if s not in adj:
                 continue
-            dys = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in pto[s])
-            items += (f'<li style="margin:2px 0"><b>{_html.escape(s)}</b>: '
-                      f'no activity {dys}</li>')
-        inner = ('Scheduled work days with no submitted activity (likely PTO / out):'
+            a = adj[s]
+            dys = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in a["days"])
+            items += (f'<li style="margin:2px 0"><b>{_html.escape(s)}</b>: out {dys}. '
+                      f'Adjusted goal ~{a["goal"]} this week '
+                      f'(worked {a["worked"]} of {a["sched"]} scheduled days)</li>')
+        inner = ('PTO / time off this week (weekly goal adjusted for days out):'
                  f'<ul style="margin:6px 0 0;padding-left:20px">{items}</ul>')
     if holidays:
         hol = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in holidays)
@@ -416,7 +416,7 @@ def _notes_html(pto: dict, week_label: str, holidays: list | None = None) -> str
         f'<div style="{_FONT};font-size:12px;color:{_PTO_TX};'
         f'background:#fff8e8;border:1px solid #f0e2bd;border-radius:4px;'
         f'padding:9px 13px;margin:16px 0 0">'
-        f'<b>Week of {_html.escape(week_label)} — attendance notes</b><br>{inner}</div>'
+        f'<b>Week of {_html.escape(week_label)}: attendance notes</b><br>{inner}</div>'
     )
 
 
@@ -485,13 +485,24 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     wk_holidays = [last_week_monday + dt.timedelta(days=i) for i in range(7)
                    if _is_holiday(last_week_monday + dt.timedelta(days=i))]
 
+    # Per PTO-taker, prorate the weekly goal for the days they were out (holidays, which
+    # close the office for everyone, also drop out of the available days).
+    adj = {}
+    for s, days_out in pto.items():
+        work_days = scheds[s]["days"]
+        sched = len(work_days) or 1
+        hol = sum(1 for i in work_days if _is_holiday(last_week_monday + dt.timedelta(days=i)))
+        worked = max(0, sched - hol - len(days_out))
+        adj[s] = {"days": days_out, "sched": sched, "worked": worked,
+                  "goal": round(WEEKLY_GOAL * worked / sched)}
+
     html = (
         "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
         f"{_legend_html(scheds)}"
-        f"{_notes_html(pto, _mdY(last_week_monday), wk_holidays)}"
-        f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week, full-time)', wk_rows, goal=WEEKLY_GOAL)}<br>"
+        f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
+        f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week)', wk_rows, goal=WEEKLY_GOAL)}<br>"
         f"{_daily_table_html('Daily (goal prorated to each schedule)', dy_rows, scheds)}"
         "</div>"
     )
