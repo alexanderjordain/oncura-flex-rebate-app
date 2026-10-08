@@ -361,8 +361,7 @@ _PTO_TX = "#9a6b00"    # PTO note text
 
 
 def _legend_html(scheds: dict) -> str:
-    """Small reference table: which days each sonographer works and their shift.
-    Confirmed schedules are marked; the rest are inferred from recent activity."""
+    """Small reference table: which days each sonographer works and their shift."""
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
             + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
@@ -371,20 +370,16 @@ def _legend_html(scheds: dict) -> str:
     body = ""
     for s in SONOGRAPHERS:
         sc = scheds[s]
-        name = _html.escape(s) + ("" if sc["confirmed"] else " *")
         body += ("<tr>"
-                 + _cell(name, None, _LBL_TX, "left", True)
+                 + _cell(_html.escape(s), None, _LBL_TX, "left", True)
                  + _cell(_html.escape(sc["days_label"]))
                  + _cell(_html.escape(sc["shift"]))
                  + "</tr>")
-    note = ('<tr><td colspan="3" style="color:#6b7480;padding:5px 11px;'
-            f'{_FONT};font-size:10px">* schedule inferred from recent submitted activity; '
-            f'all others confirmed. Weekly goal is {WEEKLY_GOAL}/week.</td></tr>')
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
         f'{_bar("Sonographer Schedules", 15, 3)}'
-        f'{head}{body}{note}</table>'
+        f'{head}{body}</table>'
     )
 
 
