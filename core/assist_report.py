@@ -493,10 +493,10 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
-        f"{_legend_html(scheds)}"
         f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
         f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week)', wk_rows, goal=WEEKLY_GOAL)}<br>"
         f"{_daily_table_html('Daily (goal prorated to each schedule)', dy_rows, scheds)}"
+        f"{_legend_html(scheds)}"
         "</div>"
     )
     plain = (
