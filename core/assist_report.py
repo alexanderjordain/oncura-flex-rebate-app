@@ -355,8 +355,6 @@ def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
     )
 
 
-_OFF_BG = "#eef1f4"    # scheduled-off cell (light grey)
-_OFF_TX = "#b4bcc6"
 _PTO_TX = "#9a6b00"    # PTO note text
 
 
@@ -416,30 +414,27 @@ def _notes_html(adj: dict, week_label: str, holidays: list | None = None) -> str
 
 
 def _daily_table_html(subtitle: str, rows, scheds: dict) -> str:
-    """Daily table (FinalizedDate counts). Cells on a sonographer's scheduled-off day
-    are greyed; goal highlight uses that person's prorated daily goal."""
+    """Daily table (FinalizedDate counts). No day is greyed — counts are by finalized
+    date, which lands on weekends/off-days too, so every day shows its real count. The
+    goal highlight uses each person's prorated daily goal."""
     ncol = len(SONOGRAPHERS) + 1
     header = ("<tr>" + _cell("Assist Count", _HEAD_BG, _HEAD_TX, "left", True)
               + "".join(_cell(_html.escape(s), _HEAD_BG, _HEAD_TX, "center", True) for s in SONOGRAPHERS)
               + "</tr>")
     body = ""
     for d, counts in rows:
-        holiday = _is_holiday(d)
         cells = ""
         for s in SONOGRAPHERS:
-            if holiday or d.weekday() not in scheds[s]["days"]:
-                cells += _cell("", _OFF_BG, _OFF_TX)            # holiday or scheduled off
-                continue
             v = counts.get(s)
             goal = scheds[s]["daily_goal"]
             if isinstance(v, int) and v >= goal:
                 cells += _cell(v, _GOAL_BG, _GOAL_TX, "center", True)
             else:
                 cells += _cell(v or "")
-        label = _mdY(d) + (" (holiday)" if holiday else "")
+        label = _mdY(d) + (" (holiday)" if _is_holiday(d) else "")
         body += "<tr>" + _cell(label, None, _LBL_TX, "left", True) + cells + "</tr>"
     legend = ('<tr><td colspan="%d" style="color:#6b7480;padding:5px 11px;%s;font-size:10px">'
-              'Shaded cells = scheduled day off or company holiday. Highlight = met that person\'s daily goal.'
+              "Highlight = met that person's daily goal."
               '</td></tr>' % (ncol, _FONT))
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
