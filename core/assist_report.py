@@ -68,13 +68,14 @@ DAILY_DAYS = 15    # last N complete days
 SCHEDULE_WEEKS = 12
 WORKDAY_FRAC = 0.35
 FT_WEEKLY_HOURS = 35      # >= this (span x days) => full-time
-# Known/confirmed schedules override the inference (HR truth beats data). Luis works
-# a 4x10; Becky and Katie work ~6-hour days (both their submit-span and their PTO,
-# which is booked in 6-hour units, confirm it) — everyone else infers to 5x8.
+# Known/confirmed schedules override the inference (HR truth beats data). Hours below
+# are team-confirmed (2026-10-08): Luis 4x10 FT; Becky and Katie 30 hrs/week; Megan 20
+# hrs/week. Everyone else infers to 5x8. Days are Mon-Fri unless noted.
 CONFIRMED_SCHEDULES = {
     "Luis Romero": {"type": "FT", "days": [0, 1, 2, 3], "shift": "4x10", "weekly_hours": 40},
-    "Becky Tiner": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
-    "Katie Heuer": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Becky Tiner": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Katie Heuer": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Megan DuCasse": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x4", "weekly_hours": 20},
 }
 
 # Company-observed holidays: the office is closed, so a zero-activity day here is NOT
