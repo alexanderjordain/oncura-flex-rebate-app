@@ -217,10 +217,11 @@ def build_submitted(pull_start_iso: str, pull_end_iso: str) -> dict:
     return out
 
 
-def _goal_fields(weekly_hours: float, ndays: int) -> tuple[float, int, bool]:
+def _goal_fields(weekly_hours: float, ndays: int) -> tuple[int, int, bool]:
     """(weekly_goal, daily_goal, full_time) for a given schedule. The weekly goal
-    prorates off full-time: 50 * hours / 40 (so 40 h -> 50, 30 h -> 37.5, 20 h -> 25)."""
-    wg = round(WEEKLY_GOAL * weekly_hours / FULL_TIME_HOURS, 1)
+    prorates off full-time (50 * hours / 40) and rounds to a whole assist:
+    40 h -> 50, 30 h -> 38, 20 h -> 25."""
+    wg = int(WEEKLY_GOAL * weekly_hours / FULL_TIME_HOURS + 0.5)   # round half up
     nd = ndays or 1
     return wg, max(1, round(wg / nd)), weekly_hours >= FULL_TIME_HOURS
 

@@ -71,13 +71,13 @@ def test_table_html_highlights_goal_and_blanks_zero():
 
 def test_prorated_goals_match_hours():
     sch = ar.infer_schedules({})
-    assert sch["Becky Tiner"]["weekly_goal"] == 37.5 and not sch["Becky Tiner"]["full_time"]
-    assert sch["Katie Heuer"]["weekly_goal"] == 37.5 and not sch["Katie Heuer"]["full_time"]
+    assert sch["Becky Tiner"]["weekly_goal"] == 38 and not sch["Becky Tiner"]["full_time"]
+    assert sch["Katie Heuer"]["weekly_goal"] == 38 and not sch["Katie Heuer"]["full_time"]
     assert sch["Megan DuCasse"]["weekly_goal"] == 25 and not sch["Megan DuCasse"]["full_time"]
     assert sch["Luis Romero"]["weekly_goal"] == 50 and sch["Luis Romero"]["full_time"]
     assert sch["Denice Rodriguez"]["weekly_goal"] == 50 and sch["Denice Rodriguez"]["full_time"]
-    # 7 full-time x 50 + (37.5 + 37.5 + 25) part-time = 450
-    assert sum(sch[s]["weekly_goal"] for s in ar.SONOGRAPHERS) == 450
+    # 7 full-time x 50 + (38 + 38 + 25) part-time = 451
+    assert sum(sch[s]["weekly_goal"] for s in ar.SONOGRAPHERS) == 451
     assert sum(1 for s in ar.SONOGRAPHERS if sch[s]["full_time"]) == 7
 
 
@@ -106,10 +106,10 @@ def test_goal_perf_overflow_hits_group_total_without_a_goal():
     wc["Sandra Paris"] = 20        # overflow, no goal
     html = ar._goal_perf_html(sch, wc, "10/6/2026")
     assert "Sandra Paris (overflow)" in html
-    # group goal unchanged at 450; actual 423 + 20 overflow = 443 -> 98%
+    # group goal 451 (7x50 + 38 + 38 + 25); actual 423 + 20 overflow = 443 -> 98%
     assert "98%" in html
-    # the group goal still reads 450 (overflow did not add to the goal)
-    assert ">450<" in html
+    # the group goal still reads 451 (overflow did not add to the goal)
+    assert ">451<" in html
 
 
 def test_regular_cells_transparent_only_goal_and_header_filled():
