@@ -54,7 +54,8 @@ CC_RECIPIENTS = [
     ("Craig Presnall", "craig@oncurapartners.com"),
 ]
 SUBJECT = "Weekly Assistance Update"
-WEEKLY_GOAL = 50   # per week (full-time)
+WEEKLY_GOAL = 50       # per week at full-time
+FULL_TIME_HOURS = 40   # a full-time week; part-time goals prorate off this (50 * hrs/40)
 DAILY_GOAL = 10    # per day (full-time, 5-day default)
 # Trailing windows shown in the email (both end at the last COMPLETE period).
 WEEKLY_WEEKS = 15  # last N complete Mon-Sun weeks
@@ -73,8 +74,8 @@ FT_WEEKLY_HOURS = 35      # >= this (span x days) => full-time
 # hrs/week. Everyone else infers to 5x8. Days are Mon-Fri unless noted.
 CONFIRMED_SCHEDULES = {
     "Luis Romero": {"type": "FT", "days": [0, 1, 2, 3], "shift": "4x10", "weekly_hours": 40},
-    "Becky Tiner": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
-    "Katie Heuer": {"type": "FT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Becky Tiner": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
+    "Katie Heuer": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x6", "weekly_hours": 30},
     "Megan DuCasse": {"type": "PT", "days": [0, 1, 2, 3, 4], "shift": "5x4", "weekly_hours": 20},
 }
 
@@ -210,6 +211,19 @@ def build_submitted(pull_start_iso: str, pull_end_iso: str) -> dict:
     return out
 
 
+def _goal_fields(weekly_hours: float, ndays: int) -> tuple[float, int, bool]:
+    """(weekly_goal, daily_goal, full_time) for a given schedule. The weekly goal
+    prorates off full-time: 50 * hours / 40 (so 40 h -> 50, 30 h -> 37.5, 20 h -> 25)."""
+    wg = round(WEEKLY_GOAL * weekly_hours / FULL_TIME_HOURS, 1)
+    nd = ndays or 1
+    return wg, max(1, round(wg / nd)), weekly_hours >= FULL_TIME_HOURS
+
+
+def fmt_goal(g: float) -> str:
+    """50, 37.5, 25 — drop a trailing .0."""
+    return f"{g:g}"
+
+
 def infer_schedules(sub: dict, n_weeks: int = SCHEDULE_WEEKS) -> dict:
     """Derive each sonographer's working pattern from SUBMITTED activity.
 
@@ -232,18 +246,22 @@ def infer_schedules(sub: dict, n_weeks: int = SCHEDULE_WEEKS) -> dict:
         avg = [t / n_weeks for t in wd_total]
         peak = max(avg) if avg else 0.0
         work = [i for i in range(7) if peak > 0 and avg[i] >= WORKDAY_FRAC * peak]
-        span = statistics.median(spans) if spans else 8.0
-        ndays = len(work) or 1
-        # Inferred folks are assumed standard full-time (8-hr days); the raw submit-span
-        # is too noisy to show as an hours figure. Specific non-standard schedules go in
-        # CONFIRMED_SCHEDULES (Becky/Katie/Megan) and override this below.
-        wk_hours = len(work) * 8
+        if not work:
+            work = [0, 1, 2, 3, 4]      # no data -> assume standard Mon–Fri
+        ndays = len(work)
+        # Everyone not in CONFIRMED_SCHEDULES is full-time (Marty's roster: only Becky,
+        # Katie and Megan are part-time). The inference still picks their WORK DAYS (for
+        # PTO detection); hours are the full-time 40 so the goal is the full 50.
+        wk_hours = FULL_TIME_HOURS
+        wg, dgoal, ft = _goal_fields(wk_hours, ndays)
         scheds[s] = {
-            "type": "FT" if wk_hours >= FT_WEEKLY_HOURS else "PT",
+            "type": "FT",
             "days": work,
-            "shift": f"{len(work)}x{round(span)}" if work else "-",
+            "shift": f"{ndays}x{round(wk_hours / ndays)}",
             "weekly_hours": wk_hours,
-            "daily_goal": max(1, round(WEEKLY_GOAL / ndays)),
+            "weekly_goal": wg,
+            "full_time": ft,
+            "daily_goal": dgoal,
             "days_label": ("–".join(_DOW[i] for i in (work[0], work[-1]))
                            if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "-",
             "confirmed": False,
@@ -253,10 +271,11 @@ def infer_schedules(sub: dict, n_weeks: int = SCHEDULE_WEEKS) -> dict:
             continue
         work = ov["days"]
         ndays = len(work) or 1
+        wg, dgoal, ft = _goal_fields(ov["weekly_hours"], ndays)
         scheds[s] = {
-            "type": ov["type"], "days": work, "shift": ov["shift"],
+            "type": ("FT" if ft else "PT"), "days": work, "shift": ov["shift"],
             "weekly_hours": ov["weekly_hours"],
-            "daily_goal": max(1, round(WEEKLY_GOAL / ndays)),
+            "weekly_goal": wg, "full_time": ft, "daily_goal": dgoal,
             "days_label": ("–".join(_DOW[i] for i in (work[0], work[-1]))
                            if _consecutive(work) else ", ".join(_DOW[i] for i in work)) or "-",
             "confirmed": True,
@@ -334,7 +353,7 @@ def _bar(text: str, size: int, ncol: int) -> str:
             f'padding:7px 11px;{_FONT};font-size:{size}px">{text}</td></tr>')
 
 
-def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
+def _table_html(subtitle: str, rows, scheds: dict | None = None) -> str:
     ncol = len(SONOGRAPHERS) + 1
     header = ("<tr>" + _cell("Assist Count", _HEAD_BG, _HEAD_TX, "left", True)
               + "".join(_cell(_html.escape(s), _HEAD_BG, _HEAD_TX, "center", True) for s in SONOGRAPHERS)
@@ -344,6 +363,7 @@ def _table_html(subtitle: str, rows, goal: int | None = None) -> str:
         cells = ""
         for s in SONOGRAPHERS:
             v = counts.get(s)
+            goal = scheds[s]["weekly_goal"] if scheds else None   # each person's prorated goal
             if goal is not None and isinstance(v, int) and v >= goal:
                 cells += _cell(v, _GOAL_BG, _GOAL_TX, "center", True)   # highlighted
             else:
@@ -362,11 +382,14 @@ _PTO_TX = "#9a6b00"    # PTO note text
 
 
 def _legend_html(scheds: dict) -> str:
-    """Small reference table: which days each sonographer works and their shift."""
+    """Reference table: each sonographer's work days, hours, full-time status, and the
+    prorated weekly goal (part-timers prorate off 50 by hours/40)."""
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
             + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Hours/week", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Full-time?", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
             + "</tr>")
     body = ""
     for s in SONOGRAPHERS:
@@ -375,12 +398,72 @@ def _legend_html(scheds: dict) -> str:
                  + _cell(_html.escape(s), None, _LBL_TX, "left", True)
                  + _cell(_html.escape(sc["days_label"]))
                  + _cell(sc["weekly_hours"])
+                 + _cell("Yes" if sc["full_time"] else "No")
+                 + _cell(fmt_goal(sc["weekly_goal"]))
                  + "</tr>")
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
-        f'{_bar("Sonographer Schedules", 15, 3)}'
+        f'{_bar("Sonographer Schedules &amp; Weekly Goals", 15, 5)}'
         f'{head}{body}</table>'
+    )
+
+
+def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
+    """Per-sonographer goal vs. actual for the last complete week, with % of goal, plus
+    full-time / part-time subtotals and a group total — the view Marty asked for. Rows are
+    sorted by % of goal (lowest first) to surface who is falling short."""
+    recs = []
+    for s in SONOGRAPHERS:
+        g = scheds[s]["weekly_goal"]; a = week_counts.get(s, 0)
+        pct = (a / g * 100) if g else 0.0
+        recs.append((s, scheds[s]["full_time"], g, a, pct))
+    recs.sort(key=lambda r: r[4])   # lowest % of goal first
+
+    head = ("<tr>"
+            + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
+            + _cell("Full-time?", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Actual", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("% of Goal", _HEAD_BG, _HEAD_TX, "center", True)
+            + "</tr>")
+    body = ""
+    for s, ft, g, a, pct in recs:
+        met = a >= g
+        pct_cell = (_cell(f"{round(pct)}%", _GOAL_BG, _GOAL_TX, "center", True) if met
+                    else _cell(f"{round(pct)}%", None, "#b23b3b", "center", True))
+        body += ("<tr>"
+                 + _cell(_html.escape(s), None, _LBL_TX, "left", True)
+                 + _cell("Yes" if ft else "No")
+                 + _cell(fmt_goal(g))
+                 + _cell(a)
+                 + pct_cell
+                 + "</tr>")
+
+    def _subtotal(label, group, bg):
+        g = sum(r[2] for r in group); a = sum(r[3] for r in group)
+        pct = round(a / g * 100) if g else 0
+        return ("<tr>"
+                + _cell(label, bg, _HEAD_TX, "left", True)
+                + _cell("", bg, _HEAD_TX)
+                + _cell(fmt_goal(g), bg, _HEAD_TX, "center", True)
+                + _cell(a, bg, _HEAD_TX, "center", True)
+                + _cell(f"{pct}%", bg, _HEAD_TX, "center", True)
+                + "</tr>")
+
+    ft_rows = [r for r in recs if r[1]]; pt_rows = [r for r in recs if not r[1]]
+    subtotals = ""
+    if ft_rows:
+        subtotals += _subtotal(f"Full-time ({len(ft_rows)})", ft_rows, "#eef3f5")
+    if pt_rows:
+        subtotals += _subtotal(f"Part-time ({len(pt_rows)})", pt_rows, "#eef3f5")
+    subtotals += _subtotal("Group Total", recs, _HEAD_BG)
+    return (
+        '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
+        f'{_FONT};font-size:11px;margin:16px 0 0">'
+        f'{_bar("Weekly Goal Performance", 15, 5)}'
+        f'{_bar("Week of " + _html.escape(week_label), 12, 5)}'
+        f'{head}{body}{subtotals}</table>'
     )
 
 
@@ -489,12 +572,19 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         adj[s] = {"days": days_out, "sched": sched, "worked": worked,
                   "goal": round(WEEKLY_GOAL * worked / sched)}
 
+    # Last complete week's counts -> goal-performance table (goal vs actual, % of goal).
+    week_counts = counts["weekly"].get(last_week_monday.isoformat(), {})
+    tot_goal = sum(scheds[s]["weekly_goal"] for s in SONOGRAPHERS)
+    tot_act = sum(week_counts.get(s, 0) for s in SONOGRAPHERS)
+    tot_pct = round(tot_act / tot_goal * 100) if tot_goal else 0
+
     html = (
         "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
         f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
-        f"{_table_html(f'Weekly (Goal: {WEEKLY_GOAL}/week)', wk_rows, goal=WEEKLY_GOAL)}<br>"
+        f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
+        f"{_table_html('Weekly (Goal: 50/week at full-time, prorated for part-time)', wk_rows, scheds)}<br>"
         f"{_daily_table_html('Daily (goal prorated to each schedule)', dy_rows, scheds)}"
         f"{_legend_html(scheds)}"
         "</div>"
@@ -502,6 +592,8 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     plain = (
         "Hello all,\n\n"
         "Please see the following assisting sonographer activity reports "
-        "(formatted tables in the HTML version of this email)."
+        "(formatted tables in the HTML version of this email).\n\n"
+        f"Week of {_mdY(last_week_monday)} — group goal {fmt_goal(tot_goal)}, "
+        f"actual {tot_act}, {tot_pct}% of goal."
     )
     return SUBJECT, plain, html

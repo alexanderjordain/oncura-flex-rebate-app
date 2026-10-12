@@ -55,17 +55,41 @@ def test_rows_trailing_windows():
 
 
 def test_table_html_highlights_goal_and_blanks_zero():
+    sch = ar.infer_schedules({})   # Becky goal 37.5, Denice 50, Katie 37.5
     html = ar._table_html(
-        "Weekly (Goal: 50/week)",
+        "Weekly (Goal: 50/week at full-time, prorated for part-time)",
         [("WO: 6/22/2026", {"Becky Tiner": 30, "Denice Rodriguez": 60, "Katie Heuer": 0})],
-        goal=50,
+        scheds=sch,
     )
-    assert "Becky Tiner" in html and "WO: 6/22/2026" in html and "Goal: 50/week" in html
-    assert ">30<" in html          # below goal, plain
-    assert ">60<" in html          # at/above goal, present
+    assert "Becky Tiner" in html and "WO: 6/22/2026" in html and "50/week" in html
+    assert ">30<" in html          # Becky 30 < her 37.5 goal -> plain
+    assert ">60<" in html          # Denice 60 >= her 50 goal -> present (highlighted)
     assert ">0<" not in html       # zero renders as an empty cell
     assert ar._GOAL_BG in html     # goal-met highlight fill present
     assert ar._HEAD_BG in html     # teal header present
+
+
+def test_prorated_goals_match_hours():
+    sch = ar.infer_schedules({})
+    assert sch["Becky Tiner"]["weekly_goal"] == 37.5 and not sch["Becky Tiner"]["full_time"]
+    assert sch["Katie Heuer"]["weekly_goal"] == 37.5 and not sch["Katie Heuer"]["full_time"]
+    assert sch["Megan DuCasse"]["weekly_goal"] == 25 and not sch["Megan DuCasse"]["full_time"]
+    assert sch["Luis Romero"]["weekly_goal"] == 50 and sch["Luis Romero"]["full_time"]
+    assert sch["Denice Rodriguez"]["weekly_goal"] == 50 and sch["Denice Rodriguez"]["full_time"]
+    # 7 full-time x 50 + (37.5 + 37.5 + 25) part-time = 450
+    assert sum(sch[s]["weekly_goal"] for s in ar.SONOGRAPHERS) == 450
+    assert sum(1 for s in ar.SONOGRAPHERS if sch[s]["full_time"]) == 7
+
+
+def test_goal_perf_table_group_total_and_pct():
+    sch = ar.infer_schedules({})
+    wc = {s: 50 for s in ar.SONOGRAPHERS if sch[s]["full_time"]}   # 7 x 50 = 350
+    wc["Becky Tiner"] = 30; wc["Katie Heuer"] = 25; wc["Megan DuCasse"] = 18  # -> 423 total
+    html = ar._goal_perf_html(sch, wc, "10/6/2026")
+    assert "Weekly Goal Performance" in html
+    assert "Group Total" in html and "% of Goal" in html
+    assert "Full-time (7)" in html and "Part-time (3)" in html
+    assert "94%" in html           # 423 / 450
 
 
 def test_regular_cells_transparent_only_goal_and_header_filled():
