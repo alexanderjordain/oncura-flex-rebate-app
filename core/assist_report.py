@@ -683,7 +683,7 @@ def build_monthly_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         f"<p>Monthly assisting-sonographer comp summary for <b>{_html.escape(month_label)}</b> "
-        "(weeks by work-order / Monday date), scored against the commission plan.</p>"
+        "(weeks by week of / Monday date), scored against the commission plan.</p>"
         f"{_comp_summary_html(scheds, weeks, month_label)}<br>"
         f"{_table_html(month_label + ': weekly assists by WO (highlight = hit goal)', wk_rows, scheds)}"
         "</div>"
