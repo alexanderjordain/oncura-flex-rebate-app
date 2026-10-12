@@ -388,34 +388,6 @@ def _table_html(subtitle: str, rows, scheds: dict | None = None) -> str:
 _PTO_TX = "#9a6b00"    # PTO note text
 
 
-def _legend_html(scheds: dict) -> str:
-    """Reference table: each sonographer's work days, hours, full-time status, and the
-    prorated weekly goal (part-timers prorate off 50 by hours/40)."""
-    head = ("<tr>"
-            + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
-            + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
-            + _cell("Hours/week", _HEAD_BG, _HEAD_TX, "center", True)
-            + _cell("40 hours?", _HEAD_BG, _HEAD_TX, "center", True)
-            + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
-            + "</tr>")
-    body = ""
-    for s in SONOGRAPHERS:
-        sc = scheds[s]
-        body += ("<tr>"
-                 + _cell(_html.escape(s), None, _LBL_TX, "left", True)
-                 + _cell(_html.escape(sc["days_label"]))
-                 + _cell(sc["weekly_hours"])
-                 + _cell("Yes" if sc["full_time"] else "No")
-                 + _cell(fmt_goal(sc["weekly_goal"]))
-                 + "</tr>")
-    return (
-        '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
-        f'{_FONT};font-size:11px;margin:16px 0 0">'
-        f'{_bar("Sonographer Schedules &amp; Weekly Goals", 15, 5)}'
-        f'{head}{body}</table>'
-    )
-
-
 def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
     """Per-sonographer goal vs. actual for the last complete week, with % of goal, plus
     40-hour / modified subtotals and a group total — the view Marty asked for. Rows are
@@ -430,7 +402,7 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
 
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
-            + _cell("40 hours?", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Hours/week", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Actual", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("% of Goal", _HEAD_BG, _HEAD_TX, "center", True)
@@ -443,7 +415,7 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
                     else _cell(f"{round(pct)}%"))
         body += ("<tr>"
                  + _cell(_html.escape(s), None, _LBL_TX, "left", True)
-                 + _cell("Yes" if ft else "No")
+                 + _cell(scheds[s]["weekly_hours"])
                  + _cell(fmt_goal(g))
                  + _cell(a)
                  + pct_cell
@@ -569,8 +541,7 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "<p>Please see the following assisting sonographer activity reports.</p>"
         f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
         f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
-        f"{_table_html('Weekly (Goal: 50/week at full-time, prorated for part-time)', wk_rows, scheds)}<br>"
-        f"{_legend_html(scheds)}"
+        f"{_table_html('Weekly (Goal: 50/week at full-time, prorated for part-time)', wk_rows, scheds)}"
         "</div>"
     )
     plain = (
