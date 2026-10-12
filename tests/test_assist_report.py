@@ -92,6 +92,26 @@ def test_goal_perf_table_group_total_and_pct():
     assert "94%" in html           # 423 / 450
 
 
+def test_goal_perf_no_red_text():
+    sch = ar.infer_schedules({})
+    wc = {"Becky Tiner": 1}         # almost everyone far below goal
+    html = ar._goal_perf_html(sch, wc, "10/6/2026")
+    assert "#b23b3b" not in html    # no red percentages anywhere
+
+
+def test_goal_perf_overflow_hits_group_total_without_a_goal():
+    sch = ar.infer_schedules({})
+    wc = {s: 50 for s in ar.SONOGRAPHERS if sch[s]["full_time"]}   # 350
+    wc["Becky Tiner"] = 30; wc["Katie Heuer"] = 25; wc["Megan DuCasse"] = 18  # -> 423
+    wc["Sandra Paris"] = 20        # overflow, no goal
+    html = ar._goal_perf_html(sch, wc, "10/6/2026")
+    assert "Sandra Paris (overflow)" in html
+    # group goal unchanged at 450; actual 423 + 20 overflow = 443 -> 98%
+    assert "98%" in html
+    # the group goal still reads 450 (overflow did not add to the goal)
+    assert ">450<" in html
+
+
 def test_regular_cells_transparent_only_goal_and_header_filled():
     # A plain (below-goal) cell carries no background fill at all.
     plain = ar._cell("30")

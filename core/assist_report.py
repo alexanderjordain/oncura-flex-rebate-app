@@ -33,6 +33,12 @@ SONOGRAPHERS = [
 ]
 _SSET = {s.lower(): s for s in SONOGRAPHERS}
 
+# Assisters whose work counts toward the GROUP total but who carry NO individual goal
+# (overflow — e.g. a lead who also assists). Shown as their own row and folded into the
+# group-total actual without changing the group goal.
+OVERFLOW_ASSISTERS = ["Sandra Paris"]
+_ASSIST = {s.lower(): s for s in SONOGRAPHERS + OVERFLOW_ASSISTERS}
+
 # Recipients (as "Name <email>").
 TO_RECIPIENTS = [
     ("Melissa Colpitts", "mcolpitts@oncurapartners.com"),
@@ -165,7 +171,7 @@ def build_counts(pull_start_iso: str, pull_end_iso: str) -> dict:
         rows, _ = opd_api._fetch_all(f"{opd_api.BASE_URL}/Consult", auth=auth,
                                      params={"$filter": flt})
         for r in rows:
-            son = _SSET.get((r.get("AssistedBy") or "").strip().lower())
+            son = _ASSIST.get((r.get("AssistedBy") or "").strip().lower())
             fd = r.get("FinalizedDate")
             if not (son and fd):
                 continue
@@ -411,14 +417,15 @@ def _legend_html(scheds: dict) -> str:
 
 def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
     """Per-sonographer goal vs. actual for the last complete week, with % of goal, plus
-    full-time / part-time subtotals and a group total — the view Marty asked for. Rows are
-    sorted by % of goal (lowest first) to surface who is falling short."""
+    40-hour / modified subtotals and a group total — the view Marty asked for. Rows are
+    sorted by % of goal (highest first). Overflow assisters (e.g. Sandra) have no goal;
+    their assists fold into the group-total actual without changing the group goal."""
     recs = []
     for s in SONOGRAPHERS:
         g = scheds[s]["weekly_goal"]; a = week_counts.get(s, 0)
         pct = (a / g * 100) if g else 0.0
         recs.append((s, scheds[s]["full_time"], g, a, pct))
-    recs.sort(key=lambda r: r[4])   # lowest % of goal first
+    recs.sort(key=lambda r: -r[4])   # highest % of goal first
 
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
@@ -430,8 +437,9 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
     body = ""
     for s, ft, g, a, pct in recs:
         met = a >= g
+        # Met goal -> yellow highlight; otherwise plain (no red, per request).
         pct_cell = (_cell(f"{round(pct)}%", _GOAL_BG, _GOAL_TX, "center", True) if met
-                    else _cell(f"{round(pct)}%", None, "#b23b3b", "center", True))
+                    else _cell(f"{round(pct)}%"))
         body += ("<tr>"
                  + _cell(_html.escape(s), None, _LBL_TX, "left", True)
                  + _cell("Yes" if ft else "No")
@@ -440,24 +448,38 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
                  + pct_cell
                  + "</tr>")
 
-    def _subtotal(label, group, bg):
-        g = sum(r[2] for r in group); a = sum(r[3] for r in group)
-        pct = round(a / g * 100) if g else 0
+    # Overflow assisters: no individual goal; their work is folded into the group total.
+    overflow_actual = 0
+    for s in OVERFLOW_ASSISTERS:
+        a = week_counts.get(s, 0)
+        overflow_actual += a
+        body += ("<tr>"
+                 + _cell(_html.escape(s) + " (overflow)", None, _LBL_TX, "left", True)
+                 + _cell("n/a") + _cell("n/a") + _cell(a) + _cell("n/a")
+                 + "</tr>")
+
+    def _subtotal(label, goal_sum, actual_sum, bg):
+        pct = round(actual_sum / goal_sum * 100) if goal_sum else 0
         return ("<tr>"
                 + _cell(label, bg, _HEAD_TX, "left", True)
                 + _cell("", bg, _HEAD_TX)
-                + _cell(fmt_goal(g), bg, _HEAD_TX, "center", True)
-                + _cell(a, bg, _HEAD_TX, "center", True)
+                + _cell(fmt_goal(goal_sum), bg, _HEAD_TX, "center", True)
+                + _cell(actual_sum, bg, _HEAD_TX, "center", True)
                 + _cell(f"{pct}%", bg, _HEAD_TX, "center", True)
                 + "</tr>")
 
     ft_rows = [r for r in recs if r[1]]; pt_rows = [r for r in recs if not r[1]]
     subtotals = ""
     if ft_rows:
-        subtotals += _subtotal(f"40 hours ({len(ft_rows)})", ft_rows, "#eef3f5")
+        subtotals += _subtotal(f"40 hours ({len(ft_rows)})",
+                               sum(r[2] for r in ft_rows), sum(r[3] for r in ft_rows), "#eef3f5")
     if pt_rows:
-        subtotals += _subtotal(f"Modified ({len(pt_rows)})", pt_rows, "#eef3f5")
-    subtotals += _subtotal("Group Total", recs, _HEAD_BG)
+        subtotals += _subtotal(f"Modified ({len(pt_rows)})",
+                               sum(r[2] for r in pt_rows), sum(r[3] for r in pt_rows), "#eef3f5")
+    # Group total: goal from the goaled sonographers only; actual includes overflow.
+    tot_goal = sum(r[2] for r in recs)
+    tot_act = sum(r[3] for r in recs) + overflow_actual
+    subtotals += _subtotal("Group Total", tot_goal, tot_act, _HEAD_BG)
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
@@ -499,38 +521,6 @@ def _notes_html(adj: dict, week_label: str, holidays: list | None = None) -> str
     )
 
 
-def _daily_table_html(subtitle: str, rows, scheds: dict) -> str:
-    """Daily table (FinalizedDate counts). No day is greyed — counts are by finalized
-    date, which lands on weekends/off-days too, so every day shows its real count. The
-    goal highlight uses each person's prorated daily goal."""
-    ncol = len(SONOGRAPHERS) + 1
-    header = ("<tr>" + _cell("Assist Count", _HEAD_BG, _HEAD_TX, "left", True)
-              + "".join(_cell(_html.escape(s), _HEAD_BG, _HEAD_TX, "center", True) for s in SONOGRAPHERS)
-              + "</tr>")
-    body = ""
-    for d, counts in rows:
-        cells = ""
-        for s in SONOGRAPHERS:
-            v = counts.get(s)
-            goal = scheds[s]["daily_goal"]
-            if isinstance(v, int) and v >= goal:
-                cells += _cell(v, _GOAL_BG, _GOAL_TX, "center", True)
-            else:
-                cells += _cell(v or "")
-        label = _mdY(d) + (" (holiday)" if _is_holiday(d) else "")
-        body += "<tr>" + _cell(label, None, _LBL_TX, "left", True) + cells + "</tr>"
-    legend = ('<tr><td colspan="%d" style="color:#6b7480;padding:5px 11px;%s;font-size:10px">'
-              "Highlight = met that person's daily goal."
-              '</td></tr>' % (ncol, _FONT))
-    return (
-        '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
-        f'{_FONT};font-size:11px;margin:16px 0 0">'
-        f'{_bar("Finalized Assistance", 15, ncol)}'
-        f'{_bar(_html.escape(subtitle), 12, ncol)}'
-        f'{header}{body}{legend}</table>'
-    )
-
-
 def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     """Pull the data and render the email. Returns (subject, plain_body, html_body).
 
@@ -546,12 +536,6 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     pull_start = min(weekly_start, daily_start)
     counts = build_counts(pull_start.isoformat(), (today + dt.timedelta(days=1)).isoformat())
     wk_rows, _ = _rows(counts, today)
-
-    # Daily rows carry the date (needed for per-person schedule/greying).
-    last_day = today - dt.timedelta(days=1)
-    dy_rows = [(last_day - dt.timedelta(days=i), counts["daily"].get(
-        (last_day - dt.timedelta(days=i)).isoformat(), {}))
-        for i in range(DAILY_DAYS - 1, -1, -1)]
 
     # Schedules + PTO from submitted activity (last SCHEDULE_WEEKS complete weeks).
     sched_start = this_monday - dt.timedelta(weeks=SCHEDULE_WEEKS)
@@ -585,7 +569,6 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
         f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
         f"{_table_html('Weekly (Goal: 50/week at full-time, prorated for part-time)', wk_rows, scheds)}<br>"
-        f"{_daily_table_html('Daily (goal prorated to each schedule)', dy_rows, scheds)}"
         f"{_legend_html(scheds)}"
         "</div>"
     )
