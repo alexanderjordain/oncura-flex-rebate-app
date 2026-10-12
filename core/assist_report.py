@@ -454,9 +454,9 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
     ft_rows = [r for r in recs if r[1]]; pt_rows = [r for r in recs if not r[1]]
     subtotals = ""
     if ft_rows:
-        subtotals += _subtotal(f"Full-time ({len(ft_rows)})", ft_rows, "#eef3f5")
+        subtotals += _subtotal(f"40 hours ({len(ft_rows)})", ft_rows, "#eef3f5")
     if pt_rows:
-        subtotals += _subtotal(f"Part-time ({len(pt_rows)})", pt_rows, "#eef3f5")
+        subtotals += _subtotal(f"Modified ({len(pt_rows)})", pt_rows, "#eef3f5")
     subtotals += _subtotal("Group Total", recs, _HEAD_BG)
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'

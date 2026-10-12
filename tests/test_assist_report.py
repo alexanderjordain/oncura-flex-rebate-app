@@ -88,7 +88,7 @@ def test_goal_perf_table_group_total_and_pct():
     html = ar._goal_perf_html(sch, wc, "10/6/2026")
     assert "Weekly Goal Performance" in html
     assert "Group Total" in html and "% of Goal" in html
-    assert "Full-time (7)" in html and "Part-time (3)" in html
+    assert "40 hours (7)" in html and "Modified (3)" in html
     assert "94%" in html           # 423 / 450
 
 
