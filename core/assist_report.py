@@ -9,6 +9,7 @@ Nothing here writes to OPD or QBO — it's a read-only pull plus an email body.
 """
 from __future__ import annotations
 
+import calendar
 import collections
 import datetime as dt
 import html as _html
@@ -60,9 +61,21 @@ CC_RECIPIENTS = [
     ("Craig Presnall", "craig@oncurapartners.com"),
 ]
 SUBJECT = "Weekly Assistance Update"
+MONTHLY_SUBJECT = "Monthly Assistance Comp Summary"
 WEEKLY_GOAL = 50       # per week at full-time
 FULL_TIME_HOURS = 40   # a full-time week; part-time goals prorate off this (50 * hrs/40)
 DAILY_GOAL = 10    # per day (full-time, 5-day default)
+
+# Comp-plan weekly assist thresholds (Oncura Sonographer Commission Plan, 2026-10-09),
+# by scheduled weekly hours. $ is the weekly goal; $$/$$$/$$$$ are the elevated comp tiers.
+# These are the plan's EXACT published numbers (the plan rounds non-uniformly, so do not
+# recompute them for the 40/30/20 buckets).
+COMP_TIERS = {
+    40: {"$": 50, "$$": 55, "$$$": 60, "$$$$": 65},
+    30: {"$": 38, "$$": 42, "$$$": 45, "$$$$": 49},
+    20: {"$": 25, "$$": 28, "$$$": 30, "$$$$": 33},
+}
+TIER_ORDER = ["$", "$$", "$$$", "$$$$"]
 # Trailing windows shown in the email (both end at the last COMPLETE period).
 WEEKLY_WEEKS = 15  # last N complete Mon-Sun weeks
 DAILY_DAYS = 15    # last N complete days
@@ -541,14 +554,143 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "<p>Please see the following assisting sonographer activity reports.</p>"
         f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
         f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
-        f"{_table_html('Weekly (Goal: 50/week at full-time, prorated for part-time)', wk_rows, scheds)}"
+        f"{_table_html('Weekly (Goal: 50/week at full-time, prorated by hours)', wk_rows, scheds)}"
         "</div>"
     )
     plain = (
         "Hello all,\n\n"
         "Please see the following assisting sonographer activity reports "
         "(formatted tables in the HTML version of this email).\n\n"
-        f"Week of {_mdY(last_week_monday)} — group goal {fmt_goal(tot_goal)}, "
+        f"Week of {_mdY(last_week_monday)}: group goal {fmt_goal(tot_goal)}, "
         f"actual {tot_act}, {tot_pct}% of goal."
     )
     return SUBJECT, plain, html
+
+
+# ── Monthly comp summary (sends on the first weekday of each month) ─────────────
+# Shows the PREVIOUS month's weeks (bucketed by WO / Monday date) and, using the
+# commission plan, how many weeks each sonographer hit goal ($) and each elevated
+# tier ($$/$$$/$$$$). Counts stay FinalizedDate; hours/goals come from the schedule.
+
+
+def _comp_thresholds(hours: int) -> dict:
+    """Comp-plan tier thresholds for a weekly-hours bucket; prorates off 40 h (rounded)
+    for any bucket the plan doesn't publish explicitly."""
+    if hours in COMP_TIERS:
+        return COMP_TIERS[hours]
+    return {t: int(COMP_TIERS[40][t] * hours / FULL_TIME_HOURS + 0.5) for t in TIER_ORDER}
+
+
+def _comp_tier(count: int, hours: int) -> str:
+    """Highest comp tier whose threshold `count` meets, or '' if below goal ($)."""
+    th = _comp_thresholds(hours)
+    hit = ""
+    for t in TIER_ORDER:
+        if count >= th[t]:
+            hit = t
+    return hit
+
+
+def _month_wo_mondays(year: int, month: int) -> list:
+    """Every WO date (Monday) that falls within the given calendar month."""
+    d = dt.date(year, month, 1)
+    d += dt.timedelta(days=(0 - d.weekday()) % 7)   # first Monday on/after the 1st
+    out = []
+    while d.year == year and d.month == month:
+        out.append(d)
+        d += dt.timedelta(days=7)
+    return out
+
+
+def _comp_summary_html(scheds: dict, weeks: list, month_label: str) -> str:
+    """Per-sonographer comp-tier counts for the month: how many of the month's weeks each
+    one hit goal ($) and each elevated tier. `weeks` = [(monday, {son: count}), ...].
+    Sorted by comp earned (weighted tier score), highest first."""
+    nwk = len(weeks)
+    recs = []
+    for s in SONOGRAPHERS:
+        hours = scheds[s]["weekly_hours"]
+        goal = _comp_thresholds(hours)["$"]
+        tally = {t: 0 for t in TIER_ORDER}
+        for _mo, wc in weeks:
+            t = _comp_tier(wc.get(s, 0), hours)
+            if t:
+                tally[t] += 1
+        hit = sum(tally.values())
+        score = sum(tally[t] * (i + 1) for i, t in enumerate(TIER_ORDER))
+        recs.append((s, hours, goal, hit, tally, score))
+    recs.sort(key=lambda r: -r[5])
+
+    heads = ["Sonographer", "Hours/week", "Goal", "Weeks", "Hit Goal", "$", "$$", "$$$", "$$$$"]
+    ncol = len(heads)
+    header = "<tr>" + "".join(
+        _cell(h, _HEAD_BG, _HEAD_TX, ("left" if h == "Sonographer" else "center"), True)
+        for h in heads) + "</tr>"
+    body = ""
+    for s, hours, goal, hit, tally, _score in recs:
+        hit_cell = (_cell(hit, _GOAL_BG, _GOAL_TX, "center", True)
+                    if nwk and hit == nwk else _cell(hit))
+        body += ("<tr>"
+                 + _cell(_html.escape(s), None, _LBL_TX, "left", True)
+                 + _cell(hours)
+                 + _cell(goal)
+                 + _cell(nwk)
+                 + hit_cell
+                 + "".join(_cell(tally[t] or "") for t in TIER_ORDER)
+                 + "</tr>")
+    # Company goal (sum of individual goals) met in how many weeks.
+    group_goal = sum(_comp_thresholds(scheds[s]["weekly_hours"])["$"] for s in SONOGRAPHERS)
+    group_hit = sum(1 for _mo, wc in weeks
+                    if sum(wc.get(s, 0) for s in SONOGRAPHERS) >= group_goal)
+    note = ('<tr><td colspan="%d" style="color:#6b7480;padding:6px 11px;%s;font-size:10px">'
+            "Comp-plan weekly thresholds by hours ($ = goal). Each week counts at the highest "
+            "tier reached. Company goal (%d/wk) met in %d of %d weeks."
+            '</td></tr>' % (ncol, _FONT, group_goal, group_hit, nwk))
+    return (
+        '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
+        f'{_FONT};font-size:11px;margin:16px 0 0">'
+        f'{_bar("Monthly Comp Summary", 15, ncol)}'
+        f'{_bar(_html.escape(month_label), 12, ncol)}'
+        f'{header}{body}{note}</table>'
+    )
+
+
+def build_monthly_email(today: dt.date | None = None) -> tuple[str, str, str]:
+    """Monthly comp summary for the PREVIOUS calendar month (weeks bucketed by WO/Monday
+    date). Returns (subject, plain, html). Intended to send on the first weekday of a
+    month."""
+    if today is None:
+        today = eastern_today()
+    first_this = today.replace(day=1)
+    last_prev = first_this - dt.timedelta(days=1)
+    y, m = last_prev.year, last_prev.month
+    mondays = _month_wo_mondays(y, m)
+    month_label = f"{calendar.month_name[m]} {y}"
+
+    pull_start = mondays[0]
+    pull_end = mondays[-1] + dt.timedelta(days=7)
+    counts = build_counts(pull_start.isoformat(), pull_end.isoformat())
+    weeks = [(mo, counts["weekly"].get(mo.isoformat(), {})) for mo in mondays]
+
+    this_monday = today - dt.timedelta(days=today.weekday())
+    sub = build_submitted((this_monday - dt.timedelta(weeks=SCHEDULE_WEEKS)).isoformat(),
+                          this_monday.isoformat())
+    scheds = infer_schedules(sub)
+
+    wk_rows = [(f"WO: {_mdY(mo)}", wc) for mo, wc in weeks]
+    subject = f"{MONTHLY_SUBJECT} - {month_label}"
+    html = (
+        "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
+        "<p>Hello all,</p>"
+        f"<p>Monthly assisting-sonographer comp summary for <b>{_html.escape(month_label)}</b> "
+        "(weeks by work-order / Monday date), scored against the commission plan.</p>"
+        f"{_comp_summary_html(scheds, weeks, month_label)}<br>"
+        f"{_table_html(month_label + ': weekly assists by WO (highlight = hit goal)', wk_rows, scheds)}"
+        "</div>"
+    )
+    plain = (
+        "Hello all,\n\n"
+        f"Monthly assisting-sonographer comp summary for {month_label} "
+        "(formatted tables in the HTML version of this email)."
+    )
+    return subject, plain, html

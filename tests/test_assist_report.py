@@ -121,6 +121,40 @@ def test_regular_cells_transparent_only_goal_and_header_filled():
     assert f'bgcolor="{ar._HEAD_BG}"' in ar._cell("Becky Tiner", ar._HEAD_BG, ar._HEAD_TX, bold=True)
 
 
+def test_comp_tier_lookup():
+    assert ar.COMP_TIERS[40] == {"$": 50, "$$": 55, "$$$": 60, "$$$$": 65}
+    assert ar._comp_tier(49, 40) == ""        # below the 50 goal
+    assert ar._comp_tier(50, 40) == "$"
+    assert ar._comp_tier(64, 40) == "$$$"     # 60 <= 64 < 65
+    assert ar._comp_tier(65, 40) == "$$$$"
+    assert ar._comp_tier(41, 30) == "$"       # 38 <= 41 < 42
+    assert ar._comp_tier(42, 30) == "$$"
+    assert ar._comp_tier(52, 20) == "$$$$"    # >= 33
+
+
+def test_month_wo_mondays_september_2026():
+    m = ar._month_wo_mondays(2026, 9)
+    assert m == [dt.date(2026, 9, 7), dt.date(2026, 9, 14),
+                 dt.date(2026, 9, 21), dt.date(2026, 9, 28)]
+    assert all(d.weekday() == 0 for d in m)
+
+
+def test_comp_summary_counts_and_group_goal():
+    sch = ar.infer_schedules({})
+    S = ar.SONOGRAPHERS
+    sample = {
+        dt.date(2026, 9, 14): [41, 56, 57, 46, 55, 37, 56, 44, 52, 52],
+        dt.date(2026, 9, 21): [44, 51, 50, 29, 64, 36, 52, 58, 62, 51],
+        dt.date(2026, 9, 28): [31, 51, 49, 38, 40, 34, 39, 50, 43, 41],
+    }
+    weeks = [(d, dict(zip(S, v))) for d, v in sorted(sample.items())]
+    html = ar._comp_summary_html(sch, weeks, "September 2026")
+    assert "Monthly Comp Summary" in html and "September 2026" in html
+    assert "Hit Goal" in html
+    # group goal 451 (7x50 + 2x38 + 25); met in weeks 1 and 2 only (496, 497, 416)
+    assert "Company goal (451/wk) met in 2 of 3 weeks" in html
+
+
 def test_eml_supports_cc_and_html_body():
     raw = ah._build_eml_bytes(
         "Subject", "plain fallback", "a@x.com, b@x.com", None,
