@@ -388,7 +388,7 @@ def _legend_html(scheds: dict) -> str:
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
             + _cell("Works", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Hours/week", _HEAD_BG, _HEAD_TX, "center", True)
-            + _cell("Full-time?", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("40 hours?", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
             + "</tr>")
     body = ""
@@ -422,7 +422,7 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
 
     head = ("<tr>"
             + _cell("Sonographer", _HEAD_BG, _HEAD_TX, "left", True)
-            + _cell("Full-time?", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("40 hours?", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Actual", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("% of Goal", _HEAD_BG, _HEAD_TX, "center", True)
