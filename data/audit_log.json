@@ -2788,6 +2788,49 @@
       ],
       "note": "Rebate cycle for July 2026, August 2026, and September 2026",
       "entry_hash": "8df82ca1fbbef691bb83e1566f3f02f01edc74806c3e9b5a2baead552a0edf4b"
+    },
+    {
+      "id": "35c18cd3-8dd5-4391-8bf5-0191c8b1854e",
+      "timestamp": "2026-10-13T18:34:54",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 10,
+      "params": {
+        "company": "OnePlace",
+        "payment_date": "2026-10-01",
+        "applies_to": "",
+        "invoice_date": "2026-10-01",
+        "start_invoice_no": 54098,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "September 2026 Oncura PTB.xlsx",
+        "sha256": "da8d63e33bc494c1da4d4fe3680462c0b50c82c8330b0eaddb54b0ad3437cbb8",
+        "size_bytes": 32164
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "e01fc52ca47c5e596c00bdc21235d8f4de2c66f2e94e8d750a63a79ea1aaf669",
+          "row_count": 30,
+          "total": 27379.99
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "05f1eb422372811d498f626d96533773c31bfb171800f0210c0b6c200fd1c363",
+          "row_count": 19,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "3003d571844e4edbd2a53d5c1e95ef54de466359b09ea9b1388a367948f2b382",
+          "row_count": 19,
+          "total": 6735.0
+        }
+      ],
+      "note": "49 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "7d64aa0af92f5658235005e5742073675868727df909dfcbd208e52ab402c57c"
     }
   ]
 }
