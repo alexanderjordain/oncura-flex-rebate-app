@@ -2831,6 +2831,49 @@
       ],
       "note": "49 new payment(s) recorded; 0 already in ledger",
       "entry_hash": "7d64aa0af92f5658235005e5742073675868727df909dfcbd208e52ab402c57c"
+    },
+    {
+      "id": "053f30e0-9beb-42e0-a640-f8cfb4167ef6",
+      "timestamp": "2026-10-13T18:56:48",
+      "cycle_type": "stage1_finance_payment",
+      "approver": "JW",
+      "year": 2026,
+      "month": 10,
+      "params": {
+        "company": "NewLane",
+        "payment_date": "2026-10-09",
+        "applies_to": "2026-10",
+        "invoice_date": "2026-10-09",
+        "start_invoice_no": 54117,
+        "skipped_already_seen": 0
+      },
+      "source_file": {
+        "name": "Copy of Sept Oncura.xlsx",
+        "sha256": "1eae38c8d4a8ce411ed3a938b70c101c2d009251f608030be51a942879d1f9bf",
+        "size_bytes": 11580
+      },
+      "outputs": [
+        {
+          "name": "flex_payments",
+          "sha256": "191220ae607191c494bb2d25ce859214d8326ec61cdcab4c2f8b2def8c15f679",
+          "row_count": 1,
+          "total": 799.05
+        },
+        {
+          "name": "scan_invoices",
+          "sha256": "f4f6664d192f71d414088528b8a7149f57343dcf730880c03c17f37ca0baa286",
+          "row_count": 24,
+          "total": null
+        },
+        {
+          "name": "scan_payments",
+          "sha256": "c89eed038ad3d2a730aaddddc48f75f1a2bdd4123df19ace609cf1ec5d973cb3",
+          "row_count": 24,
+          "total": 17510.0
+        }
+      ],
+      "note": "25 new payment(s) recorded; 0 already in ledger",
+      "entry_hash": "32a23a80e51b324f6d46fd2f67af9865738dd398fce1c3d6405c597fd843bff6"
     }
   ]
 }
