@@ -383,6 +383,14 @@
       "uploaded_at": "2026-10-06T17:22:15",
       "row_count": 7,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-09-30"
+    },
+    {
+      "sha256": "da8d63e33bc494c1da4d4fe3680462c0b50c82c8330b0eaddb54b0ad3437cbb8",
+      "filename": "September 2026 Oncura PTB.xlsx",
+      "company": "OnePlace",
+      "uploaded_at": "2026-10-13T18:34:52",
+      "row_count": 49,
+      "note": "Stage 1 / OnePlace / pay_date=2026-10-01"
     }
   ],
   "payments": [
@@ -13535,6 +13543,496 @@
       "payment_date": "2026-09-01",
       "amount": 1547.0,
       "recorded_at": "2026-10-07T02:01:23"
+    },
+    {
+      "fingerprint": "2d035ef8e88284f5a3c7106d7ac31ff0fbe80b1af3c120bb226f91e9b3cc0d8a",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010151336",
+      "qb_customer": "Waldorf Emergency Care",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "531cf0a502cbe802c52213531cf139a724552674b8a535fa7d8e699355533e80",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010159710",
+      "qb_customer": "TVC-Driftwood Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 933.15,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "42ff44d7f685f47e746c9602a505b09b5efa7fdfa7ea0f7910f32d25629b437c",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010163214",
+      "qb_customer": "Marin City Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 895.92,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "ba47456c655f8c83d30a074e797ed0ffde989fbcd2aea3798c36c23a1cdf7c67",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010147515",
+      "qb_customer": "Abell Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "4cf1345ad2cc6b06e43aa5f0f24ab2d0062560d04f56a4d6781d51da5676b772",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010149759",
+      "qb_customer": "VETFORPET Wellness & Emergency Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "9c4ad5251a67bff91c351b259b650def03b54780376bcd9d3e52aa4c2cf5dfbe",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010149791",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "dcc4b95a72b8934c55c0de96dd15146bb63b0e5cf04966ef41575fc87761c0a7",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010150418",
+      "qb_customer": "Reata Veterinary Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "35a75c551ed5861f49bf49b39a356409b90970d94687e1c1a4f3f3e554e10725",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010150489",
+      "qb_customer": "TVC - Kindness Small Animal Hospital - TX",
+      "payment_date": "2026-10-01",
+      "amount": 901.81,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "c124540bac12aeeb154e85729643e97842692ba0b2f40909f680a49d6f86a9a4",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010151349",
+      "qb_customer": "West Hollywood Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "4e05427ea91e33ee02f2b036708ae87494ae60c3accb4873aa3af2f10edaf04b",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010151378",
+      "qb_customer": "Chenango Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "cc53da03b0f9231f52f51768b03db642f7346aef1e8577d298e02638b06685c8",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010151569",
+      "qb_customer": "TLC Pet Hospital NM",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "9afc0206047f0dbfa381f3ba15e125baca6c00dd26543b59a9a093255a308270",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010152681",
+      "qb_customer": "The Scaredy Cat Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "fe10b367780f07aa039dd71d8d373c4802a3f276dfd5e12af6995c90ccc4b261",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010153855",
+      "qb_customer": "Trinity Pet Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "e33910efbbf872b4ffb7d52bf93f6fc725eed4e7f88973a4d84d90fa5031d86c",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010157958",
+      "qb_customer": "South Bay Veterinary Group - Charles St",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "49d4b6a3a868cd08f4b61ef0c15707d8694afa97e09a89ff19becf1a4131c367",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010159231",
+      "qb_customer": "TVC-Luv N Care Animal Hospital - Longwood",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "ac4e3af7c5dc9fecd3c812d8fbe4f35ff974798f0f83b3ef3ddccbe57348475f",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010159244",
+      "qb_customer": "Luv-N-Care Animal Hospital of Windermere",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "7f6f10f3c56e02ac8c4f5f1ae56f21c0718d5e247567ff0f475d9ff0acb593ea",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010159406",
+      "qb_customer": "Miller Mobile Veterinary Services & Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "3c7857daad99a0a8968c223b814384b4bcb57f4faed475b3b9d0a0fb9a79d698",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010159671",
+      "qb_customer": "On Point Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 917.71,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "246ac5c4e3b5c7be38c2700bd3ea0989a7d97f91abe52042606308dfec9bdb04",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010162493",
+      "qb_customer": "Sycamore Veterinary Services",
+      "payment_date": "2026-10-01",
+      "amount": 910.55,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "3c0079b1045c03d277a4ac225c0bc4c785f41d1bf259140e20905c236891e7dd",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010163557",
+      "qb_customer": "Berkeley Veterinary Clinic",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "8ea7ec0f4a72bc06985f2cfddc23c05e73f2cbf7a8312d9c3dad3fe3d9b3a166",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010164909",
+      "qb_customer": "Animal Care Experts",
+      "payment_date": "2026-10-01",
+      "amount": 887.56,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "428a4dce66193d8476a6d289d33367f4cc960963bc345e8eda602c23217e6a24",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010169768",
+      "qb_customer": "Bridges Professional Park Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "cac7ed886234b5669ba83a3036e979e5c5e5dba4787499e17124cfe80b905a2c",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010170294",
+      "qb_customer": "Encanto Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "43b97ff1d7fda26f71b0353698ca53cf47d762b70845a71a52c49fe719ef0ba4",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010171099",
+      "qb_customer": "Silicon Valley Pet Clinic",
+      "payment_date": "2026-10-01",
+      "amount": 895.92,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "f9326c806c495607202a5801b50a02412b8c83442cc04772c4df8afda506532d",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010172166",
+      "qb_customer": "Lake Road Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "559dd088bd737b9d87fdc132d57d116013d3335fbc32f76b99967fbaeb26d27f",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010172988",
+      "qb_customer": "Baseline Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "dc87ba424bca2cd5218f18ea4041e4bde8978059e4e85003d594d74013018d0d",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010173246",
+      "qb_customer": "Animal Medical Center of Redlands",
+      "payment_date": "2026-10-01",
+      "amount": 895.92,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "f2c6e4e9f86d64b37704efd7c23e89a826579e3e95e062a9fce85be7f1830838",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010175668",
+      "qb_customer": "Animal Health Center of Santa Clara",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "55e33aaaea15f9b3482550731a42d84a81130fa0d31b407df3aab6be37d7c30e",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010159299",
+      "qb_customer": "Town and Country Animal Hospital - TN",
+      "payment_date": "2026-10-01",
+      "amount": 918.68,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "eba3b99a83807cfd780c9f260f27ff4e646b9bf860bec2ec8a6e9bf775897198",
+      "company": "OnePlace",
+      "kind": "flex",
+      "contract": "040010179004",
+      "qb_customer": "Best Friends Pet Hospital - CA",
+      "payment_date": "2026-10-01",
+      "amount": 910.69,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "503b34e867ebaf62b54cc9686432f539b997eadaac33eeb238450b8eed919575",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016207",
+      "qb_customer": "Adel Veterinary Clinic",
+      "payment_date": "2026-10-01",
+      "amount": 145.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "3a596173a2bbe95c3c38f78ce88c68b8e39dac576ebd5b1b47c13d7cbfee40a2",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016457",
+      "qb_customer": "Ashland Terrace Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 295.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "a4fad16a7af47cafe231c753e2185debb9ad82075c70cc651052fcd0db251eaf",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016511",
+      "qb_customer": "Clover Basin Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 355.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "9081ce4172c52385bc234049e9e1b9e4d19e85c6c61d1a071aaaf7f8fd613652",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016728",
+      "qb_customer": "Riverstone Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 355.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "7c690a7d1ff7edf8c1423a90b94e589bd1270c252eae8084d1c3cb120ad3bf70",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016731",
+      "qb_customer": "Baytown Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 355.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "b57da7776668da5efe8b9dda83636c8f1a1bbbd254a85c1243c5219bd150cb49",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000017351",
+      "qb_customer": "River Road Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 355.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "df3e3b02ce9f1e436df232c8789420a7b583bf3ffb5e928a99fa78413f140e16",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000018761",
+      "qb_customer": "Oak Tree Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 355.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "a6b809b7b02e9d9574711aaf32dfabb77088fcef93a973c24bf7251f1ea3666a",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000020140",
+      "qb_customer": "Wheaton Way Veterinary Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 395.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "fd7046c7b701e2b705e0c869925180fe1d59acf67f15b4279fd6df6207b3168a",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000020405",
+      "qb_customer": "Risius Family Veterinary Services",
+      "payment_date": "2026-10-01",
+      "amount": 395.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "dc99a4f30a13287330342e316b42687f2ff4e6d120bbaf1f3c9b90141080c1a1",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "040010127920",
+      "qb_customer": "Easthaven Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 595.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "b097415c2df73783d1778c7899410b8491f7209095b02874a840917dce1ffd80",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016218",
+      "qb_customer": "Dougherty Veterinary Clinic",
+      "payment_date": "2026-10-01",
+      "amount": 295.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "ab8c5e45e4cd0760b57b5d310e3a1de2a023846a8fa81c89ff36bec65587ed1a",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016230",
+      "qb_customer": "Monticello Veterinary Partners DBA Monticello Veterinary Practice",
+      "payment_date": "2026-10-01",
+      "amount": 295.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "2244fb353d07c3b17c381c37e165ad115511de1ba1dfa1a4546d9af62fed3b08",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016590",
+      "qb_customer": "Deepwoods Veterinary Services",
+      "payment_date": "2026-10-01",
+      "amount": 175.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "151965833abc9b5b8e22d6bde550f2979e229b630214769a7ccf76924ded6f67",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000016798",
+      "qb_customer": "Round Top Animal Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 535.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "c08406b6e3099933e5f5fc03fee20a8123fb1f28d6b7968eed88053ed03bfb70",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000017185",
+      "qb_customer": "TVC - Altmeyer Veterinary Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 355.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "edce1451387d0bb1c829966a962b5b3fffb31cccde15e794e412d71077e09b58",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000018552",
+      "qb_customer": "Daly City Pet Hospital, Inc. dba City Pet Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 395.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "e0777ce9547e186783e8a9fcc96726a37f075740be505f092ddef07047d3ce0e",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000020507",
+      "qb_customer": "Vista Veterinary Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 395.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "c0c991f8042374271083f2958b0a57052e1b74163b1eed8f5f1fe8d71c54908f",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "000000020698",
+      "qb_customer": "Whole Health Veterinary Care",
+      "payment_date": "2026-10-01",
+      "amount": 395.0,
+      "recorded_at": "2026-10-13T18:34:52"
+    },
+    {
+      "fingerprint": "6ee265756650e6098f41b3d8d1c4641f53d9de26c13034ed2eb20f1da2886427",
+      "company": "OnePlace",
+      "kind": "scan",
+      "contract": "040010167650",
+      "qb_customer": "Winterfield Veterinary Hospital",
+      "payment_date": "2026-10-01",
+      "amount": 295.0,
+      "recorded_at": "2026-10-13T18:34:52"
     }
   ]
 }
