@@ -2741,6 +2741,53 @@
       ],
       "note": "Direct-bill overages billed for September 2000",
       "entry_hash": "082f4646cab58f0a91e7a105924709599533ba27ee975b7efd1874c29b9dc3b0"
+    },
+    {
+      "id": "e5e6888f-41b7-4f75-ae1f-f2bedb70af1d",
+      "timestamp": "2026-10-13T16:59:23",
+      "cycle_type": "rebate_report",
+      "approver": "AJ",
+      "year": 2026,
+      "month": 9,
+      "params": {
+        "months": [
+          "2026-07",
+          "2026-08",
+          "2026-09"
+        ],
+        "period_label": "July 2026, August 2026, and September 2026",
+        "buckets": [
+          "NewLane Financed",
+          "Self-Financed",
+          "OnePlace Capital"
+        ],
+        "n_clinics": 87,
+        "per_bucket_totals": {
+          "NewLane Financed": 1852.5,
+          "Self-Financed": 2157.05,
+          "OnePlace Capital": 5776.9
+        },
+        "grand_total": 9786.45,
+        "fuzzy_match_decisions": {
+          "confirmed": 0,
+          "rejected": 0
+        }
+      },
+      "source_file": {
+        "name": "export_grid_df1f8c47-c93c-4602-bdb5-397642cab580.xls",
+        "sha256": "46cb38a7ddd6adb645ea340fa5b34456a31fe64781f34854323392c92140fc6f",
+        "size_bytes": 2397696
+      },
+      "outputs": [
+        {
+          "name": "Rebates_Jul_2026_and_Aug_2026_and_Sep_2026.xlsx",
+          "sha256": "c9c9265ad0dd5533365fb3cd1e338562d699e9b089740baab1d97dd286026a38",
+          "row_count": 87,
+          "total": 9786.45
+        }
+      ],
+      "note": "Rebate cycle for July 2026, August 2026, and September 2026",
+      "entry_hash": "8df82ca1fbbef691bb83e1566f3f02f01edc74806c3e9b5a2baead552a0edf4b"
     }
   ]
 }
