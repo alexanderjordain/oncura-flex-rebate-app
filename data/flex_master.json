@@ -1463,7 +1463,7 @@
       "ema_end": "2029-07-26",
       "support_ema_end": "2025-03-26",
       "hardware_ema_end": "2029-07-26",
-      "active": true,
+      "active": false,
       "notes": "",
       "group_id": null,
       "parent_clinic_id": null
