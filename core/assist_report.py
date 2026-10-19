@@ -475,25 +475,22 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
     )
 
 
-def _notes_html(adj: dict, week_label: str, holidays: list | None = None) -> str:
+def _notes_html(pto: dict, week_label: str, holidays: list | None = None) -> str:
     """Submitted-activity callout for the reported week: who took PTO (a scheduled work
-    day with no activity) and their goal adjusted for the days out. `adj` is
-    {son: {days:[dates], worked:int, sched:int, goal:int}}. Empty -> 'full attendance'.
-    Any company holiday in the week is called out so a lighter week reads correctly."""
-    if not adj:
+    day with no activity). `pto` is {son: [dates]}. Empty -> 'full attendance'. The weekly
+    goal is NOT adjusted for PTO. Any company holiday in the week is called out so a
+    lighter week reads correctly."""
+    if not pto:
         inner = ('Full attendance. Every sonographer had activity on each of their '
                  'scheduled work days.')
     else:
         items = ""
         for s in SONOGRAPHERS:
-            if s not in adj:
+            if s not in pto:
                 continue
-            a = adj[s]
-            dys = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in a["days"])
-            items += (f'<li style="margin:2px 0"><b>{_html.escape(s)}</b>: out {dys}. '
-                      f'Adjusted goal ~{a["goal"]} this week '
-                      f'(worked {a["worked"]} of {a["sched"]} scheduled days)</li>')
-        inner = ('PTO / time off this week (weekly goal adjusted for days out):'
+            dys = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in pto[s])
+            items += (f'<li style="margin:2px 0"><b>{_html.escape(s)}</b>: out {dys}</li>')
+        inner = ('PTO / time off this week:'
                  f'<ul style="margin:6px 0 0;padding-left:20px">{items}</ul>')
     if holidays:
         hol = ", ".join(f"{d.strftime('%a')} {d.month}/{d.day}" for d in holidays)
@@ -531,17 +528,6 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     wk_holidays = [last_week_monday + dt.timedelta(days=i) for i in range(7)
                    if _is_holiday(last_week_monday + dt.timedelta(days=i))]
 
-    # Per PTO-taker, prorate the weekly goal for the days they were out (holidays, which
-    # close the office for everyone, also drop out of the available days).
-    adj = {}
-    for s, days_out in pto.items():
-        work_days = scheds[s]["days"]
-        sched = len(work_days) or 1
-        hol = sum(1 for i in work_days if _is_holiday(last_week_monday + dt.timedelta(days=i)))
-        worked = max(0, sched - hol - len(days_out))
-        adj[s] = {"days": days_out, "sched": sched, "worked": worked,
-                  "goal": round(WEEKLY_GOAL * worked / sched)}
-
     # Last complete week's counts -> goal-performance table (goal vs actual, % of goal).
     week_counts = counts["weekly"].get(last_week_monday.isoformat(), {})
     tot_goal = sum(scheds[s]["weekly_goal"] for s in SONOGRAPHERS)
@@ -552,7 +538,7 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
-        f"{_notes_html(adj, _mdY(last_week_monday), wk_holidays)}"
+        f"{_notes_html(pto, _mdY(last_week_monday), wk_holidays)}"
         f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
         f"{_table_html('Weekly (Goal: 50/week at full-time, prorated by hours)', wk_rows, scheds)}"
         "</div>"
