@@ -230,6 +230,58 @@ def build_submitted(pull_start_iso: str, pull_end_iso: str) -> dict:
     return out
 
 
+@st.cache_data(ttl=1800, show_spinner="Pulling review activity from OPD…")
+def build_reviews(pull_start_iso: str, pull_end_iso: str) -> dict:
+    """Tally the '$0' "Sonographer Review & Outreach" service (ServiceID 155) by the
+    reviewing sonographer and the week the review was logged.
+
+    Attribution is Consult.ReviewedBy (an Account id) -> Account.FullName, NOT AssistedBy
+    (which is blank on review cases). The review is a $0 add-on, EligibleForScanPackage=false,
+    so it never affects the assist counts or the scan-package math. Bucketed by the
+    ConsultService line's createdDate (when the review was performed), Eastern.
+    Returns {'weekly': {monday_iso: {sonographer: n}}}. Cached 30 min.
+
+    OData quirks handled: filter the service by substringof('Outreach', ...) (the word
+    'Review' also appears in the comprehensive-consult names; 'Outreach' is unique to this
+    service), and `ID eq` on this feed must be UNQUOTED (quoted ids 400)."""
+    auth = opd_api.auth_from_secrets()
+    start = dt.date.fromisoformat(pull_start_iso)
+    end_excl = dt.date.fromisoformat(pull_end_iso)
+    accts, _ = opd_api._fetch_all(f"{opd_api.BASE_URL}/Account", auth=auth,
+                                  params={"$select": "ID,FullName"})
+    amap = {a.get("ID"): (a.get("FullName") or "").strip() for a in accts}
+    weekly = collections.defaultdict(collections.Counter)
+    for a, b in _month_chunks(start, end_excl):
+        flt = (f"substringof('Outreach',ServiceName) "
+               f"and createdDate ge datetime'{a.isoformat()}T00:00:00' "
+               f"and createdDate lt datetime'{b.isoformat()}T00:00:00'")
+        lines, _ = opd_api._fetch_all(
+            f"{opd_api.BASE_URL}/ConsultService", auth=auth,
+            params={"$filter": flt, "$select": "ServiceName,ConsultServiceCost_Consult,createdDate"})
+        lines = [l for l in lines
+                 if (l.get("ServiceName") or "").strip() == "Sonographer Review & Outreach"]
+        if not lines:
+            continue
+        ids = sorted({l.get("ConsultServiceCost_Consult") for l in lines
+                      if l.get("ConsultServiceCost_Consult")})
+        rb: dict[str, str] = {}
+        for i in range(0, len(ids), 20):
+            f2 = " or ".join(f"ID eq {cid}" for cid in ids[i:i + 20])   # UNQUOTED ids
+            crows, _ = opd_api._fetch_all(f"{opd_api.BASE_URL}/Consult", auth=auth,
+                                          params={"$filter": f2, "$select": "ID,ReviewedBy"})
+            for c in crows:
+                rb[c.get("ID")] = c.get("ReviewedBy")
+        for l in lines:
+            son = _ASSIST.get(amap.get(rb.get(l.get("ConsultServiceCost_Consult")), "").lower())
+            cd = l.get("createdDate")
+            if not (son and cd):
+                continue
+            d = _eastern_date(cd)
+            mon = d - dt.timedelta(days=d.weekday())
+            weekly[mon.isoformat()][son] += 1
+    return {"weekly": {k: dict(v) for k, v in weekly.items()}}
+
+
 def _goal_fields(weekly_hours: float, ndays: int) -> tuple[int, int, bool]:
     """(weekly_goal, daily_goal, full_time) for a given schedule. The weekly goal
     prorates off full-time (50 * hours / 40) and rounds to a whole assist:
@@ -398,6 +450,29 @@ def _table_html(subtitle: str, rows, scheds: dict | None = None) -> str:
     )
 
 
+def _reviews_html(rows) -> str:
+    """Reviews table: 'Sonographer Review & Outreach' count by sonographer by week, with a
+    per-week Total. No goal highlighting (reviews carry no goal). Same WOs as the assist
+    weekly table so Sandra can read them side by side."""
+    ncol = len(SONOGRAPHERS) + 2
+    header = ("<tr>" + _cell("Reviews", _HEAD_BG, _HEAD_TX, "left", True)
+              + "".join(_cell(_html.escape(s), _HEAD_BG, _HEAD_TX, "center", True) for s in SONOGRAPHERS)
+              + _cell("Total", _HEAD_BG, _HEAD_TX, "center", True) + "</tr>")
+    body = ""
+    for label, counts in rows:
+        tot = sum(int(counts.get(s, 0) or 0) for s in SONOGRAPHERS)
+        cells = "".join(_cell(counts.get(s) or "") for s in SONOGRAPHERS)
+        body += ("<tr>" + _cell(_html.escape(label), None, _LBL_TX, "left", True)
+                 + cells + _cell(tot or "", None, _TX, "center", True) + "</tr>")
+    return (
+        '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
+        f'{_FONT};font-size:11px;margin:16px 0 0">'
+        f'{_bar("Reviews: Sonographer Review &amp; Outreach", 15, ncol)}'
+        f'{_bar("Count by week performed (reviewing sonographer; $0 service, separate from assists)", 12, ncol)}'
+        f'{header}{body}</table>'
+    )
+
+
 _PTO_TX = "#9a6b00"    # PTO note text
 
 
@@ -520,6 +595,17 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
     counts = build_counts(pull_start.isoformat(), (today + dt.timedelta(days=1)).isoformat())
     wk_rows, _ = _rows(counts, today)
 
+    # Reviews ("Sonographer Review & Outreach", $0) by sonographer by week — same WOs as
+    # the assist weekly table so they line up. Separate from assists (ReviewedBy, not AssistedBy).
+    reviews = build_reviews(pull_start.isoformat(), (today + dt.timedelta(days=1)).isoformat())
+    rev_weekly = reviews["weekly"]
+    rev_mondays = [last_week_monday - dt.timedelta(days=7 * i) for i in range(WEEKLY_WEEKS - 1, -1, -1)]
+    _rev_full = [(f"WO: {_mdY(m)}", rev_weekly.get(m.isoformat(), {})) for m in rev_mondays]
+    # Reviews just started; drop leading empty weeks so the table stays tight and fills in over time.
+    _first = next((i for i, (_, c) in enumerate(_rev_full) if c), len(_rev_full) - 1)
+    rev_rows = _rev_full[_first:]
+    rev_last_week = sum(rev_weekly.get(last_week_monday.isoformat(), {}).values())
+
     # Schedules + PTO from submitted activity (last SCHEDULE_WEEKS complete weeks).
     sched_start = this_monday - dt.timedelta(weeks=SCHEDULE_WEEKS)
     sub = build_submitted(sched_start.isoformat(), this_monday.isoformat())
@@ -541,6 +627,7 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         f"{_notes_html(pto, _mdY(last_week_monday), wk_holidays)}"
         f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
         f"{_table_html('Weekly (Goal: 50/week at full-time, prorated by hours)', wk_rows, scheds)}"
+        f"<br>{_reviews_html(rev_rows)}"
         "</div>"
     )
     plain = (
@@ -548,7 +635,8 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "Please see the following assisting sonographer activity reports "
         "(formatted tables in the HTML version of this email).\n\n"
         f"Week of {_mdY(last_week_monday)}: group goal {fmt_goal(tot_goal)}, "
-        f"actual {tot_act}, {tot_pct}% of goal."
+        f"actual {tot_act}, {tot_pct}% of goal.\n"
+        f"Reviews logged (Sonographer Review & Outreach): {rev_last_week}."
     )
     return SUBJECT, plain, html
 
