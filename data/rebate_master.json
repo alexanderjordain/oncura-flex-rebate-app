@@ -368,8 +368,8 @@
       "rate_ultrasound": 0.1,
       "rate_rads": 0.08,
       "rads_rate_confirmed": true,
-      "active": true,
-      "notes": ""
+      "active": false,
+      "notes": "Retired from rebate program: paid off financed equipment May 2026, no longer eligible (deactivated 2026-11-02)."
     },
     {
       "clinic_name": "Harris Hill Animal Hospital",
@@ -940,8 +940,8 @@
       "rate_ultrasound": 0.1,
       "rate_rads": 0.08,
       "rads_rate_confirmed": true,
-      "active": true,
-      "notes": ""
+      "active": false,
+      "notes": "Retired from rebate program: paid off financed equipment 2026-02-05, no longer eligible (deactivated 2026-11-02)."
     },
     {
       "clinic_name": "Westcliff Animal Hospital",
@@ -951,8 +951,8 @@
       "rate_ultrasound": 0.1,
       "rate_rads": 0.08,
       "rads_rate_confirmed": true,
-      "active": true,
-      "notes": ""
+      "active": false,
+      "notes": "Retired from rebate program: paid off financed equipment 2026-05-08, no longer eligible (deactivated 2026-11-02)."
     },
     {
       "clinic_name": "Woodstock Animal Hospital",

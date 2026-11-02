@@ -58,6 +58,33 @@ def test_finance_clinic_basic_rebate():
     assert pc.iloc[0]["total_rebate"] == 120.0
 
 
+def test_inactive_clinic_excluded_from_rebate():
+    """A clinic retired from the program (active=false) earns no rebate even with
+    imaging revenue -- its OPD lines fall through to 'unmatched'. Guards the
+    Rebate Master 'active' checkbox as the real eligibility control (a paid-off
+    clinic deactivated in the roster must stop getting paid)."""
+    norm = _norm([
+        ("Acme Vet", "ultrasound", 1000.0),
+        ("Acme Vet", "rads", 500.0),
+    ])
+    master = _master()
+    master["clinics"][0]["active"] = False
+    res = rebate_calc.calculate(norm, master, config={})
+    assert res["per_clinic"].empty
+    assert res["grand_total"] == 0
+    # unmatched stores the casefolded OPD name
+    assert "acme vet" in set(res["unmatched"]["opd_clinic"].astype(str).str.lower())
+
+
+def test_active_default_true_when_flag_absent():
+    """A roster record with no 'active' key is treated as active (back-compat)."""
+    master = _master()
+    master["clinics"][0].pop("active", None)
+    res = rebate_calc.calculate(_norm([("Acme Vet", "ultrasound", 1000.0)]), master, config={})
+    assert len(res["per_clinic"]) == 1
+    assert res["per_clinic"].iloc[0]["ultrasound_rebate"] == 100.0
+
+
 def test_self_funded_uses_lower_rates():
     """Self-funded clinic should default to 5% / 2%."""
     norm = _norm([
@@ -184,15 +211,10 @@ def test_variance_flags_disagreement_with_feed():
     assert pc.iloc[0]["variance"] == 10.0
 
 
-def test_inactive_clinic_still_calculates_if_in_master():
-    """Inactivity is a master-roster flag; the calc itself doesn't filter on it
-    (the downstream report filters)."""
-    norm = _norm([("Acme Vet", "ultrasound", 1000.0)])
-    master = _master()
-    master["clinics"][0]["active"] = False
-    res = rebate_calc.calculate(norm, master, config={})
-    # The clinic still matches and gets a rebate row; the cycle UI is what filters by active.
-    assert len(res["per_clinic"]) == 1
+# NOTE (2026-11-02): the former test_inactive_clinic_still_calculates_if_in_master
+# asserted the OLD behavior (the calc ignored `active`, only the cycle UI filtered).
+# That was a payout trap -- a deactivated clinic with revenue kept getting paid -- and
+# is now fixed in rebate_calc.calculate. See test_inactive_clinic_excluded_from_rebate.
 
 
 # ── Per-token-pair fuzzy gate (added 2026-06-10) ─────────────────────────────

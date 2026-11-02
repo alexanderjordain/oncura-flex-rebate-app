@@ -174,7 +174,14 @@ def calculate(norm_df: pd.DataFrame, master: dict, config: dict) -> dict:
       bucket_totals: dict finance_company -> total_rebate
       grand_total: float
     """
-    clinics = master.get("clinics", [])
+    # Only clinics still active in the rebate program are eligible. Retiring a
+    # clinic in Rebate Master (active=false, e.g. once it pays off its financed
+    # equipment) drops it here, so its OPD revenue falls through to "unmatched"
+    # and earns no rebate. This makes the Rebate Master "active" checkbox the
+    # real eligibility control: it previously gated only the pre-seeded zero
+    # rows in rebate_cycle, not the matcher, so a deactivated clinic that still
+    # had imaging revenue kept getting paid.
+    clinics = [c for c in master.get("clinics", []) if c.get("active", True)]
     index = _build_index(clinics)
 
     # Normalize the OPD clinic name BEFORE groupby so capitalization / whitespace
