@@ -423,6 +423,14 @@
       "uploaded_at": "2026-11-05T15:24:16",
       "row_count": 3,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-10-21"
+    },
+    {
+      "sha256": "72655ebfc511d7b9f6052057c9431a14dace573018f9df8860772a20289e70a8",
+      "filename": "Remittance Detail Downloadable (39).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-11-05T15:25:30",
+      "row_count": 1,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-10-28"
     }
   ],
   "payments": [
@@ -14670,6 +14678,16 @@
       "payment_date": "2026-10-21",
       "amount": 912.68,
       "recorded_at": "2026-11-05T15:24:16"
+    },
+    {
+      "fingerprint": "bd2b963c30ce639fcf50d27f8a16d7485b9e128d208e83815c6c6cc9b91f465b",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "43244156",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "2026-10-28",
+      "amount": 921.84,
+      "recorded_at": "2026-11-05T15:25:30"
     }
   ]
 }
