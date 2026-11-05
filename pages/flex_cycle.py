@@ -493,24 +493,39 @@ with tab_remit, safe_stage("Stage 1 — Finance Payment Imports"):
         applies_to = ""
         _coverage = ledger.uses_coverage(company)
         if _coverage:
-            _cur = dt.date.today()
-            _cur_idx = _cur.year * 12 + (_cur.month - 1)
-            _last_month = f"{(_cur_idx-1)//12:04d}-{(_cur_idx-1)%12+1:02d}"  # current month - 1
-            _opts = {f"{(_cur_idx+d)//12:04d}-{(_cur_idx+d)%12+1:02d}" for d in range(-6, 2)}
-            _opts.add(_last_month)
-            if SS.get("remit_applies_to_w"):
-                _opts.add(SS["remit_applies_to_w"])
+            # Coverage options are anchored to the PAYMENT date (not today) and
+            # capped at payment month - 1. A NewLane remittance covers the PRIOR
+            # month, so it can never be "for" the month it was received or later —
+            # offering those is what lets a remittance get filed a month late
+            # (coverage + 1 overshooting the received month). Default = payment
+            # month - 1; earlier months stay selectable for an off-schedule
+            # remittance. With the cap in place, coverage + 1 can land no later
+            # than the received month, matching OnePlace.
+            _anchor_idx = pay_date.year * 12 + (pay_date.month - 1)
+            _cap_idx = _anchor_idx - 1                       # latest allowed coverage
+            _cap = f"{_cap_idx//12:04d}-{_cap_idx%12+1:02d}"
+            _opts = {f"{i//12:04d}-{i%12+1:02d}" for i in range(_cap_idx - 6, _cap_idx + 1)}
+            # Preserve a prior pick only if it's still in range (<= cap); a stale
+            # received-month selection must not linger in the options.
+            _prev = SS.get("remit_applies_to_w")
+            if _prev and _prev <= _cap:
+                _opts.add(_prev)
             _month_opts = sorted(_opts)
-            _def_idx = _month_opts.index(_last_month) if _last_month in _month_opts else 0
+            # Drop an out-of-range stored widget value so the selectbox re-defaults
+            # cleanly instead of erroring on a value no longer in options.
+            if SS.get("remit_applies_to_w") and SS["remit_applies_to_w"] not in _month_opts:
+                SS.pop("remit_applies_to_w", None)
+            _def_idx = _month_opts.index(_cap)
             applies_to = _row_l.selectbox(
                 "Applies to month",
                 options=_month_opts,
                 index=_def_idx,
                 format_func=lambda s: dt.date(int(s[:4]), int(s[5:7]), 1).strftime("%B %Y"),
                 key="remit_applies_to_w",
-                help="Which month this NewLane remittance is for. Defaults to last "
-                     "month; Stage 3 trues it up the following month. Change it only "
-                     "if the remittance arrived off its usual schedule.",
+                help="Which month this NewLane remittance is FOR. NewLane covers the "
+                     "prior month, so this is capped at the month before the payment "
+                     "date; Stage 3 trues it up the following month. Pick an earlier "
+                     "month only for an off-schedule remittance.",
             )
         SS["remit_applies_to"] = applies_to
 

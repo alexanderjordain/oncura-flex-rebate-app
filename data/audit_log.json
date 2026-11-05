@@ -2842,7 +2842,7 @@
       "params": {
         "company": "NewLane",
         "payment_date": "2026-10-09",
-        "applies_to": "2026-10",
+        "applies_to": "2026-09",
         "invoice_date": "2026-10-09",
         "start_invoice_no": 54117,
         "skipped_already_seen": 0
@@ -2873,7 +2873,7 @@
         }
       ],
       "note": "25 new payment(s) recorded; 0 already in ledger",
-      "entry_hash": "32a23a80e51b324f6d46fd2f67af9865738dd398fce1c3d6405c597fd843bff6"
+      "entry_hash": "0532bd446ae2d2b0cc909874b0e5f5e96aa01a44bef32c27dc1b6e07e0674a1c"
     },
     {
       "id": "e2125154-884a-46d9-8b44-e09b1e15ec40",
