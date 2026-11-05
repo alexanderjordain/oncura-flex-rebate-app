@@ -407,6 +407,14 @@
       "uploaded_at": "2026-11-05T15:13:32",
       "row_count": 29,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-10-06"
+    },
+    {
+      "sha256": "751f1e319566ee6737cc83ad8634894cb76a2226f2c4d040ebf738070268a5e0",
+      "filename": "Remittance Detail Downloadable (37).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-11-05T15:22:42",
+      "row_count": 1,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-10-14"
     }
   ],
   "payments": [
@@ -14614,6 +14622,16 @@
       "payment_date": "2026-10-06",
       "amount": 920.8,
       "recorded_at": "2026-11-05T15:13:32"
+    },
+    {
+      "fingerprint": "c0b7fdc8ccf972fb264fa5b9c6ce50ff1d4b1032713f098fa590d8515e8ce228",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "$896.98",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "2026-10-14",
+      "amount": 896.98,
+      "recorded_at": "2026-11-05T15:22:42"
     }
   ]
 }
