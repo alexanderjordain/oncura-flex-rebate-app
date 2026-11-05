@@ -415,6 +415,14 @@
       "uploaded_at": "2026-11-05T15:22:42",
       "row_count": 1,
       "note": "Stage 1 / GreatAmerica / pay_date=2026-10-14"
+    },
+    {
+      "sha256": "0222b77372738f821bbde93743bdbc39e14412c61ba6a10f9ef39cfdd8b189b3",
+      "filename": "Remittance Detail Downloadable (38).csv",
+      "company": "GreatAmerica",
+      "uploaded_at": "2026-11-05T15:24:16",
+      "row_count": 3,
+      "note": "Stage 1 / GreatAmerica / pay_date=2026-10-21"
     }
   ],
   "payments": [
@@ -14632,6 +14640,36 @@
       "payment_date": "2026-10-14",
       "amount": 896.98,
       "recorded_at": "2026-11-05T15:22:42"
+    },
+    {
+      "fingerprint": "c080a6e3caef6a70c584765e56030b9fc62e61d01ae297c04b8c4d5cb34ab19e",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "42995974",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "2026-10-21",
+      "amount": 935.08,
+      "recorded_at": "2026-11-05T15:24:16"
+    },
+    {
+      "fingerprint": "8a0508a17f0528e6b8e8e4251470df76f31a17c55c0db99717c6d1943355cddc",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "43252832",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "2026-10-21",
+      "amount": 939.08,
+      "recorded_at": "2026-11-05T15:24:16"
+    },
+    {
+      "fingerprint": "e9660fb81abaf2ebcba08001e71630910b2ab15cd025289c43c0ca9d77179961",
+      "company": "GreatAmerica",
+      "kind": "flex",
+      "contract": "43252885",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "2026-10-21",
+      "amount": 912.68,
+      "recorded_at": "2026-11-05T15:24:16"
     }
   ]
 }
