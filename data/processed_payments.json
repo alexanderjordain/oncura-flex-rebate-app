@@ -14726,6 +14726,656 @@
       "payment_date": "2026-10-09",
       "amount": 811.25,
       "recorded_at": "2026-11-05T15:41:47"
+    },
+    {
+      "fingerprint": "b1acd4a6d7c1825257714a92012285477dfb00c6f3651c771586c15c4d65381a",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "e9660fb81abaf2ebcba08001e71630910b2ab15cd025289c43c0ca9d77179961",
+      "qb_customer": "A Caring Vet",
+      "payment_date": "10/31/2026",
+      "amount": 1087.32,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "8a78e98372adad8e0eb9a67341f9bba1e8304b76f59d5b48b619121c1fd0181a",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "ba47456c655f8c83d30a074e797ed0ffde989fbcd2aea3798c36c23a1cdf7c67",
+      "qb_customer": "Abell Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "76cff4ffcc92211913f2eb21f333172af313842180da378c889a7ba54fa53d89",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "198e00b59c8c92d34df338b2ee5ac3a32a54704d6806014fee7fdf3ab8a04f75",
+      "qb_customer": "Allen Veterinary Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "2ee75ae51698bd2b982b40520f1e06426825f862c2e6c4e0009c89d5915f5a3f",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "8ea7ec0f4a72bc06985f2cfddc23c05e73f2cbf7a8312d9c3dad3fe3d9b3a166",
+      "qb_customer": "Animal Care Experts",
+      "payment_date": "10/31/2026",
+      "amount": 712.44,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "8c47843bcf272c602f9e0191615ff891ee0fb8e8f9f6ef29abf307cf1984e47f",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "f2c6e4e9f86d64b37704efd7c23e89a826579e3e95e062a9fce85be7f1830838",
+      "qb_customer": "Animal Health Center of Santa Clara",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "9f658286c1e5e447c6b745c8da3039b7ddb73eaa9b44d171366725944c78ba39",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "dc87ba424bca2cd5218f18ea4041e4bde8978059e4e85003d594d74013018d0d",
+      "qb_customer": "Animal Medical Center of Redlands",
+      "payment_date": "10/31/2026",
+      "amount": 829.08,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "38881d11ba8f35dc7c06ffa95834f1fdd23a2562a2c7de62d2d7363fd340de98",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "559dd088bd737b9d87fdc132d57d116013d3335fbc32f76b99967fbaeb26d27f",
+      "qb_customer": "Baseline Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "5d03193a7dc38948cabbacc3a4fc9474c66bc69dadd46792fd32a5a24d551da3",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "3c0079b1045c03d277a4ac225c0bc4c785f41d1bf259140e20905c236891e7dd",
+      "qb_customer": "Berkeley Veterinary Clinic",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "e31ed7639bfaaad84e0dbaefa01e351e6bc61326a8b13a505c37fe166bbdd2f2",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "eba3b99a83807cfd780c9f260f27ff4e646b9bf860bec2ec8a6e9bf775897198",
+      "qb_customer": "Best Friends Pet Hospital - CA",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "683451b9ede300aa55bdc3724d48b8f391e1d350cc00c847bbb1ca2b1761c163",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "428a4dce66193d8476a6d289d33367f4cc960963bc345e8eda602c23217e6a24",
+      "qb_customer": "Bridges Professional Park Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "6a20a896eacfcf244fab55be3080e8b41db5259ea7491fa6f7b9f32b52e90bc0",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "e8feee400c361b91b9bbf49ebc4404a1614de1d725def657cdccb1d028bf9f59",
+      "qb_customer": "Cedar Veterinary Clinic",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "d571453083403b3d58bd158570cd9dbb20d66bbd4f21fa8e7a3add63a2eed0ef",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "4e05427ea91e33ee02f2b036708ae87494ae60c3accb4873aa3af2f10edaf04b",
+      "qb_customer": "Chenango Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "0ad7f12e0c7dfefae6645fce5a0a421b8c3e57d8908910e81740cc64295ad41c",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "006ecb9dadcee8d82ff5a9ae0c03f03fb657f248765c94eba26ffbd23dc56f09",
+      "qb_customer": "CityVet Preston Forest",
+      "payment_date": "10/31/2026",
+      "amount": 815.9,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "9576487fcb0c1bc153c667106539488f9a388182001b054ac3ea9b92d2e36099",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "23522d0a98c2a749cc4c7bd0a8bfc6c485ded5e502c0dd7d29c9b7aa0eb4c674",
+      "qb_customer": "CityVet Whiterock",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "58d063ccb8eef790365b972df6551964bd578d5044654fba7ecf84acaed0e25c",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "adcd314a21d2cf6c2e7dc351e1dfd29287bd2ce7ca9ba7a4b18d2a8d1f015105",
+      "qb_customer": "Clark Veterinary Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "aa5b562e51d158ef45e224b09cb2f6a8d4a36336860f775946dc2d6456211093",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "57ac4eca28bbedec07f1b101465a5433aa63b1c5ebc98457f8ce44e4b2b79a9f",
+      "qb_customer": "Clinica Veterinaria Acuario",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "7f9d83c9e93f2c563f9040a000f8aaa64eb8327e899c69ff616e6d194d809d72",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "ba9919ad161c03a8c41ee2d6389a9b7f4f1a3e918f835f74afaa3af749ec59c9",
+      "qb_customer": "Clinica Veterinaria Diaz Umpierre",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "df5336f016f35bd61bb265e9610ab1d4fd7eaa630ad13d1dfd11c38d6615588a",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "1e24ca917448e12d8ebfc4e54fa7f6804b7818e76db62d10ac93416538bf88d7",
+      "qb_customer": "Clinica Veterinaria Gardenville",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "3eccc67552b74a3ed3f6081fac0c8c23fa16762675c5161b1abf71ec9e7e22ea",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "8b9a96c82b1eec597ddc1d90cd235c70dcf54a5ebc7cba88f3793bfee94db0c7",
+      "qb_customer": "Crossroads Animal Hospital TX",
+      "payment_date": "10/31/2026",
+      "amount": 760.92,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "a360d9e5b156b0c54cf775a62801d0269625ef912e97dffa9cd51757864423a8",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "8a0508a17f0528e6b8e8e4251470df76f31a17c55c0db99717c6d1943355cddc",
+      "qb_customer": "Day Hollow Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 760.92,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "7060a996c341243fc9d37fdeabd1930978fade14799acec30793d463f42e6d70",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "b103d1d16c7b3408aca9eade56fbbb188e899ccf9f955aec605184b9509d563c",
+      "qb_customer": "Delmar Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 805.71,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "c85543be7d62298fb5c247381daaa9a954800ca5d65046ec627c03fb5216bc6d",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "9c4ad5251a67bff91c351b259b650def03b54780376bcd9d3e52aa4c2cf5dfbe",
+      "qb_customer": "Desert Ark Veterinary Hospital AAHA - Avondale",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "d6a60614d316fd3d3dfcdb8a8cb16ce5d7675f31b01eb38b2a8c464ca79a8743",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "82773246c8ccb9e921efa338e4299a78152bba8a508eac7d04961fb7e94df56a",
+      "qb_customer": "Doctor Pet Puerto Nuevo",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "72abc998def4bc5c90730a8ad71b468ca6e55df80ca969b991b36a3d665831a4",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "cac7ed886234b5669ba83a3036e979e5c5e5dba4787499e17124cfe80b905a2c",
+      "qb_customer": "Encanto Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "78fbab575ed4766fc5206b3fd9ddd5dbc4d702dbb952f67f1e7dd1f365029fdb",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "647fd31dd833dda9cc75aa89ffa3cc3a20d18628b1df3f831d0cebb030c06984",
+      "qb_customer": "Galloway Village Veterinary",
+      "payment_date": "10/31/2026",
+      "amount": 703.02,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "bc942e7cb643b34d6a39ff30d7ec9471cf0ec8ac1eea5cd37e33236b3cf05d62",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "64476154fcb1945ee80e12092f3015eef796ebe286dbbce390df41b77079ce6b",
+      "qb_customer": "Hospital Veterinario Condado",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "c84dcf4f877c1d9439e32190a6513131b5b76f76888c022ab7abdcd2287ed707",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "6c2c3268b4099034fcba57f165d2da26407da2d49d6b282e9cd440c2a8a7a9b8",
+      "qb_customer": "La Canada Pet Clinic",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "563e6423a83bcbdd208bab216f9b6a72c2aa8508ac167855fa39a4d19f23df40",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "f9326c806c495607202a5801b50a02412b8c83442cc04772c4df8afda506532d",
+      "qb_customer": "Lake Road Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 989.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "4f8c95c5237ee3703a6050d88634c5851c0cd657f44ab23c3928d0345672287b",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "c0b7fdc8ccf972fb264fa5b9c6ce50ff1d4b1032713f098fa590d8515e8ce228",
+      "qb_customer": "Liberty Veterinary Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 703.02,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "9e38ac69c6657d5b199585f064a9a552ae664d9c9b850ca1cd70d76aa66f8865",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "1b01d26bb865ffefc91727dcfc91f15699212866b0ada92cfe6cbb7057b3cfe9",
+      "qb_customer": "Love Animal Hospital and Urgent Care",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "1263710d94bb2e0a6e1f029892885e50997ee861c3bd3c343fcc9c0a6a282d56",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "49f98353b8fdea872df6e416f7c036bea401f2e66a1cd487d59243ab19a669ba",
+      "qb_customer": "Love Animal Hospital and Urgent Care",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "0c19214a3d1ff276094c7f0edb1bda6a5d159dea43dd17e32cf6a2bef2e9631c",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "ac4e3af7c5dc9fecd3c812d8fbe4f35ff974798f0f83b3ef3ddccbe57348475f",
+      "qb_customer": "Luv-N-Care Animal Hospital of Windermere",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "ba7f582d85a64286df83300d743d927baa07fac8b00273d7a262e9855655737f",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "42ff44d7f685f47e746c9602a505b09b5efa7fdfa7ea0f7910f32d25629b437c",
+      "qb_customer": "Marin City Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 829.08,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "ea9a880f2cf2d0b0893090c51fcacf1a0b60046ac5a1f50f198b019c5572a95a",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "7f6f10f3c56e02ac8c4f5f1ae56f21c0718d5e247567ff0f475d9ff0acb593ea",
+      "qb_customer": "Miller Mobile Veterinary Services & Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "25f30c0b777ef0b932996c7a697dc2a2c09c843d112a73a7334e2205b922c47b",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "de72d8c5cf86ea98c26461967cc4c4624f66741aefe4f96ce2d1aac973242eac",
+      "qb_customer": "Mohnacky Animal Hospital of Carlsbad",
+      "payment_date": "10/31/2026",
+      "amount": 999.31,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "d78499bbebee978b82b199aae90c269c28769f7b60404cfc8ba64ea907b3cada",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "f707242cd46a0044a52b72c1d2b893ebce388b401bafbad41ec6b848d4ebbbb4",
+      "qb_customer": "Northwest Animal Hospital - Grapevine",
+      "payment_date": "10/31/2026",
+      "amount": 771.36,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "110a07c6ba8958499d41e60192b2646dd82148438157901a021c857920b0649b",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "00f31e850d74a8cb701ce061d0e289e8b81b7076f2ff914f7151225e23efab53",
+      "qb_customer": "Northwest Pet Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 895.44,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "2bbf0ba6489d80814d145ebf8efb907d6ed6ff996f4b453408f6471cba8fe9c9",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "3c7857daad99a0a8968c223b814384b4bcb57f4faed475b3b9d0a0fb9a79d698",
+      "qb_customer": "On Point Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "7eefed585b3c39f051ba986ac2143101964d820877735773ea37575e34da76e1",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "937751f700d33e96d779c9002dfc0378710f0ce6d0e7c5f39f9bd60c967480ec",
+      "qb_customer": "Orchard Lake Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 703.02,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "5c81a12aa408633cdacbc7ed8767ea551eef7242f04f961b43feb86e30a83e4c",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "4d51a5e6991d5c27c195002a34bcd42420069fddaa43e51830dac6967d1b7706",
+      "qb_customer": "Pine Tree Veterinary Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 700.95,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "92bfc3c6dc2a1e0d8d6b7ecb081eecb50ea2ddfce7ba9c9c3211599271f1f8f2",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "dcc4b95a72b8934c55c0de96dd15146bb63b0e5cf04966ef41575fc87761c0a7",
+      "qb_customer": "Reata Veterinary Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "a561f2c3985d8db2ca3028ab872c972845f6baf912839578d6486681b8a53bdb",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "e8268eb27307220df173b324b9da20b27f3d1bd824b52a1aa6c3367d8e685a6d",
+      "qb_customer": "Ridgeview Animal Clinic",
+      "payment_date": "10/31/2026",
+      "amount": 979.2,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "55caaf4952069ffb6fc29cbde30a9c2f2bcc37f37146f01d27acb170182d26a9",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "78d3a7d5c778a3ff59cf944f43a033fabde2b6bc14928025007f86f9edb167d2",
+      "qb_customer": "Riverdale Integrative Veterinary Care",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "f5ea339a23b93622ca64586b0ca6ea5f0b3e258e419363b56a35b786d66a3ad0",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "7469d5068a094208df125811ea97532e340d9ddd14b0dfb5beb86394eac672b7",
+      "qb_customer": "Riverlin Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "d6bff8d47787a5c1adf3f0cfab7fadc5674c1c19e04edadeed3d4f8c04da7bfb",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "43b97ff1d7fda26f71b0353698ca53cf47d762b70845a71a52c49fe719ef0ba4",
+      "qb_customer": "Silicon Valley Pet Clinic",
+      "payment_date": "10/31/2026",
+      "amount": 829.08,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "188d98397eafc8c37ec2927cc39625aae344f2263952f310e779ef962ec4cfd1",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "e33910efbbf872b4ffb7d52bf93f6fc725eed4e7f88973a4d84d90fa5031d86c",
+      "qb_customer": "South Bay Veterinary Group - Charles St",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "563604fedc6540344d224aa32081df07245ace94eeb11d0f4ac40f2d429fd57d",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "74151c4a44a18eb9ce7c9d0940924a056576642bce0745f3563afbb56dbc24c8",
+      "qb_customer": "State Line Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 703.02,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "f1b712f42f8da14137853fe5509da8d492ff545a29ab9d365512dda5ab7e5af0",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "bd2b963c30ce639fcf50d27f8a16d7485b9e128d208e83815c6c6cc9b91f465b",
+      "qb_customer": "SVP Lynn Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "1e1cb331dab2bba60dbec8c0448b03089e16badfdcc3e47410d9bc2da5cf4b55",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "246ac5c4e3b5c7be38c2700bd3ea0989a7d97f91abe52042606308dfec9bdb04",
+      "qb_customer": "Sycamore Veterinary Services",
+      "payment_date": "10/31/2026",
+      "amount": 989.45,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "adc179c87a692776a4728ad59b8c78c4c96790d94d5a2775b5eed9859a107a5f",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "a2e3410250abebac14d83b4369b9f75249a0bc0134de4de49109399de08f26e6",
+      "qb_customer": "The Animal Hospital of Telluride",
+      "payment_date": "10/31/2026",
+      "amount": 703.02,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "29461dc5d5f9cf6ae63ef73c24d392091338eb75b139da1a626b1bbb8c0de346",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "9afc0206047f0dbfa381f3ba15e125baca6c00dd26543b59a9a093255a308270",
+      "qb_customer": "The Scaredy Cat Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "6e740eeab234056be6e70a08733a5311e37d5804bb7d8b920a76857db31a7e70",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "c5dc611a65a6d2423ebb920b146ef11d687f0e74c8ba73a7a71d4f92efd4a604",
+      "qb_customer": "TLC Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 703.02,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "a0ff3fe5758ea53c7e256b9b6ee5c71362f2088bf0b76763662442249610881c",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "cc53da03b0f9231f52f51768b03db642f7346aef1e8577d298e02638b06685c8",
+      "qb_customer": "TLC Pet Hospital NM",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "6a9a2d196919e1ffed3dd2f5ac7b25b491039899713f0db70c0a98a074275241",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "55e33aaaea15f9b3482550731a42d84a81130fa0d31b407df3aab6be37d7c30e",
+      "qb_customer": "Town and Country Animal Hospital - TN",
+      "payment_date": "10/31/2026",
+      "amount": 918.68,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "9ec596f5b4403bb9fdc85055922ea5da6e45edb781e8d2c2a463033be9f6f2b2",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "fe10b367780f07aa039dd71d8d373c4802a3f276dfd5e12af6995c90ccc4b261",
+      "qb_customer": "Trinity Pet Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "d890e07c79d3708dcbc85c16be5d92591bf825e2bfaedb6b2adf9bfa6a59d9f6",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "c6ba65a017783563d66b6f8bd9a9d4e19be41503b452cde74966fe7ffa235b24",
+      "qb_customer": "TVC - Harborside Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 771.36,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "6e70125a0dc4d9fa67cb47b8ce869aa23b609316271f257d034369762e4a7d71",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "35a75c551ed5861f49bf49b39a356409b90970d94687e1c1a4f3f3e554e10725",
+      "qb_customer": "TVC - Kindness Small Animal Hospital - TX",
+      "payment_date": "10/31/2026",
+      "amount": 823.19,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "5dc92454d7fae68baaaa1ea62ec02fa6ca6b2194026867b0ff9a39b210b546c4",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "86c92149b3d24cc45268c18d8ff80d6ec8fd3fd9d3122096baaf466dd56205f4",
+      "qb_customer": "TVC- Berkley Pet Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 978.16,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "7f42073cd9b38386dd00594c150666f085d0b0b172e4ed0e55b1f1462bf4d819",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "531cf0a502cbe802c52213531cf139a724552674b8a535fa7d8e699355533e80",
+      "qb_customer": "TVC-Driftwood Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 666.85,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "8632f5c1f0bf71d582e30072015296c8fb2be23f7549eefa1df77936181ce662",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "49d4b6a3a868cd08f4b61ef0c15707d8694afa97e09a89ff19becf1a4131c367",
+      "qb_customer": "TVC-Luv N Care Animal Hospital - Longwood",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "f1cc0840991fd1e7b4d2cefe80fc826384ed7d62f431e307c9887b320ddee3e8",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "4cf1345ad2cc6b06e43aa5f0f24ab2d0062560d04f56a4d6781d51da5676b772",
+      "qb_customer": "VETFORPET Wellness & Emergency Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "b111dc81972fd59913d5925f4c534967f3c836a1263fe2bc0b31454ae643e362",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "2d035ef8e88284f5a3c7106d7ac31ff0fbe80b1af3c120bb226f91e9b3cc0d8a",
+      "qb_customer": "Waldorf Emergency Care",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "f496b5168003d2e40a06c492330a507152420076eb33f1c3c26602183bfe6c02",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "3a6b0422cebdf5ca624bf6a13ffa19a1fc07a0062a984a38073f1de19e2afffa",
+      "qb_customer": "West Charleston Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 964.92,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "ab21592dbf23f8d9987be0ed74a949f1067d424dfd7e9c4155f8039107db2e94",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "c124540bac12aeeb154e85729643e97842692ba0b2f40909f680a49d6f86a9a4",
+      "qb_customer": "West Hollywood Animal Hospital",
+      "payment_date": "10/31/2026",
+      "amount": 982.29,
+      "recorded_at": "2026-11-05T18:03:47"
+    },
+    {
+      "fingerprint": "c2965465fbf195a4e73f42207fe8a0db72b7296119a89b6ded3a5c749166f27b",
+      "company": "INTERNAL",
+      "kind": "credit_memo",
+      "contract": "c080a6e3caef6a70c584765e56030b9fc62e61d01ae297c04b8c4d5cb34ab19e",
+      "qb_customer": "Woodland Veterinary Clinic - CO",
+      "payment_date": "10/31/2026",
+      "amount": 964.92,
+      "recorded_at": "2026-11-05T18:03:47"
     }
   ]
 }
