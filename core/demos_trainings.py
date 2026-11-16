@@ -30,16 +30,15 @@ SUBJECT = "Weekly Demos + Trainings - Training Sonographers"
 WEEKS = 4  # trailing complete weeks shown
 
 # Demos: these trainers run sales demos (read from their calendars).
-DEMO_TRAINERS = ["Carla", "John Paul", "Mariah", "Rosie", "Sandra"]
+DEMO_TRAINERS = ["Carla", "John Paul", "Mariah", "Sandra"]
 # Trainings: these appear in OPD certification AssistedBy.
-TRAIN_TRAINERS = ["Carla", "John Paul", "Mariah", "Rosie", "Sarah"]
+TRAIN_TRAINERS = ["Carla", "John Paul", "Mariah", "Sarah"]
 
 # Mailbox per demo trainer (the sender reads these calendars app-only).
 DEMO_MAILBOX = {
     "Carla": "carla@oncurapartners.com",
     "John Paul": "jpamberger@oncurapartners.com",
     "Mariah": "mariah@oncurapartners.com",
-    "Rosie": "rharo@oncurapartners.com",
     "Sandra": "sparis@oncurapartners.com",
 }
 # Mailbox per training trainer (calendars read app-only, like demos). Trainings are now
@@ -50,7 +49,6 @@ TRAIN_MAILBOX = {
     "Carla": "carla@oncurapartners.com",
     "John Paul": "jpamberger@oncurapartners.com",
     "Mariah": "mariah@oncurapartners.com",
-    "Rosie": "rharo@oncurapartners.com",
     "Sarah": "servin@oncurapartners.com",
 }
 
@@ -61,7 +59,6 @@ _DEMO_TOKENS = {
     "Carla": ("carla",),
     "John Paul": ("amberger", "john paul", " jp", "/jp"),
     "Mariah": ("mariah", "delgado"),
-    "Rosie": ("rosie", "haro"),
     "Sandra": ("sandra", "paris"),
 }
 _PLACEHOLDER_SUBJECTS = ("demo block", "demo spot")
@@ -128,8 +125,6 @@ def _train_label(name: str | None) -> str | None:
         return "John Paul"
     if "delgado" in n or "mariah" in n:
         return "Mariah"
-    if "haro" in n or "rosie" in n:
-        return "Rosie"
     if "ervin" in n or "sarah" in n:
         return "Sarah"
     return None
