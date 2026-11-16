@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import datetime as dt
 import html as _html
+import re
 from zoneinfo import ZoneInfo
 
 import streamlit as st
@@ -40,6 +41,17 @@ DEMO_MAILBOX = {
     "Mariah": "mariah@oncurapartners.com",
     "Rosie": "rharo@oncurapartners.com",
     "Sandra": "sparis@oncurapartners.com",
+}
+# Mailbox per training trainer (calendars read app-only, like demos). Trainings are now
+# counted as calendar appointments rather than OPD certifications (Marty, 2026-11-16).
+# NOTE: servin@ (Sarah) must be in the app-only ApplicationAccessPolicy group or her
+# calendar 403s and she shows zero; the four demo trainers are already in the group.
+TRAIN_MAILBOX = {
+    "Carla": "carla@oncurapartners.com",
+    "John Paul": "jpamberger@oncurapartners.com",
+    "Mariah": "mariah@oncurapartners.com",
+    "Rosie": "rharo@oncurapartners.com",
+    "Sarah": "servin@oncurapartners.com",
 }
 
 # Subject tokens that mark a trainer as the sonographer on a demo ("rep/sonographer").
@@ -84,6 +96,27 @@ def is_demo_for(subject: str, organizer_email: str, owner_mailbox: str, owner_la
     if (organizer_email or "").strip().lower() == (owner_mailbox or "").strip().lower():
         return False  # a hold the trainer put on their own calendar, not a booked demo
     return any(tok in subj for tok in _DEMO_TOKENS.get(owner_label, ()))
+
+
+_TRAIN_MODULE = re.compile(r"\bm[1-5]\b")
+
+
+def is_training_for(subject: str, body_preview: str = "") -> bool:
+    """True if a calendar event is a module training appointment (M1-M5 Abdomen or Basic
+    Echo) booked by the trainer whose calendar it is on.
+
+    Looks at the subject AND the body because trainers title these inconsistently: some use
+    "M3 Abdomen Training- ...", others "<trainee> and <trainer>" with the module only in the
+    body. Requiring an M1-M5 marker alongside "Echo/Abdomen Training" keeps the real sessions
+    and drops refreshers ("Abdomen Refresher Training", no module), self-booked call/scheduling
+    tasks ("Call <clinic> ... training", no module), availability holds, and cancellations."""
+    s = (subject or "").strip().lower()
+    if s.startswith(("canceled", "cancelled")):
+        return False
+    text = s + " " + (body_preview or "").lower()
+    if "echo training" not in text and "abdomen training" not in text:
+        return False
+    return bool(_TRAIN_MODULE.search(text))
 
 
 def _train_label(name: str | None) -> str | None:
@@ -166,17 +199,16 @@ def render_email(demos: dict, trainings: dict, weeks: list) -> tuple[str, str, s
     """Return (subject, plain_body, html_body). `demos`/`trainings` are {monday_iso: {trainer: n}}."""
     note = (
         '<p style="font-family:Calibri,Arial,sans-serif;font-size:11px;color:#6b7580;margin:16px 0 0">'
-        "Trainings are Abdomen and Basic Echo certifications in OPD, counted by the case's submitted "
-        "date and attributed to the trainer in the case's AssistedBy field (GlobalFAST excluded). "
-        "Finalization requires supervisor approval at month-end, so we count submissions, not "
-        "finalizations. Demos are sales demos from the trainers' Outlook calendars; availability holds "
-        "and canceled sessions are excluded. Sandra runs demos only and Sarah runs trainings only, so "
-        "each appears in one table. Weeks run Monday to Sunday.</p>")
+        "Trainings are training appointments on the trainers' Outlook calendars (Abdomen and Basic "
+        "Echo module sessions, M1 through M5), counted by the appointment date; cancellations and "
+        "refresher sessions are excluded. Demos are sales demos from the trainers' Outlook calendars; "
+        "availability holds and canceled sessions are excluded. Sandra runs demos only and Sarah runs "
+        "trainings only, so each appears in one table. Weeks run Monday to Sunday.</p>")
     html = ("<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
             "<p>Hello all,</p>"
             "<p>Please see the following demo and training activity for the training sonographers.</p>"
             f"{_tbl(DEMO_TRAINERS, 'Demos', 'Demos', 'Sales demos delivered, count by week', demos, weeks)}<br>"
-            f"{_tbl(TRAIN_TRAINERS, 'Trainings', 'Trainings', 'Certifications submitted (Abdomen + Basic Echo), count by week', trainings, weeks)}"
+            f"{_tbl(TRAIN_TRAINERS, 'Trainings', 'Trainings', 'Training appointments (Abdomen + Basic Echo), count by week', trainings, weeks)}"
             f"{note}</div>")
     last = weeks[-1]
     d_tot = sum(int(v or 0) for v in demos.get(last.isoformat(), {}).values())
