@@ -190,41 +190,29 @@ def _tbl(cols, corner, title, subtitle, weekmap, weeks) -> str:
             f'{_bar(title, 15, ncol)}{_bar(_html.escape(subtitle), 12, ncol)}{header}{body}</table>')
 
 
-def render_email(demos: dict, trainings: dict, weeks: list,
-                 session_trainings: dict | None = None) -> tuple[str, str, str]:
+def render_email(demos: dict, sessions: dict, weeks: list) -> tuple[str, str, str]:
     """Return (subject, plain_body, html_body). Each arg is {monday_iso: {trainer: n}}.
-    `trainings` = OPD certification counts (table 2). `session_trainings`, when provided, is
-    the calendar module-appointment counts and renders a third table (sessions delivered)."""
+    Two tables: Demos and Trainings-Sessions (calendar module appointments). The OPD
+    certifications table was dropped from the weekly report 2026-11-16 (certs are tracked
+    in the monthly commission process instead)."""
     note = (
         '<p style="font-family:Calibri,Arial,sans-serif;font-size:11px;color:#6b7580;margin:16px 0 0">'
-        "Trainings - certifications are Abdomen and Basic Echo certifications in OPD, counted by the "
-        "case's submitted date and attributed to the trainer in the case's AssistedBy field (GlobalFAST "
-        "excluded). Finalization requires supervisor approval at month-end, so we count submissions, not "
-        "finalizations. Trainings - sessions are the individual module appointments (M1-M5, Abdomen and "
-        "Echo) delivered from each trainer's Outlook calendar, counted the same way as demos; a session "
-        "is one module appointment, so this measures delivery workload and runs well above the "
-        "certifications table, which counts only completed certs. Availability holds, canceled sessions, "
-        "GlobalFAST, and one-off refreshers are excluded. Demos are sales demos from the trainers' "
-        "Outlook calendars; availability holds and canceled sessions are excluded. Sandra runs demos "
-        "only and Sarah runs trainings only, so each appears in one table. Weeks run Monday to Sunday.</p>")
-    sessions_tbl = ""
-    if session_trainings is not None:
-        sessions_tbl = "<br>" + _tbl(
-            TRAIN_TRAINERS, 'Trainings', 'Trainings',
-            'Sessions delivered (module appointments), count by week', session_trainings, weeks)
+        "Trainings are training sessions delivered from each trainer's Outlook calendar (individual "
+        "module appointments, M1 through M5, Abdomen and Basic Echo), counted the same way as demos; "
+        "a session is one module appointment. Availability holds, canceled sessions, and one-off "
+        "refreshers are excluded. Demos are sales demos from the trainers' Outlook calendars; "
+        "availability holds and canceled sessions are excluded. Sandra runs demos only and Sarah runs "
+        "trainings only, so each appears in one table. Weeks run Monday to Sunday.</p>")
     html = ("<div style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#1f2733'>"
             "<p>Hello all,</p>"
             "<p>Please see the following demo and training activity for the training sonographers.</p>"
             f"{_tbl(DEMO_TRAINERS, 'Demos', 'Demos', 'Sales demos delivered, count by week', demos, weeks)}<br>"
-            f"{_tbl(TRAIN_TRAINERS, 'Trainings', 'Trainings', 'Certifications submitted (Abdomen + Basic Echo), count by week', trainings, weeks)}"
-            f"{sessions_tbl}"
+            f"{_tbl(TRAIN_TRAINERS, 'Trainings', 'Trainings', 'Sessions delivered (module appointments), count by week', sessions, weeks)}"
             f"{note}</div>")
     last = weeks[-1]
     d_tot = sum(int(v or 0) for v in demos.get(last.isoformat(), {}).values())
-    t_tot = sum(int(v or 0) for v in trainings.get(last.isoformat(), {}).values())
-    s_tot = sum(int(v or 0) for v in (session_trainings or {}).get(last.isoformat(), {}).values())
+    s_tot = sum(int(v or 0) for v in sessions.get(last.isoformat(), {}).values())
     plain = ("Hello all,\n\nDemo and training activity for the training sonographers "
              "(formatted tables in the HTML version of this email).\n\n"
-             f"Week of {_mdY(last)}: {d_tot} demos, {t_tot} certifications submitted, "
-             f"{s_tot} sessions delivered.")
+             f"Week of {_mdY(last)}: {d_tot} demos, {s_tot} sessions delivered.")
     return SUBJECT, plain, html
