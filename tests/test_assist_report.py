@@ -8,17 +8,20 @@ from core import accounting_handoff as ah
 def test_recipients_shape():
     to = ar.recipients("to")
     cc = ar.recipients("cc")
-    assert len(to) == 12 and len(cc) == 3
+    assert len(to) == 11 and len(cc) == 3
     assert to[0] == "Melissa Colpitts <mcolpitts@oncurapartners.com>"
     assert cc[0] == "Marty McCutchen <marty@oncurapartners.com>"
     assert all(r.count("<") == 1 and r.endswith(">") for r in to + cc)
-    assert len(ar.SONOGRAPHERS) == 10
+    assert len(ar.SONOGRAPHERS) == 9
     # Elyce Thomas is a tracked column and now also on the To list (added per request).
     assert "Elyce Thomas" in ar.SONOGRAPHERS
     assert any("Elyce Thomas <ethomas@oncurapartners.com>" == r for r in to)
     # Liza Gonzalez was removed from both the tracked columns and the recipients.
     assert "Liza Gonzalez" not in ar.SONOGRAPHERS
     assert not any("Liza" in r for r in to)
+    # Chelsea Parsons was removed from both the tracked columns and the recipients.
+    assert "Chelsea Parsons" not in ar.SONOGRAPHERS
+    assert not any("Chelsea" in r or "cparsons" in r.lower() for r in to)
 
 
 def test_eastern_date_conversion():
@@ -76,20 +79,21 @@ def test_prorated_goals_match_hours():
     assert sch["Megan DuCasse"]["weekly_goal"] == 25 and not sch["Megan DuCasse"]["full_time"]
     assert sch["Luis Romero"]["weekly_goal"] == 50 and sch["Luis Romero"]["full_time"]
     assert sch["Denice Rodriguez"]["weekly_goal"] == 50 and sch["Denice Rodriguez"]["full_time"]
-    # 7 full-time x 50 + (38 + 38 + 25) part-time = 451
-    assert sum(sch[s]["weekly_goal"] for s in ar.SONOGRAPHERS) == 451
-    assert sum(1 for s in ar.SONOGRAPHERS if sch[s]["full_time"]) == 7
+    # 6 full-time x 50 + (38 + 38 + 25) part-time = 401
+    assert sum(sch[s]["weekly_goal"] for s in ar.SONOGRAPHERS) == 401
+    assert sum(1 for s in ar.SONOGRAPHERS if sch[s]["full_time"]) == 6
 
 
 def test_goal_perf_table_group_total_and_pct():
     sch = ar.infer_schedules({})
-    wc = {s: 50 for s in ar.SONOGRAPHERS if sch[s]["full_time"]}   # 7 x 50 = 350
-    wc["Becky Tiner"] = 30; wc["Katie Heuer"] = 25; wc["Megan DuCasse"] = 18  # -> 423 total
+    wc = {s: 50 for s in ar.SONOGRAPHERS if sch[s]["full_time"]}   # 6 x 50 = 300
+    wc["Becky Tiner"] = 30; wc["Katie Heuer"] = 25; wc["Megan DuCasse"] = 18  # -> 373 total
     html = ar._goal_perf_html(sch, wc, "10/6/2026")
     assert "Weekly Goal Performance" in html
     assert "Group Total" in html and "% of Goal" in html
-    assert "40 hours (7)" in html and "Modified (3)" in html
-    assert "94%" in html           # 423 / 450
+    assert "40-hour schedule (6)" in html and "Modified schedule (3)" in html
+    assert "Reviews" in html        # gray-ish supplementary column (not in the %)
+    assert "93%" in html           # 373 / 401
 
 
 def test_goal_perf_no_red_text():
@@ -101,15 +105,15 @@ def test_goal_perf_no_red_text():
 
 def test_goal_perf_overflow_hits_group_total_without_a_goal():
     sch = ar.infer_schedules({})
-    wc = {s: 50 for s in ar.SONOGRAPHERS if sch[s]["full_time"]}   # 350
-    wc["Becky Tiner"] = 30; wc["Katie Heuer"] = 25; wc["Megan DuCasse"] = 18  # -> 423
+    wc = {s: 50 for s in ar.SONOGRAPHERS if sch[s]["full_time"]}   # 300
+    wc["Becky Tiner"] = 30; wc["Katie Heuer"] = 25; wc["Megan DuCasse"] = 18  # -> 373
     wc["Sandra Paris"] = 20        # overflow, no goal
     html = ar._goal_perf_html(sch, wc, "10/6/2026")
     assert "Sandra Paris (overflow)" in html
-    # group goal 451 (7x50 + 38 + 38 + 25); actual 423 + 20 overflow = 443 -> 98%
+    # group goal 401 (6x50 + 38 + 38 + 25); actual 373 + 20 overflow = 393 -> 98%
     assert "98%" in html
-    # the group goal still reads 451 (overflow did not add to the goal)
-    assert ">451<" in html
+    # the group goal still reads 401 (overflow did not add to the goal)
+    assert ">401<" in html
 
 
 def test_regular_cells_transparent_only_goal_and_header_filled():
@@ -143,16 +147,16 @@ def test_comp_summary_counts_and_group_goal():
     sch = ar.infer_schedules({})
     S = ar.SONOGRAPHERS
     sample = {
-        dt.date(2026, 9, 14): [41, 56, 57, 46, 55, 37, 56, 44, 52, 52],
-        dt.date(2026, 9, 21): [44, 51, 50, 29, 64, 36, 52, 58, 62, 51],
-        dt.date(2026, 9, 28): [31, 51, 49, 38, 40, 34, 39, 50, 43, 41],
+        dt.date(2026, 9, 14): [41, 57, 46, 55, 37, 56, 44, 52, 52],
+        dt.date(2026, 9, 21): [44, 50, 29, 64, 36, 52, 58, 62, 51],
+        dt.date(2026, 9, 28): [31, 49, 38, 40, 34, 39, 50, 43, 41],
     }
     weeks = [(d, dict(zip(S, v))) for d, v in sorted(sample.items())]
     html = ar._comp_summary_html(sch, weeks, "September 2026")
     assert "Monthly Comp Summary" in html and "September 2026" in html
     assert "Hit Goal" in html
-    # group goal 451 (7x50 + 2x38 + 25); met in weeks 1 and 2 only (496, 497, 416)
-    assert "Company goal (451/wk) met in 2 of 3 weeks" in html
+    # group goal 401 (6x50 + 2x38 + 25); met in weeks 1 and 2 only (440, 446, 365)
+    assert "Company goal (401/wk) met in 2 of 3 weeks" in html
 
 
 def test_eml_supports_cc_and_html_body():

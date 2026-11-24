@@ -26,9 +26,9 @@ except Exception:  # pragma: no cover - tzdata missing
     _ET = None
 
 # ── Report configuration ──────────────────────────────────────────────────────
-# The 10 tracked sonographers, in report-column order.
+# The 9 tracked sonographers, in report-column order.
 SONOGRAPHERS = [
-    "Becky Tiner", "Chelsea Parsons", "Denice Rodriguez", "Elyce Thomas",
+    "Becky Tiner", "Denice Rodriguez", "Elyce Thomas",
     "Francisco Zuniga", "Katie Heuer", "Lanis Davis",
     "Luis Romero", "Lyannette Curiel", "Megan DuCasse",
 ]
@@ -45,7 +45,6 @@ TO_RECIPIENTS = [
     ("Melissa Colpitts", "mcolpitts@oncurapartners.com"),
     ("Sandra Paris", "sparis@oncurapartners.com"),
     ("Becky Tiner", "btiner@oncurapartners.com"),
-    ("Chelsea Parsons", "cparsons@oncurapartners.com"),
     ("Denice Rodriguez", "DeniceRodriguez@oncurapartners.com"),
     ("Elyce Thomas", "ethomas@oncurapartners.com"),
     ("Francisco Zuniga", "francisco@oncurapartners.com"),
@@ -101,15 +100,30 @@ CONFIRMED_SCHEDULES = {
 # Company-observed holidays: the office is closed, so a zero-activity day here is NOT
 # PTO — without this, every holiday flags all 10 sonographers as "out" (Labor Day
 # 2026 did exactly that in testing). Update this list each year. No Juneteenth.
+# Verified against OPD submission volume 2024-2026: on a true closure, submissions
+# collapse to ~7% of a normal weekday. Oncura is OPEN on Juneteenth, Veterans Day, MLK
+# Day, Presidents Day, Columbus Day, and Good Friday - do NOT add those. New Year's Eve
+# runs ~45% (a light/partial day), so it is not a full closure. Observed rule: a Saturday
+# holiday is taken the Friday before, a Sunday holiday the Monday after.
 HOLIDAYS = {
+    # 2026
     dt.date(2026, 1, 1),    # New Year's Day
     dt.date(2026, 5, 25),   # Memorial Day
     dt.date(2026, 7, 3),    # Independence Day (observed; 7/4 is a Saturday)
     dt.date(2026, 9, 7),    # Labor Day
     dt.date(2026, 11, 26),  # Thanksgiving
     dt.date(2026, 11, 27),  # Day after Thanksgiving
+    dt.date(2026, 12, 24),  # Christmas Eve (OPD-confirmed closed; ~21% of normal in 2025)
     dt.date(2026, 12, 25),  # Christmas Day
-    dt.date(2027, 1, 1),    # New Year's Day (covers year-end runs)
+    # 2027
+    dt.date(2027, 1, 1),    # New Year's Day
+    dt.date(2027, 5, 31),   # Memorial Day
+    dt.date(2027, 7, 5),    # Independence Day (observed; 7/4 is a Sunday)
+    dt.date(2027, 9, 6),    # Labor Day
+    dt.date(2027, 11, 25),  # Thanksgiving
+    dt.date(2027, 11, 26),  # Day after Thanksgiving
+    dt.date(2027, 12, 24),  # Christmas Day observed + Christmas Eve (12/25/27 is a Saturday)
+    dt.date(2027, 12, 31),  # New Year's Day 2028 observed (1/1/28 is a Saturday) - confirm w/ HR
 }
 
 
@@ -409,6 +423,8 @@ _TX = "#333333"        # regular numbers
 _LBL_TX = "#1f2733"    # row labels (dates)
 _BORDER = "#d9dde3"
 _FONT = "font-family:Calibri,Arial,sans-serif"
+_REV_BG = "#e8ebee"    # gray-ish supplementary Reviews column (shown but NOT in goal %)
+_REV_TX = "#55606b"
 
 
 def _cell(content, bg: str | None = None, tx: str = _TX, align: str = "center", bold: bool = False) -> str:
@@ -476,11 +492,16 @@ def _reviews_html(rows) -> str:
 _PTO_TX = "#9a6b00"    # PTO note text
 
 
-def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
+def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str, week_reviews: dict | None = None) -> str:
     """Per-sonographer goal vs. actual for the last complete week, with % of goal, plus
     40-hour / modified subtotals and a group total — the view Marty asked for. Rows are
     sorted by % of goal (highest first). Overflow assisters (e.g. Sandra) have no goal;
-    their assists fold into the group-total actual without changing the group goal."""
+    their assists fold into the group-total actual without changing the group goal.
+
+    A gray-ish Reviews column (Sonographer Review & Outreach for the same week) is shown
+    AFTER % of Goal for context. Reviews are a separate $0 service and deliberately do NOT
+    factor into the goal or the percentage."""
+    wr = week_reviews or {}
     recs = []
     for s in SONOGRAPHERS:
         g = scheds[s]["weekly_goal"]; a = week_counts.get(s, 0)
@@ -494,6 +515,7 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
             + _cell("Weekly Goal", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("Actual", _HEAD_BG, _HEAD_TX, "center", True)
             + _cell("% of Goal", _HEAD_BG, _HEAD_TX, "center", True)
+            + _cell("Reviews", _HEAD_BG, _HEAD_TX, "center", True)
             + "</tr>")
     body = ""
     for s, ft, g, a, pct in recs:
@@ -507,19 +529,23 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
                  + _cell(fmt_goal(g))
                  + _cell(a)
                  + pct_cell
+                 + _cell(wr.get(s, 0) or "", _REV_BG, _REV_TX)   # gray reviews, not in %
                  + "</tr>")
 
     # Overflow assisters: no individual goal; their work is folded into the group total.
     overflow_actual = 0
+    overflow_rev = 0
     for s in OVERFLOW_ASSISTERS:
         a = week_counts.get(s, 0)
         overflow_actual += a
+        overflow_rev += int(wr.get(s, 0) or 0)
         body += ("<tr>"
                  + _cell(_html.escape(s) + " (overflow)", None, _LBL_TX, "left", True)
                  + _cell("n/a") + _cell("n/a") + _cell(a) + _cell("n/a")
+                 + _cell(wr.get(s, 0) or "", _REV_BG, _REV_TX)
                  + "</tr>")
 
-    def _subtotal(label, goal_sum, actual_sum, bg):
+    def _subtotal(label, goal_sum, actual_sum, bg, rev_sum):
         pct = round(actual_sum / goal_sum * 100) if goal_sum else 0
         return ("<tr>"
                 + _cell(label, bg, _HEAD_TX, "left", True)
@@ -527,25 +553,29 @@ def _goal_perf_html(scheds: dict, week_counts: dict, week_label: str) -> str:
                 + _cell(fmt_goal(goal_sum), bg, _HEAD_TX, "center", True)
                 + _cell(actual_sum, bg, _HEAD_TX, "center", True)
                 + _cell(f"{pct}%", bg, _HEAD_TX, "center", True)
+                + _cell(rev_sum or "", _REV_BG, _REV_TX, "center", True)
                 + "</tr>")
 
     ft_rows = [r for r in recs if r[1]]; pt_rows = [r for r in recs if not r[1]]
     subtotals = ""
     if ft_rows:
-        subtotals += _subtotal(f"40 hours ({len(ft_rows)})",
-                               sum(r[2] for r in ft_rows), sum(r[3] for r in ft_rows), "#eef3f5")
+        subtotals += _subtotal(f"40-hour schedule ({len(ft_rows)})",
+                               sum(r[2] for r in ft_rows), sum(r[3] for r in ft_rows), "#eef3f5",
+                               sum(int(wr.get(r[0], 0) or 0) for r in ft_rows))
     if pt_rows:
-        subtotals += _subtotal(f"Modified ({len(pt_rows)})",
-                               sum(r[2] for r in pt_rows), sum(r[3] for r in pt_rows), "#eef3f5")
-    # Group total: goal from the goaled sonographers only; actual includes overflow.
+        subtotals += _subtotal(f"Modified schedule ({len(pt_rows)})",
+                               sum(r[2] for r in pt_rows), sum(r[3] for r in pt_rows), "#eef3f5",
+                               sum(int(wr.get(r[0], 0) or 0) for r in pt_rows))
+    # Group total: goal from the goaled sonographers only; actual + reviews include overflow.
     tot_goal = sum(r[2] for r in recs)
     tot_act = sum(r[3] for r in recs) + overflow_actual
-    subtotals += _subtotal("Group Total", tot_goal, tot_act, _HEAD_BG)
+    tot_rev = sum(int(wr.get(r[0], 0) or 0) for r in recs) + overflow_rev
+    subtotals += _subtotal("Group Total", tot_goal, tot_act, _HEAD_BG, tot_rev)
     return (
         '<table cellspacing="0" cellpadding="0" style="border-collapse:collapse;'
         f'{_FONT};font-size:11px;margin:16px 0 0">'
-        f'{_bar("Weekly Goal Performance", 15, 5)}'
-        f'{_bar("Week of " + _html.escape(week_label), 12, 5)}'
+        f'{_bar("Weekly Goal Performance", 15, 6)}'
+        f'{_bar("Week of " + _html.escape(week_label), 12, 6)}'
         f'{head}{body}{subtotals}</table>'
     )
 
@@ -625,7 +655,7 @@ def build_email(today: dt.date | None = None) -> tuple[str, str, str]:
         "<p>Hello all,</p>"
         "<p>Please see the following assisting sonographer activity reports.</p>"
         f"{_notes_html(pto, _mdY(last_week_monday), wk_holidays)}"
-        f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday))}<br>"
+        f"{_goal_perf_html(scheds, week_counts, _mdY(last_week_monday), rev_weekly.get(last_week_monday.isoformat(), {}))}<br>"
         f"{_table_html('Weekly (Goal: 50/week at full-time, prorated by hours)', wk_rows, scheds)}"
         f"<br>{_reviews_html(rev_rows)}"
         "</div>"
